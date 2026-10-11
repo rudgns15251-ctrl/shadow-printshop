@@ -1,0 +1,15 @@
+{
+  "tasks": [
+    {
+      "id": "PLAN-001",
+      "title": "Generate and critically assess three small Steam indie game concepts",
+      "kind": "planning",
+      "priority": 10,
+      "dependencies": [],
+      "allowed_prefixes": ["projects/first-game/design/"],
+      "required_files": ["projects/first-game/design/concepts.md"],
+      "instructions": "Write projects/first-game/design/concepts.md IN KOREAN. Propose 3 DISTINCT small-scope Windows single-player indie game concepts for a maximum 12-week production target and paid Steam release; exclude AAA-scale, expensive visual fidelity, multiplayer, live services and unlicensed third-party IP. For each candidate explain core loop, differentiator, 2D/3D and engine recommendation, content burden, accessibility, major technical risks, measurable prototype acceptance criteria and a 12-week feasibility concern. Compare concepts with a transparent weighted matrix. Recommend one candidate but mark rankings as hypotheses pending market and human playtests. Do not invent Steam sales statistics, web research or sources. Explicitly list unknowns and a 7-day vertical-slice plan. Do not modify files outside the allowed path.",
+      "min_file_chars": 1200
+    }
+  ]
+}
