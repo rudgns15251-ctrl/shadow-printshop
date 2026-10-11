@@ -6,10 +6,29 @@
       "kind": "planning",
       "priority": 10,
       "dependencies": [],
-      "allowed_prefixes": ["projects/first-game/design/"],
-      "required_files": ["projects/first-game/design/concepts.md"],
+      "allowed_prefixes": [
+        "projects/first-game/design/"
+      ],
+      "required_files": [
+        "projects/first-game/design/concepts.md"
+      ],
       "instructions": "Write projects/first-game/design/concepts.md IN KOREAN. Propose 3 DISTINCT small-scope Windows single-player indie game concepts for a maximum 12-week production target and paid Steam release; exclude AAA-scale, expensive visual fidelity, multiplayer, live services and unlicensed third-party IP. For each candidate explain core loop, differentiator, 2D/3D and engine recommendation, content burden, accessibility, major technical risks, measurable prototype acceptance criteria and a 12-week feasibility concern. Compare concepts with a transparent weighted matrix. Recommend one candidate but mark rankings as hypotheses pending market and human playtests. Do not invent Steam sales statistics, web research or sources. Explicitly list unknowns and a 7-day vertical-slice plan. Do not modify files outside the allowed path.",
       "min_file_chars": 1200
+    },
+    {
+      "id": "PLAN-002",
+      "title": "Independently generate genre-diverse commercial indie game concepts",
+      "kind": "planning",
+      "priority": 20,
+      "dependencies": [],
+      "allowed_prefixes": [
+        "projects/first-game/design/"
+      ],
+      "required_files": [
+        "projects/first-game/design/independent_concepts.md"
+      ],
+      "instructions": "Write projects/first-game/design/independent_concepts.md IN KOREAN. This is a FRESH game concept exploration. Do not read, quote or reuse projects/first-game/design/concepts.md, any prior project designs, ChatGPT conversations, Codex conversations, or files outside this repository. Use ONLY these requirements: Windows PC single-player, paid Steam release as a goal, target production up to 12 weeks, no AAA/large-scale/high-fidelity production burden; budget is flexible but flag any anticipated spending and do not make purchases. Create TEN genuinely distinct, implementable game concepts across AT LEAST SEVEN genres, with no genre or theme favored in advance. For each: provide a short hook, target player, moment-to-moment core loop, up to 3 key mechanics, proposed 2D/3D and engine, minimum saleable scope as a hypothesis, concrete prototype for one week, technical and content risks, automatic tests and human-playtest acceptance metrics, and a plausible 12-week scope adjustment. Clearly label all estimates as guesses. Then shortlist THREE concepts using stated criteria including player appeal hypotheses, originality risks, production feasibility, testability, and marketing clarity. Do not treat a numerical score as evidence of sales or fun. Provide an explicit MARKET-RESEARCH-TO-DO checklist for Steam competitors, recent reviews, discoverability, pricing, and target audience; say RESEARCH NOT DONE if no reliable sources were inspected. Do not fabricate evidence, sources, or sales stats. Do not lock in or begin development of any game and do not modify files outside the allowed path.",
+      "min_file_chars": 3500
     }
   ]
 }

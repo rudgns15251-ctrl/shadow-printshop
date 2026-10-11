@@ -9,7 +9,8 @@ import harness
 class StarterTests(unittest.TestCase):
     def test_task_manifest_valid(self):
         tasks = harness.read_tasks()
-        self.assertEqual(len(tasks), 1)
+        self.assertGreaterEqual(len(tasks), 2)
+        self.assertIn('PLAN-002', [task['id'] for task in tasks])
         self.assertEqual(tasks[0]['id'], 'PLAN-001')
 
     def test_allowed_paths_with_boundary(self):
