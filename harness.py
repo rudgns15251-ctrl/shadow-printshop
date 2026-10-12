@@ -152,7 +152,10 @@ def validate_workspace(worktree, task):
     if check.returncode != 0:
         return False, f"git diff --check failed: {check.stdout[:300]}"
     # Refuse worktrees in which the agent created a Git commit instead of a file diff.
-    if git("rev-parse", "HEAD", cwd=worktree).stdout.strip() != git("rev-parse", "HEAD").stdout.strip():
+    worktree_base = git("rev-parse", "HEAD", cwd=worktree).stdout.strip()
+    main_head = git("rev-parse", "HEAD").stdout.strip()
+    if (not worktree_base or not main_head or
+            git("merge-base", "--is-ancestor", worktree_base, main_head).returncode != 0):
         return False, "Unexpected Git commit in worktree."
     return True, f"Allowed paths and required artifacts passed: {', '.join(paths)}"
 

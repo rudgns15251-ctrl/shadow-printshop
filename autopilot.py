@@ -159,7 +159,11 @@ def call_harness(task_id: str, timeout: int):
     cmd = [sys.executable, str(ROOT / 'harness.py'), 'run', task_id, '--live']
     print(f'START {task_id}; local log: {log_path.relative_to(ROOT)}', flush=True)
     with log_path.open('w', encoding='utf-8', errors='replace') as log:
-        proc = subprocess.Popen(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+        child_env = os.environ.copy()
+        child_env['PYTHONIOENCODING'] = 'utf-8'
+        child_env['PYTHONUTF8'] = '1'
+        proc = subprocess.Popen(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
+                                stdin=subprocess.DEVNULL, env=child_env)
         start = time.monotonic()
         warned = False
         last_heartbeat = 0
@@ -181,7 +185,7 @@ def call_harness(task_id: str, timeout: int):
 
 def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_timeout: int):
     if not live:
-        print('DRY RUN — no Codex usage or writes beyond state initialization.')
+        print('DRY RUN - no Codex usage or writes beyond state initialization.')
         show_plan()
         print('Use: .\\.venv\\Scripts\\python.exe autopilot.py run --live --max-tasks 2 --minutes 45')
         return

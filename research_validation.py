@@ -78,7 +78,10 @@ def check_json(data: object) -> tuple[bool, str]:
             seen_ids.add(appid)
             if not valid_steam_url(comp.get("url"), appid):
                 return False, f"{cid}: invalid Steam link or inconsistent app ID"
-            for key in ("title", "overlap", "evidence_note"):
+            title = comp.get("title")
+            if not isinstance(title, str) or not title.strip():
+                return False, f"{cid}: missing title"
+            for key in ("overlap", "evidence_note"):
                 if not isinstance(comp.get(key), str) or len(comp[key].strip()) < 5:
                     return False, f"{cid}: missing {key}"
             if comp.get("claim_status") not in {"observed_in_search", "unconfirmed"}:

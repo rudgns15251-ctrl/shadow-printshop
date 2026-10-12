@@ -46,6 +46,13 @@ class ResearchValidationTests(unittest.TestCase):
         target['evidence_gaps'] = ['Could not establish comparable Steam title pages']
         self.assertTrue(check_json(data)[0])
 
+    def test_valid_short_steam_title(self):
+        data = fixture()
+        data['candidates'][0]['comparables'][0]['title'] = 'VOI'
+        self.assertTrue(check_json(data)[0])
+        data['candidates'][0]['comparables'][0]['title'] = '  '
+        self.assertFalse(check_json(data)[0])
+
     def test_search_event_required(self):
         self.assertTrue(has_search_event(json.dumps({'type':'item.completed', 'item':{'type':'web_search_call'}})))
         self.assertFalse(has_search_event(json.dumps({'type':'item.completed', 'item':{'type':'agent_message'}})))
