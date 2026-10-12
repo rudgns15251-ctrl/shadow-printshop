@@ -1,0 +1,123 @@
+{
+  "source_policy": "steam_links_are_leads_not_verified_sales",
+  "research_date": "2026-10-12",
+  "candidates": [
+    {
+      "id": "C01",
+      "evidence_status": "enough_links_for_manual_review",
+      "comparables": [
+        {
+          "app_id": 545690,
+          "url": "https://store.steampowered.com/app/545690/",
+          "title": "VOI",
+          "overlap": "직접 규칙 중복: 도형이 겹칠 때 XOR로 흑백 결과를 바꾸어 목표 도형을 만든다.",
+          "evidence_note": "Steam 공식 설명을 web_search로 찾고 /VOI/ 페이지를 직접 열람했다. XOR 진리표와 드래그 가능한 소수 도형을 확인했다. /app/545690/ 최초 열람은 Cache miss였으며 타이틀 포함 URL은 성공했다. 판 회전·실행 취소·최소 인쇄 수는 확인하지 못했다.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 2862990,
+          "url": "https://store.steampowered.com/app/2862990/",
+          "title": "Zerko",
+          "overlap": "부분 규칙 중복: 여러 모양·값의 블록을 배치해 보드의 값을 목표 상태로 맞춘다.",
+          "evidence_note": "공식 상점 페이지를 직접 열람했다. 각 숫자를 0으로 만들기 위한 블록 배치와 점수·시간 압박이 없다는 설명을 확인했다. XOR 명암 반전과 같은 연산이라고 확인한 것은 아니다. 회전·취소·최소 수 도전은 확인 불가.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 759000,
+          "url": "https://store.steampowered.com/app/759000/",
+          "title": ".projekt",
+          "overlap": "인접 비교: 물체 배치와 시점별 실루엣의 관계를 추론해 목표 모양을 맞춘다.",
+          "evidence_note": "공식 설명을 직접 열람해 시점에 따른 실루엣 맞추기와 60개 레벨 표기를 확인했다. 검색에 노출된 사용자 리뷰에는 최소·최대 블록 및 취소, 120개 레벨 주장이 있었으나 공식 설명과 대조되지 않아 그 기능·분량은 미확인으로 남겼다. 명암 XOR·제한 판 회전은 확인 불가.",
+          "claim_status": "observed_in_search"
+        }
+      ],
+      "evidence_gaps": [
+        "VOI의 회전 가능한 제한 판, 실행 취소, 최소 인쇄 수 도전 지원 여부를 확인하지 못했다.",
+        "Zerko와 .projekt는 부분·인접 비교작이다. C01의 세 핵심 규칙을 모두 공유하는 세 작품을 확보한 것은 아니다.",
+        ".projekt 공식 설명의 60개 레벨과 검색 사용자 리뷰의 120개 주장이 달라 현재 분량 및 최소·최대 모드와 취소 기능을 재검토해야 한다.",
+        "동일 지역·통화의 현재 정가·할인가, 현재 리뷰 집계·본문, 완주 시간, 출시 당시 분량, 판매량·매출은 확인 불가."
+      ]
+    },
+    {
+      "id": "C04",
+      "evidence_status": "enough_links_for_manual_review",
+      "comparables": [
+        {
+          "app_id": 1433860,
+          "url": "https://store.steampowered.com/app/1433860/",
+          "title": "The Amazing American Circus",
+          "overlap": "직접 활동 중복: 도시를 순회하며 관객 반응에 맞는 공연을 선택하고 극단·캠프 자원을 관리한다.",
+          "evidence_note": "공식 상점 페이지를 직접 열람해 도시 이동, 지역별 관객 반응, 공연 카드 대결, 마차 업그레이드를 확인했다. 이동 시간의 비용, 배우 피로, 장비와 홍보 사이의 예산 배분 규칙은 확인하지 못했다.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 1666250,
+          "url": "https://store.steampowered.com/app/1666250/",
+          "title": "Circus Electrique",
+          "overlap": "부분 규칙 중복: 공연자 상태·구성에 따라 공연 수익이 달라지며 인력 유지에 자금을 쓴다.",
+          "evidence_note": "공식 상점 페이지를 직접 열람해 기술·상호 궁합·Devotion이 공연의 금전적 성공을 결정하고 급여 유지가 필요하다는 설명을 확인했다. Devotion은 사기이며 피로와 동일하다고 볼 근거는 없다. 턴제 전투가 함께 있는 작품이다.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 410840,
+          "url": "https://store.steampowered.com/app/410840/",
+          "title": "Rock God Tycoon",
+          "overlap": "직접 규칙 중복: 순회 공연을 예약하고 현금을 악기·장비 업그레이드와 홍보에 배분한다.",
+          "evidence_note": "공식 상점 페이지를 직접 열람해 76개 도시의 공연, 공연 예약과 연습, 악기·장비·홍보 구매를 확인했다. 구성원 긴장·결속 관리 설명은 있으나 피로, 이동 시간 차감, C04와 같은 예산 제약식은 확인하지 못했다.",
+          "claim_status": "observed_in_search"
+        }
+      ],
+      "evidence_gaps": [
+        "세 작품 모두에서 노선별 이동 시간 차감과 공연 수요·배우 피로의 교환 규칙을 직접 확인하지 못했다.",
+        "Circus Electrique의 사기와 Rock God Tycoon의 긴장을 피로 지표로 취급할 수 없다.",
+        "The Amazing American Circus의 홍보 예산 규칙과 각 작품의 실제 일정·휴식·장비·홍보 효과 수치 및 전략 다양성은 미확인이다.",
+        "동일 지역·통화의 현재 정가·할인가, 현재 리뷰 집계·본문, 캠페인 완주 시간, 출시 당시 분량, 판매량·매출은 확인 불가."
+      ]
+    },
+    {
+      "id": "C08",
+      "evidence_status": "enough_links_for_manual_review",
+      "comparables": [
+        {
+          "app_id": 501090,
+          "url": "https://store.steampowered.com/app/501090/",
+          "title": "Design it, Drive it : Speedboats",
+          "overlap": "직접 규칙 중복: 선회 특성이 다른 보트를 조종해 방향별 부표를 도는 코스에서 개인 랩타임을 개선한다.",
+          "evidence_note": "공식 상점 페이지를 직접 열람했다. solo time trials, 빨간 부표의 우회전·노란 부표의 좌회전, 최고·최근·세션 랩타임 표시를 확인했다. 방향 표식이 C08의 게이트 통과 판정과 같은지는 미확인이며 자기 고스트는 확인하지 못했다. 정밀 선체 설계 시뮬레이터다.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 257790,
+          "url": "https://store.steampowered.com/app/257790/",
+          "title": "Riptide GP2",
+          "overlap": "부분 규칙 중복: 수상 주행과 Hot Lap 기록 도전, 기록된 주행을 상대하는 반복 숙련.",
+          "evidence_note": "공식 상점 페이지를 직접 열람해 물결이 변하는 수면, Hot Lap 포함 60개 초과 이벤트, VR Challenge에서 Steam 친구의 최고 주행 녹화와 경쟁하는 기능을 확인했다. 여기서 VR은 모드 이름이다. 자기 기록 고스트·방향 지정 부표·관성 수식은 확인하지 못했다.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 320140,
+          "url": "https://store.steampowered.com/app/320140/",
+          "title": "Absolute Drift",
+          "overlap": "인접 규칙 중복: 미끄러지는 차량의 선회 숙련과 고스트·리플레이를 통한 주행 비교.",
+          "evidence_note": "공식 상점 페이지를 직접 열람해 드리프트, 지정된 점들을 통과하는 Drift Lines, 고스트·리플레이와 친구 또는 세계 최고 주행 보기 기능을 확인했다. 자동차 작품이며 방향 부표·수상 관성 및 자기 기록 고스트의 저장·표시 방식은 미확인이다.",
+          "claim_status": "observed_in_search"
+        },
+        {
+          "app_id": 4492170,
+          "url": "https://store.steampowered.com/app/4492170/",
+          "title": "Wavecraft Legends",
+          "overlap": "출시 예정 비교: 물결에 영향을 받는 수상 레이싱, 부표·체크포인트 누락 불이익, Time Trials 개인 기록 도전.",
+          "evidence_note": "공식 상점 페이지를 직접 열람해 해당 기능의 개발자 소개를 확인했다. 페이지는 아직 Steam에서 이용할 수 없음 및 출시일 미정으로 표시했다. 소개는 예정 기능의 주장으로만 취급하며 구현·출시·판매를 확인한 것은 아니다. 방향 지정 게이트와 자기 고스트는 미확인이다.",
+          "claim_status": "observed_in_search"
+        }
+      ],
+      "evidence_gaps": [
+        "Design it, Drive it : Speedboats의 방향별 회전 표식이 게이트 통과 방향·순서를 강제하는 C08의 판정과 동일한지는 확인하지 못했다.",
+        "Riptide GP2와 Absolute Drift에서 친구·타인 주행 비교는 확인했지만 자기 최고 기록 고스트의 지원 및 오프라인 이용 조건은 미확인이다.",
+        "수상 관성·선회 모델, 감각·재시작 속도·기록 개선 만족도는 설명만으로 확인할 수 없으며 직접 플레이하지 않았다.",
+        "Wavecraft Legends는 열람된 페이지상 미출시·출시일 미정이다. 분량은 예정치이며 출시 경쟁작의 실제 판매 근거에 포함하지 않는다.",
+        "동일 지역·통화의 현재 정가·할인가, 현재 리뷰 집계·본문, 출시 당시 코스·이벤트 수, 완주 시간, 판매량·매출은 확인 불가."
+      ]
+    }
+  ]
+}
