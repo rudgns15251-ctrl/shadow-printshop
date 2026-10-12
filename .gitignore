@@ -7,3 +7,6 @@ __pycache__/
 logs/
 *.log
 .env
+
+# Generated Godot import cache (not source assets)
+.godot/

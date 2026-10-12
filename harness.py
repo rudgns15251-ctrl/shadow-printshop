@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import engine_adapter
+
 from research_validation import validate_research
 
 ROOT = Path(__file__).resolve().parent
@@ -179,6 +181,12 @@ def codex_command_for_task(task, workspace):
             '-C', str(workspace), '--json', '-']
 
 
+def check_godot_gate(workspace, task, passed, note):
+    if passed and task.get("godot_validation"):
+        return engine_adapter.validate(workspace, task)
+    return passed, note
+
+
 def execute(task_id, live):
     initialize()
     tasks = {t["id"]: t for t in read_tasks()}
@@ -200,6 +208,8 @@ def execute(task_id, live):
         return
     if not shutil.which("codex"):
         raise RuntimeError("Codex CLI missing. Install @openai/codex, run 'codex login'.")
+    if task.get("godot_validation") and not engine_adapter.locate():
+        raise RuntimeError("Godot 4.x not found. Configure with: python engine_adapter.py configure <path-to-godot.exe>")
     WORKTREES.mkdir(exist_ok=True)
     LOGS.mkdir(exist_ok=True)
     workspace = WORKTREES / task_id
@@ -223,6 +233,7 @@ def execute(task_id, live):
             passed, note = validate_workspace(workspace, task)
             if passed and task.get("research_validation"):
                 passed, note = validate_research(workspace, task, result.stdout)
+            passed, note = check_godot_gate(workspace, task, passed, note)
             final = "review" if passed else "blocked"
     except subprocess.TimeoutExpired:
         final = "blocked"
@@ -277,6 +288,7 @@ def approve(task_id):
         if not audit_log.is_file():
             raise RuntimeError("Research evidence log missing; cannot approve")
         valid, note = validate_research(ws, task, audit_log.read_text(encoding="utf-8"))
+    valid, note = check_godot_gate(ws, task, valid, note)
     if not valid:
         raise RuntimeError(note)
     changed = changed_paths(ws)
