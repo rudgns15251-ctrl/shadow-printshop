@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import harness
+import v07c_controller  # HARNESS_V07C_CONTROL_INTEGRATION
 
 ROOT = Path(__file__).resolve().parent
 LOCK = ROOT / '.data' / 'autopilot.lock'
@@ -203,7 +204,7 @@ def enforce_v07a_preflight():
     return checks
 
 
-def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_timeout: int):
+def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_timeout: int, continue_after_review: bool = False):
     if not live:
         print('DRY RUN - no Codex usage or writes beyond state initialization.')
         show_plan()
@@ -217,58 +218,81 @@ def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_
     start = time.monotonic()
     handled = 0
     with SingleWorker():
+        # Soft-stop requests are scoped to the exact worker PID and start token.
+        worker_lock = current_lock()
+        if v07c_controller.stop_path(ROOT).exists():
+            raise RuntimeError('An unresolved stop request exists; inspect via controller-status')
+        report = v07c_controller.RunReport(ROOT, max_tasks=max_tasks, minutes=max_minutes,
+                                             max_retries=retries, continue_after_review=continue_after_review)
         preflight_done = False
-        while handled < max_tasks and time.monotonic()-start < max_minutes*60:
-            tasks, statuses = snapshot()
-            # Unresolved running jobs must be reviewed, not silently duplicated.
-            in_flight = [t['id'] for t in tasks if statuses[t['id']]['status'] == 'running']
-            if in_flight:
-                print('PAUSED: task(s) marked running:', ', '.join(in_flight),
-                      '- investigate before restarting.')
-                break
-            ready = ready_tasks(tasks, statuses)
-            if not ready:
-                print('No more runnable tasks. Review/approve outputs or add tasks.')
-                break
-            task = ready[0]
-            task_id = task['id']
-            remaining = int(max_minutes*60-(time.monotonic()-start))
-            if remaining < 15:
-                print('Time budget reached. Stopping before next task.')
-                break
-            per_attempt = min(task_timeout, remaining)
-            if not preflight_done:
-                enforce_v07a_preflight()
-                preflight_done = True
-            attempts = 0
-            while True:
-                # Parent harness has its own 900s timeout; leave some margin for its cleanup.
-                returncode, log_path = call_harness(task_id, per_attempt)
-                with harness.db() as conn:
-                    state = conn.execute('SELECT status,last_note FROM tasks WHERE id=?',(task_id,)).fetchone()
-                print(f'FINISHED {task_id}: CLI exit={returncode}, state={state[0]}, note={state[1]}')
-                # HARNESS_V07B_SAFE_RECOVERY_INTEGRATION
-                if state[0] == 'blocked':
-                    try:
-                        import v07b_recovery
-                        assessment = v07b_recovery.assess(ROOT, task_id)
-                        print(f'v0.7-B TRIAGE: {assessment.category}; eligible={assessment.eligible}; {assessment.reason}')
-                        print(f'Inspect: python autopilot.py triage {task_id}')
-                    except Exception as triage_error:
-                        print(f'v0.7-B TRIAGE UNAVAILABLE: {triage_error}; manual investigation required')
-                if state[0] == 'blocked' and attempts < retries and safe_retry_if_clean(task_id):
-                    attempts += 1
-                    print(f'Retrying {task_id} ({attempts}/{retries}) after clean Codex exit...')
-                    continue
-                break
-            handled += 1
-            if state[0] == 'review':
-                print(f'REVIEW REQUIRED: {task_id} was not merged or approved automatically.')
-            elif state[0] != 'review' and state[0] != 'completed':
-                print(f'Attention required: {task_id} state={state[0]}, see {log_path}')
-            if harness.git('status', '--porcelain').stdout.strip():
-                print('PAUSED: main Git checkout changed during execution.')
-                break
+        try:
+            while handled < max_tasks and time.monotonic()-start < max_minutes*60:
+                if v07c_controller.is_stop_requested(ROOT, worker_lock):
+                    print('PAUSED: stop requested; no new task started.', flush=True)
+                    break
+                tasks, statuses = snapshot()
+                # Unresolved running jobs must be reviewed, not silently duplicated.
+                in_flight = [t['id'] for t in tasks if statuses[t['id']]['status'] == 'running']
+                if in_flight:
+                    print('PAUSED: task(s) marked running:', ', '.join(in_flight),
+                          '- investigate before restarting.')
+                    break
+                ready = ready_tasks(tasks, statuses)
+                if not ready:
+                    print('No more runnable tasks. Review/approve outputs or add tasks.')
+                    break
+                task = ready[0]
+                task_id = task['id']
+                remaining = int(max_minutes*60-(time.monotonic()-start))
+                if remaining < 15:
+                    print('Time budget reached. Stopping before next task.')
+                    break
+                per_attempt = min(task_timeout, remaining)
+                if not preflight_done:
+                    enforce_v07a_preflight()
+                    preflight_done = True
+                attempts = 0
+                while True:
+                    # Parent harness has its own 900s timeout; leave some margin for its cleanup.
+                    returncode, log_path = call_harness(task_id, per_attempt)
+                    with harness.db() as conn:
+                        state = conn.execute('SELECT status,last_note FROM tasks WHERE id=?',(task_id,)).fetchone()
+                    print(f'FINISHED {task_id}: CLI exit={returncode}, state={state[0]}, note={state[1]}')
+                    report.record(task_id, returncode, state[0], state[1], log_path)
+                    # HARNESS_V07B_SAFE_RECOVERY_INTEGRATION
+                    if state[0] == 'blocked':
+                        try:
+                            import v07b_recovery
+                            assessment = v07b_recovery.assess(ROOT, task_id)
+                            print(f'v0.7-B TRIAGE: {assessment.category}; eligible={assessment.eligible}; {assessment.reason}')
+                            print(f'Inspect: python autopilot.py triage {task_id}')
+                        except Exception as triage_error:
+                            print(f'v0.7-B TRIAGE UNAVAILABLE: {triage_error}; manual investigation required')
+                    if (state[0] == 'blocked' and attempts < retries
+                            and not v07c_controller.is_stop_requested(ROOT, worker_lock)
+                            and safe_retry_if_clean(task_id)):
+                        attempts += 1
+                        print(f'Retrying {task_id} ({attempts}/{retries}) after clean Codex exit...')
+                        continue
+                    break
+                handled += 1
+                if state[0] == 'review':
+                    print(f'REVIEW REQUIRED: {task_id} was not merged or approved automatically.')
+                    if not continue_after_review:
+                        print('PAUSED: human review required; further tasks await explicit next run.')
+                        break
+                elif state[0] != 'review' and state[0] != 'completed':
+                    print(f'Attention required: {task_id} state={state[0]}, see {log_path}')
+                if harness.git('status', '--porcelain').stdout.strip():
+                    print('PAUSED: main Git checkout changed during execution.')
+                    break
+        finally:
+            try:
+                outcome = 'interrupted' if sys.exc_info()[0] else ('stopped' if v07c_controller.is_stop_requested(ROOT, worker_lock) else 'completed')
+                report_file = report.finish(outcome)
+                print('v0.7-C report:', report_file, flush=True)
+            finally:
+                v07c_controller.clear_own_stop(ROOT, worker_lock)
     print(f'Worker stopped. Tasks attempted: {handled}. Run autopilot.py plan to see next actions.')
 
 
@@ -277,6 +301,8 @@ def main(argv=None):
     sub = parser.add_subparsers(dest='cmd', required=True)
     sub.add_parser('plan', help='Read-only report and next-task plan')
     sub.add_parser('preflight', help='Run v0.7-A read-only checks before live execution')
+    sub.add_parser('controller-status', help='Read-only worker and last-run report')
+    sub.add_parser('stop', help='Request a cooperative stop AFTER the current task')
     triage = sub.add_parser('triage', help='Read-only diagnosis of a task')
     triage.add_argument('task_id')
     recover = sub.add_parser('recover', help='Explicit approval-gated blocked task recovery')
@@ -290,12 +316,18 @@ def main(argv=None):
     p.add_argument('--minutes', type=int, default=45)
     p.add_argument('--max-retries', type=int, default=0)  # v0.7-B: explicit opt-in required for legacy clean-exit retry
     p.add_argument('--task-timeout', type=int, default=930)
+    p.add_argument('--continue-after-review', action='store_true', help='Opt in to additional independent ready tasks, never auto-approve')
     args = parser.parse_args(argv)
     try:
         if args.cmd == 'plan':
             show_plan()
         elif args.cmd == 'preflight':
             enforce_v07a_preflight()
+        elif args.cmd == 'controller-status':
+            v07c_controller.status(ROOT, current_lock())
+        elif args.cmd == 'stop':
+            result = v07c_controller.request_stop(ROOT, current_lock(), pid_alive)
+            print(f'v0.7-C STOP {result}: active child is allowed to finish')
         elif args.cmd == 'triage':
             import v07b_recovery
             return v07b_recovery.main(['triage', args.task_id], root=ROOT)
@@ -307,7 +339,8 @@ def main(argv=None):
             if not (1 <= args.max_tasks <= 10 and 1 <= args.minutes <= 240 and 0 <= args.max_retries <= 2
                     and 30 <= args.task_timeout <= 1200):
                 raise ValueError('Unsafe limit: max-tasks=1..10, minutes=1..240, retries=0..2, task-timeout=30..1200')
-            run_worker(args.live, args.max_tasks, args.minutes, args.max_retries, args.task_timeout)
+            run_worker(args.live, args.max_tasks, args.minutes, args.max_retries, args.task_timeout,
+                       continue_after_review=args.continue_after_review)
     except (ValueError, RuntimeError, OSError, sqlite3.Error) as exc:
         print('ERROR:', exc, file=sys.stderr)
         return 1
