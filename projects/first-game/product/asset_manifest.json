@@ -1,0 +1,349 @@
+{
+  "task_id": "PRODUCT-001",
+  "document_type": "planned_asset_manifest",
+  "version": 1,
+  "status": "PENDING_HUMAN_APPROVAL",
+  "scope": "C01 작은 수직 슬라이스 설계; 구현/게임 선정/상업 품질 인증 아님",
+  "path_policy": "모든 경로는 후속 제작 제안이며 이번 task는 product 문서만 작성",
+  "acquisition_policy": "새 구매·외부 다운로드·유료 생성 호출 없음",
+  "license_policy": "모든 실물의 권리 증빙은 미확정; unverified는 배포 허가가 아님",
+  "owners_policy": "담당은 역할 제안, 실제 사람/에이전트 배정·제작 권한 부여 아님",
+  "assets": [
+    {
+      "id": "paper_tile",
+      "proposed_path": "projects/first-game/game/assets/art/paper_tile.png",
+      "format": "PNG RGBA",
+      "resolution_or_audio_spec": "512×512 타일",
+      "purpose": "배경 주변 종이 질감",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 아트 제작 담당",
+      "modification_owner": "후속 UI 통합 담당",
+      "source_plan": "직접 벡터/절차 도형 제작; 외부 이미지 사용 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "stamp_preview",
+      "proposed_path": "projects/first-game/game/assets/art/stamp_preview.svg",
+      "format": "SVG",
+      "resolution_or_audio_spec": "viewBox 0 0 192 192; 720p 192×192 / 1080p 288×288",
+      "purpose": "A/B 도장·0/1·변경 예정 셀의 시범 기호 세트",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 아트 제작 담당",
+      "modification_owner": "후속 UI 통합 담당",
+      "source_plan": "직접 벡터/절차 도형 제작; 외부 이미지 사용 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "ui_symbols",
+      "proposed_path": "projects/first-game/game/assets/art/ui_symbols.svg",
+      "format": "SVG",
+      "resolution_or_audio_spec": "viewBox 0 0 256 256; 8개 64×64 기호를 44px 이상 컨트롤에 사용",
+      "purpose": "힌트·회전 좌/우·되돌리기·초기화·완료·오류·포커스 기호",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 아트 제작 담당",
+      "modification_owner": "후속 UI 통합 담당",
+      "source_plan": "직접 벡터/절차 도형 제작; 외부 이미지 사용 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "panel_border",
+      "proposed_path": "projects/first-game/game/assets/art/panel_border.svg",
+      "format": "SVG",
+      "resolution_or_audio_spec": "viewBox 0 0 64 64; 9-slice 여백 8px",
+      "purpose": "종이 카드 경계",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 아트 제작 담당",
+      "modification_owner": "후속 UI 통합 담당",
+      "source_plan": "직접 벡터/절차 도형 제작; 외부 이미지 사용 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "font_ui",
+      "proposed_path": "projects/first-game/game/assets/fonts/ui_ko_regular.ttf",
+      "format": "TTF 또는 OTF",
+      "resolution_or_audio_spec": "벡터 글꼴; 한글/라틴/숫자, 18–42px 기준",
+      "purpose": "UI 한국어와 확대 가독성",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 UI 담당: 실제 내장 폰트 출처 식별",
+      "modification_owner": "후속 UI 담당: 글리프/폴백 검수",
+      "source_plan": "엔진 내장/로컬 사용 가능 폰트 후보만 검토; 다운로드 없음, 폰트 선정 미확정",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "sfx_print",
+      "proposed_path": "projects/first-game/game/assets/audio/sfx_print.wav",
+      "format": "WAV PCM",
+      "resolution_or_audio_spec": "48kHz/16bit/mono; 0.15–0.25초; 개별 게인 -6dB",
+      "purpose": "print 상태 피드백",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 오디오 생성 담당",
+      "modification_owner": "후속 오디오/게임 통합 담당",
+      "source_plan": "표준 라이브러리로 자체 절차 합성; 샘플/음원 다운로드 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "sfx_undo",
+      "proposed_path": "projects/first-game/game/assets/audio/sfx_undo.wav",
+      "format": "WAV PCM",
+      "resolution_or_audio_spec": "48kHz/16bit/mono; 0.12–0.20초; 개별 게인 -9dB",
+      "purpose": "undo 상태 피드백",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 오디오 생성 담당",
+      "modification_owner": "후속 오디오/게임 통합 담당",
+      "source_plan": "표준 라이브러리로 자체 절차 합성; 샘플/음원 다운로드 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "sfx_complete",
+      "proposed_path": "projects/first-game/game/assets/audio/sfx_complete.wav",
+      "format": "WAV PCM",
+      "resolution_or_audio_spec": "48kHz/16bit/mono; 0.45–0.70초; 개별 게인 -9dB",
+      "purpose": "complete 상태 피드백",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 오디오 생성 담당",
+      "modification_owner": "후속 오디오/게임 통합 담당",
+      "source_plan": "표준 라이브러리로 자체 절차 합성; 샘플/음원 다운로드 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "sfx_ui",
+      "proposed_path": "projects/first-game/game/assets/audio/sfx_ui.wav",
+      "format": "WAV PCM",
+      "resolution_or_audio_spec": "48kHz/16bit/mono; 0.04–0.08초; 개별 게인 -12dB",
+      "purpose": "ui 상태 피드백",
+      "phase": "optional_later",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 오디오 생성 담당",
+      "modification_owner": "후속 오디오/게임 통합 담당",
+      "source_plan": "표준 라이브러리로 자체 절차 합성; 샘플/음원 다운로드 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "sfx_error",
+      "proposed_path": "projects/first-game/game/assets/audio/sfx_error.wav",
+      "format": "WAV PCM",
+      "resolution_or_audio_spec": "48kHz/16bit/mono; 0.12–0.20초; 개별 게인 -12dB",
+      "purpose": "error 상태 피드백",
+      "phase": "optional_later",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 오디오 생성 담당",
+      "modification_owner": "후속 오디오/게임 통합 담당",
+      "source_plan": "표준 라이브러리로 자체 절차 합성; 샘플/음원 다운로드 없음 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "bgm_loop",
+      "proposed_path": "projects/first-game/game/assets/audio/bgm_workshop.ogg",
+      "format": "OGG Vorbis (원본 WAV 별도)",
+      "resolution_or_audio_spec": "48kHz/stereo; 60–90초 루프, 원본 24bit WAV",
+      "purpose": "저밀도 공방 분위기; 시험에서는 생략 가능",
+      "phase": "optional_later",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 작곡 담당",
+      "modification_owner": "후속 오디오 담당",
+      "source_plan": "자체 작곡·합성 계획; 외부 곡/샘플 없음",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "bgm_source",
+      "proposed_path": "projects/first-game/game/assets/audio/source/bgm_workshop.wav",
+      "format": "WAV PCM",
+      "resolution_or_audio_spec": "48kHz/24bit/stereo; 60–90초",
+      "purpose": "BGM 편집 원본, 배포 제외 제안",
+      "phase": "optional_later",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 작곡 담당",
+      "modification_owner": "후속 오디오 담당",
+      "source_plan": "자체 작곡 원본 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "feedback_animation",
+      "proposed_path": "projects/first-game/game/scripts/feedback_view.gd",
+      "format": "GDScript",
+      "resolution_or_audio_spec": "100–200ms; UI 명세 크기, bitmap 해당 없음",
+      "purpose": "인쇄/회전/되돌리기/완료; 모션 축소 대체",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 게임 UI 담당",
+      "modification_owner": "후속 접근성/통합 담당",
+      "source_plan": "직접 작성할 코드 기반 표현 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "sfx_generator",
+      "proposed_path": "projects/first-game/game/tools/generate_sfx.py",
+      "format": "Python source",
+      "resolution_or_audio_spec": "해상도 해당 없음; 48kHz WAV 생성",
+      "purpose": "SFX 제작 재현과 파라미터 기록",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 오디오 생성 담당",
+      "modification_owner": "후속 오디오 생성 담당",
+      "source_plan": "Python 표준 라이브러리만 사용 계획",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "ui_strings",
+      "proposed_path": "projects/first-game/game/localization/ui_ko.csv",
+      "format": "UTF-8 CSV",
+      "resolution_or_audio_spec": "해상도 해당 없음; 문자열 ID/한국어/영어 열 제안",
+      "purpose": "화면·힌트·오류·단축키 텍스트와 번역",
+      "phase": "slice_trial",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 UI/퍼즐 문안 담당",
+      "modification_owner": "후속 번역·교정 담당",
+      "source_plan": "직접 집필 및 번역 계획; 번역 수행 미확정",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    },
+    {
+      "id": "steam_capsule_source",
+      "proposed_path": "projects/first-game/game/assets/store/capsule_source.svg",
+      "format": "SVG + PNG export",
+      "resolution_or_audio_spec": "상점 규격 확인 후 결정; 해상도 unverified",
+      "purpose": "향후 상점 대표 이미지, 시험/게임 런타임 범위 밖",
+      "phase": "full_product_later",
+      "production_status": "planned_not_created",
+      "creation_owner": "후속 아트 담당",
+      "modification_owner": "후속 상점 담당",
+      "source_plan": "검토된 게임 실물로 직접 제작 계획; Steam 최신 규격 미확인",
+      "source_verification_status": "unverified",
+      "license": {
+        "status": "unverified",
+        "commercial_use_status": "unverified",
+        "redistribution_status": "unverified",
+        "evidence_path": null,
+        "required_review": "실물 원본·제작 기록·제3자 권리·상업 이용/재배포 조건·고지 의무를 사람 검토"
+      },
+      "approval_status": "PENDING_HUMAN_APPROVAL"
+    }
+  ]
+}
