@@ -247,6 +247,15 @@ def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_
                 with harness.db() as conn:
                     state = conn.execute('SELECT status,last_note FROM tasks WHERE id=?',(task_id,)).fetchone()
                 print(f'FINISHED {task_id}: CLI exit={returncode}, state={state[0]}, note={state[1]}')
+                # HARNESS_V07B_SAFE_RECOVERY_INTEGRATION
+                if state[0] == 'blocked':
+                    try:
+                        import v07b_recovery
+                        assessment = v07b_recovery.assess(ROOT, task_id)
+                        print(f'v0.7-B TRIAGE: {assessment.category}; eligible={assessment.eligible}; {assessment.reason}')
+                        print(f'Inspect: python autopilot.py triage {task_id}')
+                    except Exception as triage_error:
+                        print(f'v0.7-B TRIAGE UNAVAILABLE: {triage_error}; manual investigation required')
                 if state[0] == 'blocked' and attempts < retries and safe_retry_if_clean(task_id):
                     attempts += 1
                     print(f'Retrying {task_id} ({attempts}/{retries}) after clean Codex exit...')
@@ -268,11 +277,18 @@ def main(argv=None):
     sub = parser.add_subparsers(dest='cmd', required=True)
     sub.add_parser('plan', help='Read-only report and next-task plan')
     sub.add_parser('preflight', help='Run v0.7-A read-only checks before live execution')
+    triage = sub.add_parser('triage', help='Read-only diagnosis of a task')
+    triage.add_argument('task_id')
+    recover = sub.add_parser('recover', help='Explicit approval-gated blocked task recovery')
+    recover.add_argument('task_id')
+    recovery_mode = recover.add_mutually_exclusive_group()
+    recovery_mode.add_argument('--check', action='store_true', help='Read-only recovery eligibility')
+    recovery_mode.add_argument('--apply', action='store_true', help='Back up and restore only an eligible task')
     p = sub.add_parser('run', help='Run ready tasks, stopping at configured limits')
     p.add_argument('--live', action='store_true', help='Actually invoke Codex; consumes quota')
     p.add_argument('--max-tasks', type=int, default=2)
     p.add_argument('--minutes', type=int, default=45)
-    p.add_argument('--max-retries', type=int, default=1)
+    p.add_argument('--max-retries', type=int, default=0)  # v0.7-B: explicit opt-in required for legacy clean-exit retry
     p.add_argument('--task-timeout', type=int, default=930)
     args = parser.parse_args(argv)
     try:
@@ -280,6 +296,13 @@ def main(argv=None):
             show_plan()
         elif args.cmd == 'preflight':
             enforce_v07a_preflight()
+        elif args.cmd == 'triage':
+            import v07b_recovery
+            return v07b_recovery.main(['triage', args.task_id], root=ROOT)
+        elif args.cmd == 'recover':
+            import v07b_recovery
+            selection = '--apply' if args.apply else '--check'
+            return v07b_recovery.main(['recover', args.task_id, selection], root=ROOT)
         else:
             if not (1 <= args.max_tasks <= 10 and 1 <= args.minutes <= 240 and 0 <= args.max_retries <= 2
                     and 30 <= args.task_timeout <= 1200):
