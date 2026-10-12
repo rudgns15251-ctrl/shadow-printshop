@@ -183,6 +183,26 @@ def call_harness(task_id: str, timeout: int):
     return code, log_path
 
 
+
+# HARNESS_V07A_PREFLIGHT_INTEGRATION
+def enforce_v07a_preflight():
+    """Fail closed on FAIL/WARN before a live Codex task is dispatched."""
+    import doctor_v07a
+
+    distro = os.environ.get("GAME_HARNESS_WSL_DISTRO", "Ubuntu")
+    codex_path = os.environ.get("GAME_HARNESS_WSL_CODEX", "/home/newsjw/.local/bin/codex")
+    checks = doctor_v07a.preflight(ROOT, distro=distro, codex_path=codex_path)
+    if len(checks) != 8:
+        raise RuntimeError(f"v0.7-A: Expected 8 checks, received {len(checks)}; refusing live execution")
+    for check in checks:
+        print(f"[PREFLIGHT {check.status}] {check.name}: {check.detail}", flush=True)
+    problems = [f"{check.name}={check.status}" for check in checks if check.status != "PASS"]
+    if problems:
+        raise RuntimeError("v0.7-A preflight stopped live work: " + ", ".join(problems))
+    print("v0.7-A PREFLIGHT PASS (8/8).", flush=True)
+    return checks
+
+
 def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_timeout: int):
     if not live:
         print('DRY RUN - no Codex usage or writes beyond state initialization.')
@@ -197,6 +217,7 @@ def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_
     start = time.monotonic()
     handled = 0
     with SingleWorker():
+        preflight_done = False
         while handled < max_tasks and time.monotonic()-start < max_minutes*60:
             tasks, statuses = snapshot()
             # Unresolved running jobs must be reviewed, not silently duplicated.
@@ -216,6 +237,9 @@ def run_worker(live: bool, max_tasks: int, max_minutes: int, retries: int, task_
                 print('Time budget reached. Stopping before next task.')
                 break
             per_attempt = min(task_timeout, remaining)
+            if not preflight_done:
+                enforce_v07a_preflight()
+                preflight_done = True
             attempts = 0
             while True:
                 # Parent harness has its own 900s timeout; leave some margin for its cleanup.
@@ -243,6 +267,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Game Harness v0.2 — bounded single-worker task scheduler')
     sub = parser.add_subparsers(dest='cmd', required=True)
     sub.add_parser('plan', help='Read-only report and next-task plan')
+    sub.add_parser('preflight', help='Run v0.7-A read-only checks before live execution')
     p = sub.add_parser('run', help='Run ready tasks, stopping at configured limits')
     p.add_argument('--live', action='store_true', help='Actually invoke Codex; consumes quota')
     p.add_argument('--max-tasks', type=int, default=2)
@@ -253,6 +278,8 @@ def main(argv=None):
     try:
         if args.cmd == 'plan':
             show_plan()
+        elif args.cmd == 'preflight':
+            enforce_v07a_preflight()
         else:
             if not (1 <= args.max_tasks <= 10 and 1 <= args.minutes <= 240 and 0 <= args.max_retries <= 2
                     and 30 <= args.task_timeout <= 1200):
