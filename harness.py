@@ -87,7 +87,58 @@ def initialize():
     print(f"Initialized {len(tasks)} tasks. State: .data/state.sqlite3")
 
 
+def _harness_wsl_dispatch_command(args, cwd):
+    """Route only live Codex subprocesses to WSL; preserve other commands.
+
+    Never alter the Windows Git worktree's .git metadata. These two Git
+    environment variables are local to the Linux child process.
+    """
+    import os
+    import subprocess
+    from pathlib import Path, PureWindowsPath
+
+    if os.name != "nt" or not args or str(args[0]).lower() not in ("codex", "codex.exe"):
+        return args
+    if "exec" not in args:
+        return args
+    if os.environ.get("GAME_HARNESS_CODEX_BACKEND", "wsl").lower() == "windows":
+        return args
+
+    def to_linux(value):
+        p = PureWindowsPath(str(value))
+        if len(p.drive) != 2 or p.drive[1] != ":" or not p.is_absolute():
+            raise RuntimeError("Expected absolute local Windows path for WSL Codex")
+        return "/mnt/" + p.drive[0].lower() + "/" + "/".join(p.parts[1:])
+
+    if args.count("-C") != 1:
+        raise RuntimeError("Unexpected Codex command: exactly one -C required")
+    position = args.index("-C") + 1
+    if position >= len(args):
+        raise RuntimeError("Codex -C path missing")
+    wd = Path(args[position]).resolve()
+    if not wd.is_dir():
+        raise RuntimeError("Codex worktree missing; refusing WSL execution")
+    git_info = subprocess.run(
+        ["git", "-C", str(wd), "rev-parse", "--absolute-git-dir"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30
+    )
+    if git_info.returncode or not git_info.stdout.strip():
+        raise RuntimeError("Windows Git cannot resolve linked worktree: " + (git_info.stderr or "unknown")[-500:])
+
+    linux_wd = to_linux(wd)
+    linux_gitdir = to_linux(git_info.stdout.strip())
+    distro = os.environ.get("GAME_HARNESS_WSL_DISTRO", "Ubuntu")
+    cli = os.environ.get("GAME_HARNESS_WSL_CODEX", "/home/newsjw/.local/bin/codex")
+    linux_args = list(args[1:])
+    linux_args[position - 1] = linux_wd
+    return [
+        "wsl.exe", "-d", distro, "--cd", linux_wd, "--", "/usr/bin/env",
+        "GIT_DIR=" + linux_gitdir, "GIT_WORK_TREE=" + linux_wd,
+        cli, *linux_args
+    ]
+
 def run_command(args, cwd=ROOT, timeout=60, stdin=None):
+    args = _harness_wsl_dispatch_command(args, cwd)
     return subprocess.run(args, cwd=cwd, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace", timeout=timeout, check=False)
 
 
