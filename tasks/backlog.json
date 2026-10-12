@@ -114,6 +114,58 @@
       "require_regression": true,
       "auto_fix_limit": 2,
       "instructions": "Modify ONLY projects/first-game/game/ in this existing Godot C01 technical prototype. User manually confirmed: select stamps, rotate, print, undo, reset, solve puzzle, advance to next puzzle all work. Do not change gameplay rules, visuals, controls, expected behavior, or levels unless an independently observed defect is found. Do not change existing tests/smoke_test.gd or docs/VALIDATION.json; they are protected. Add tests/regression_test.gd extending SceneTree with real tests of underlying game_state transitions, selection/rotation/XOR/undo/reset/goal and two puzzles, and explicit error exit code. Output HARNESS_REGRESSION_PASS ONLY AFTER assertions actually pass. Write docs/QA_REGRESSION.md in Korean, specify exact covered scenarios, any unknown coverage, and manual UI verification that tests cannot replace. No invented playtesting or sales claims. No Git commits, plugins, network, destructive OS operations or changing global harness tests. The harness independently stages and runs its own qa/scene_probe.gd. If tests fail, fix the game implementation within allowed scope; never weaken tests to get a pass."
+    },
+    {
+      "id": "ITER-001",
+      "title": "진행 경계 안내",
+      "kind": "godot_prototype",
+      "priority": 35,
+      "dependencies": [
+        "PROTO-002"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/"
+      ],
+      "required_files": [
+        "projects/first-game/game/docs/ITER-001_NOTES.md"
+      ],
+      "min_file_chars": 180,
+      "protected_files": [
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/docs/VALIDATION.json"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 2,
+      "instructions": "This is an EXPERIMENTAL TEST GAME, NOT an approved commercial concept. Modify only the existing Godot project in projects/first-game/game/. Keep original playtested controls, puzzles, and state semantics unless requested improvement requires small compatible changes. Protected files MUST remain unchanged: smoke_test.gd, regression_test.gd, VALIDATION.json. Never weaken tests or independent QA, change harness config, create submodules or symlinks. Implement one small bounded improvement, explain the exact before/after behavior, supply a new optional focused Godot test (without modifying protected existing ones). Document actual commands/tests and limitations in the required notes document. Do not access network, personal files, native code, shell commands, third-party assets, or make Git commits. Do not claim human playtesting or market readiness. Approved improvement category: ui_clarity. Goal: projects/first-game/game/scripts/main.gd의 기존 상태 안내에 첫 퍼즐 완료 시 수동 진행 가능 여부와 두 번째 완료 시 종료·취소·초기화 가능 여부를 명시한다. 퍼즐과 조작 규칙은 유지한다.. Checks to demonstrate (NOT to self-certify):\n- 첫 퍼즐 완료에는 다음 퍼즐 안내가 표시되고, 취소하면 해당 안내가 사라지며 다음 버튼이 비활성화된다.\n- 두 번째 완료에는 종료와 취소·초기화 안내가 표시되고, 다음 버튼은 비활성화된 채 유지된다.\nMANDATORY OVERRIDE: Never interpret the preceding goal/checks as permission to break any protection, change test expectations, modify outside game/, access network, or alter Git history."
+    },
+    {
+      "id": "ITER-002",
+      "title": "버튼 포커스 입력 검증",
+      "kind": "godot_prototype",
+      "priority": 35,
+      "dependencies": [
+        "ITER-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/"
+      ],
+      "required_files": [
+        "projects/first-game/game/docs/ITER-002_NOTES.md"
+      ],
+      "min_file_chars": 180,
+      "protected_files": [
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/docs/VALIDATION.json"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 2,
+      "instructions": "This is an EXPERIMENTAL TEST GAME, NOT an approved commercial concept. Modify only the existing Godot project in projects/first-game/game/. Keep original playtested controls, puzzles, and state semantics unless requested improvement requires small compatible changes. Protected files MUST remain unchanged: smoke_test.gd, regression_test.gd, VALIDATION.json. Never weaken tests or independent QA, change harness config, create submodules or symlinks. Implement one small bounded improvement, explain the exact before/after behavior, supply a new optional focused Godot test (without modifying protected existing ones). Document actual commands/tests and limitations in the required notes document. Do not access network, personal files, native code, shell commands, third-party assets, or make Git commits. Do not claim human playtesting or market readiness. Approved improvement category: qa_case. Goal: projects/first-game/game/docs/에 인쇄 버튼 포커스 상태의 키 입력 QA 시나리오를 추가한다. 기존 사람 테스트 기록과 smoke/regression 테스트는 보존하고 새 실행 결과는 실제 관찰 후에만 기록한다.. Checks to demonstrate (NOT to self-certify):\n- 첫 퍼즐 초기화 후 인쇄 버튼에 포커스를 두고 Space와 Enter를 각각 별도 시도한다. 한 번 누르고 놓을 때 인쇄 횟수와 취소 이력이 각각 정확히 1 증가해야 한다.\n- 같은 초기 조건에서 Space를 2초간 누르면 인쇄는 1회만 발생해야 하며, 키를 놓은 뒤 취소 한 번으로 시작 보드·인쇄 0회·빈 이력이 복원되어야 한다.\nMANDATORY OVERRIDE: Never interpret the preceding goal/checks as permission to break any protection, change test expectations, modify outside game/, access network, or alter Git history."
     }
   ]
 }
