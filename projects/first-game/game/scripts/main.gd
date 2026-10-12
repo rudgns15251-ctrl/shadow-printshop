@@ -122,9 +122,9 @@ func _refresh() -> void:
 	next_button.disabled = not state.can_advance()
 	if data["solved"]:
 		if state.can_advance():
-			status.text = "MATCH! Press N for puzzle 2, or undo / reset to retry with fewer prints."
+			status.text = "MATCH! Next is manual: press N or click 'N: next puzzle' for puzzle 2.\nU / Z: undo | R: reset to retry this puzzle."
 		else:
-			status.text = "Both puzzles complete. Prototype ends here. Undo / reset to retry this puzzle."
+			status.text = "Both puzzles complete. No next puzzle. Close the window to exit.\nU / Z: undo | R: reset to retry this puzzle."
 	else:
 		status.text = "Different cells: %d   |   Preview is free. Only PRINT counts as a turn." % state.mismatch_count()
 
