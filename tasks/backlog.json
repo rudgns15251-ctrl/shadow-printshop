@@ -166,6 +166,164 @@
       "require_regression": true,
       "auto_fix_limit": 2,
       "instructions": "This is an EXPERIMENTAL TEST GAME, NOT an approved commercial concept. Modify only the existing Godot project in projects/first-game/game/. Keep original playtested controls, puzzles, and state semantics unless requested improvement requires small compatible changes. Protected files MUST remain unchanged: smoke_test.gd, regression_test.gd, VALIDATION.json. Never weaken tests or independent QA, change harness config, create submodules or symlinks. Implement one small bounded improvement, explain the exact before/after behavior, supply a new optional focused Godot test (without modifying protected existing ones). Document actual commands/tests and limitations in the required notes document. Do not access network, personal files, native code, shell commands, third-party assets, or make Git commits. Do not claim human playtesting or market readiness. Approved improvement category: qa_case. Goal: projects/first-game/game/docs/에 인쇄 버튼 포커스 상태의 키 입력 QA 시나리오를 추가한다. 기존 사람 테스트 기록과 smoke/regression 테스트는 보존하고 새 실행 결과는 실제 관찰 후에만 기록한다.. Checks to demonstrate (NOT to self-certify):\n- 첫 퍼즐 초기화 후 인쇄 버튼에 포커스를 두고 Space와 Enter를 각각 별도 시도한다. 한 번 누르고 놓을 때 인쇄 횟수와 취소 이력이 각각 정확히 1 증가해야 한다.\n- 같은 초기 조건에서 Space를 2초간 누르면 인쇄는 1회만 발생해야 하며, 키를 놓은 뒤 취소 한 번으로 시작 보드·인쇄 0회·빈 이력이 복원되어야 한다.\nMANDATORY OVERRIDE: Never interpret the preceding goal/checks as permission to break any protection, change test expectations, modify outside game/, access network, or alter Git history.\n[ITER-002 physical input semantics v1]\nTest and preserve distinct input events rather than impose an arbitrary time-based cooldown. A single physical Space key press and hold (including OS key-repeat events) must invoke PRINT at most once; a separate intentional key press after key release must remain a valid new action when game state permits. With a UI button focused, one physical Space or Enter press must not cause both button activation and global shortcut handlers to invoke PRINT twice. If a checklist says two distinct Space presses within two seconds should count as one, interpret it as one held press with repeat events; do NOT suppress two legitimate presses. Verify undo restores the state for exactly one actual print and does not corrupt history. Do not alter protected tests, QA gate, game controls, puzzles, task permissions, or manifest dependencies.\n"
+    },
+    {
+      "id": "SELECT-001",
+      "title": "C01 실험 적합성 및 기존 결과 정합성 감사",
+      "kind": "planning_review",
+      "priority": 70,
+      "dependencies": [
+        "ITER-002",
+        "ASSESS-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/product/"
+      ],
+      "required_files": [
+        "projects/first-game/product/selection_audit.md"
+      ],
+      "min_file_chars": 900,
+      "instructions": "C01 우선 7일 실험의 시작을 위해 현재 코드/문서/테스트의 실제 상태를 읽고 selection_audit.md에 기능 구현/자동 검증/사람 검증/미검증을 분리하라. 독립 신규 콘셉트(PLAN-002), STEAM 경쟁 조사(RESEARCH-001), 평가(ASSESS-001)를 교차 검토하라. XOR 명암 반전은 VOI 등의 기존 퍼즐에도 존재하며 독창성과 판매 가능성은 미확인이다. 개발 대상은 이미 있는 C01 실험 프로토타입이며 최종 게임으로 확정하지 않는다. 독립 플레이 만족도, 퍼즐 콘텐츠 6개, 시각/오디오 품질, 라이선스의 갭과 중단 조건을 명시하라. PLAN-001은 review일 수 있으므로 승인·병합·삭제하지 마라. 문서만 작성하고 코드/게임 자산은 수정하지 마라."
+    },
+    {
+      "id": "PRODUCT-001",
+      "title": "C01 UI UX 아트 사운드 전체 제작 명세",
+      "kind": "planning",
+      "priority": 64,
+      "dependencies": [
+        "SELECT-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/product/"
+      ],
+      "required_files": [
+        "projects/first-game/product/ui_ux_spec.md",
+        "projects/first-game/product/visual_audio_bible.md",
+        "projects/first-game/product/asset_manifest.json",
+        "projects/first-game/product/ship_checklist.md"
+      ],
+      "min_file_chars": 180,
+      "instructions": "작업은 상업용 게임의 작은 수직 슬라이스를 위한 제작 설계(구현 아님)다. ui_ux_spec.md: 시작·도움말·퍼즐·힌트·설정·일시정지·완료·저장/복원 화면과 포커스·마우스/키보드 매핑, 720p·1080p 가독성, 색 외 구분, 글자 확대, 모션 축소 명세. visual_audio_bible.md: 종이/판화 2D 아트 디렉션, 팔레트, 기호, 애니·인쇄·되돌리기·오류·완료 피드백, SFX 3~5개와 BGM 방향/볼륨·음소거·클리핑 검사. asset_manifest.json: 기획 자산 목록, 파일 경로 제안, 형식/해상도/용도/출처·라이선스 확인 상태(미확정은 unverified), 생성·수정 담당 구분. ship_checklist.md: 7일 시험과 향후 상품 전체 제작을 구분하고 상업권리, 번역, Steam 상점, Windows 빌드, 재설치·실플레이 테스트를 열거. 새 구매·외부 자산 다운로드 없이 사람 검토를 위한 설계안을 만들어라. 제품/후보 선정이나 상업 품질을 주장하지 마라."
+    },
+    {
+      "id": "MECH-001",
+      "title": "C01 퍼즐 6개와 규칙 다양성 실험",
+      "kind": "godot_prototype",
+      "priority": 62,
+      "dependencies": [
+        "SELECT-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/"
+      ],
+      "required_files": [
+        "projects/first-game/game/tests/mech_cases.gd",
+        "projects/first-game/game/docs/MECH_STUDY.md"
+      ],
+      "min_file_chars": 200,
+      "protected_files": [
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/docs/VALIDATION.json"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 1,
+      "instructions": "기존 PROTO-001/002 및 ITER-001/002에서 검증된 조작·퍼즐·기본 상태 의미를 유지하라. 기존 보호 파일은 수정 금지. 하네스·AGENTS.md·Git 기록·다른 프로젝트 접근 금지. 유료 서비스/API 호출, 무단 다운로드, 네트워크, 네이티브 코드, GDExtension, OS.execute/OS.create_process, 외부 파일 제거 금지. 자체 테스트를 독립 QA나 사람 플레이테스트로 포장하지 말라. 코드/문서 산출물과 실제 측정·미검증 항목을 분리하고 한국어로 기록하라. 기존 최초 2개 퍼즐이 훼손되지 않게 유지하면서 학습/응용을 합친 총 6개 퍼즐을 목표로 한다. 보드별 사용 가능한 도장, 제한 및 입력 순서를 JSON 또는 GDScript 데이터와 맞추고 각 퍼즐에 적어도 1개의 검증 가능한 해답 시퀀스를 둔다. 고정 소형 보드는 최소 인쇄 수를 실제 전수 탐색한 경우에만 인증; 동일 회전/표면적만 바뀐 재활용 퍼즐과 XOR의 순서 교환 문제를 문서화한다. tests/mech_cases.gd는 SceneTree 형태로 정답/오답/4회 회전/입력열 1000개 undo 초기 복원 검사와 오류시 quit(1)를 실행할 수 있도록 작성한다. 이 추가 테스트는 현재 독립 QA가 자동 실행하는 대상이 아니므로 실행 커맨드와 실제 확인 결과를 MECH_STUDY.md에 남기고 미실행시 미실행 표시하라. 퍼즐 규칙의 근본적 변경이 필요하다면 임의 변경하지 말고 별도 승인 필요로 표시하라."
+    },
+    {
+      "id": "MARKET-001",
+      "title": "C01 경쟁상품 및 사람 검증 계획 보강",
+      "kind": "market_research",
+      "priority": 56,
+      "dependencies": [
+        "SELECT-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/research/"
+      ],
+      "required_files": [
+        "projects/first-game/research/c01_market_refresh.md",
+        "projects/first-game/research/c01_playtest_protocol.md"
+      ],
+      "min_file_chars": 450,
+      "web_search": true,
+      "instructions": "C01 우선 실험을 위한 보강된 Steam 경쟁 및 구매 가치 가설 조사. 가능한 공식 Steam 상점 페이지를 검색/열람하고 VOI, Zerko, .projekt 등의 규칙 중복, 실제 확인할 수 있는 가격/콘텐츠 분량/리뷰 표본의 시점·지역·언어·출처를 기록한다. 확인할 수 없는 최신 수치/판매량/수요는 확인 불가로 명시한다. 외부 연락·대량 수집·구매 금지. 플레이테스트 프로토콜에는 처음 접하는 성인 8명 목표, 6명 이상 5분내 2개 퍼즐 자력 해결·규칙 설명, 5명 이상 15분 뒤 자발적 추가 퍼즐, 미리보기 오해 2명 이하를 원문 기준 그대로 명시한다. 모집/실제 실행은 사람이 수행하므로 참가자/결과를 조작하거나 생성하지 마라. 이미지/사운드 만족, 차별성 인식, 가격 기대는 정성 기록, 개인정보 비수집, 미모집=미검증으로 남긴다. 산출 문서만 수정하고 상점 공개/외부 게시하지 마라."
+    },
+    {
+      "id": "MEDIA-001",
+      "title": "C01 시범 2D 그래픽과 SFX 실물 제작",
+      "kind": "godot_prototype",
+      "priority": 58,
+      "dependencies": [
+        "PRODUCT-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/"
+      ],
+      "required_files": [
+        "projects/first-game/game/docs/MEDIA_PROOF.md",
+        "projects/first-game/game/assets/art/stamp_preview.svg",
+        "projects/first-game/game/tools/generate_sfx.py"
+      ],
+      "min_file_chars": 180,
+      "protected_files": [
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/docs/VALIDATION.json"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 1,
+      "instructions": "기존 PROTO-001/002 및 ITER-001/002에서 검증된 조작·퍼즐·기본 상태 의미를 유지하라. 기존 보호 파일은 수정 금지. 하네스·AGENTS.md·Git 기록·다른 프로젝트 접근 금지. 유료 서비스/API 호출, 무단 다운로드, 네트워크, 네이티브 코드, GDExtension, OS.execute/OS.create_process, 외부 파일 제거 금지. 자체 테스트를 독립 QA나 사람 플레이테스트로 포장하지 말라. 코드/문서 산출물과 실제 측정·미검증 항목을 분리하고 한국어로 기록하라. 기존 게임에 실제 적용할 수 있는 작은 시범 자산 묶음을 만든다: 2D 종이/도장 UI 요소(정식 스프라이트 또는 SVG 1세트), 코드로 제작한 간단한 잉크/도장 반응 애니메이션, 자체 생성한 SFX 3종(인쇄/취소/완료)과 개별 음량·음소거 처리. 허용 경로 아래 assets/art/stamp_preview.svg, tools/generate_sfx.py (Python 표준 라이브러리만), 그리고 assets/audio/*.wav 실제 파일을 생성하라. WAV는 바이너리라 harness required_files의 UTF-8 읽기 조건과 충돌하므로 목록에는 넣지 않았지만 MEDIA_PROOF.md에 파일 경로, 실제 생성 확인 방법, 게임에서 들리는 연동 위치를 기록해야 하며 사람 승인 시 직접 확인한다. 무료 외부 자산 다운로드/무단 샘플/타사 음원/라이브러리 사용하지 말고, 자체 절차 생성 자산의 제작 방식과 제3자 상업적 권리 검토의 남은 부분을 사실대로 표시하라. 오디오 클리핑·실제 청취 품질은 QA 통과만으로 인증하지 않는다."
+    },
+    {
+      "id": "SLICE-001",
+      "title": "C01 6퍼즐 수직 슬라이스 통합",
+      "kind": "godot_prototype",
+      "priority": 55,
+      "dependencies": [
+        "MECH-001",
+        "MEDIA-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/"
+      ],
+      "required_files": [
+        "projects/first-game/game/docs/SLICE_QA.md",
+        "projects/first-game/game/tests/slice_acceptance.gd"
+      ],
+      "min_file_chars": 250,
+      "protected_files": [
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/docs/VALIDATION.json"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 1,
+      "instructions": "기존 PROTO-001/002 및 ITER-001/002에서 검증된 조작·퍼즐·기본 상태 의미를 유지하라. 기존 보호 파일은 수정 금지. 하네스·AGENTS.md·Git 기록·다른 프로젝트 접근 금지. 유료 서비스/API 호출, 무단 다운로드, 네트워크, 네이티브 코드, GDExtension, OS.execute/OS.create_process, 외부 파일 제거 금지. 자체 테스트를 독립 QA나 사람 플레이테스트로 포장하지 말라. 코드/문서 산출물과 실제 측정·미검증 항목을 분리하고 한국어로 기록하라. 승인된 MECH 퍼즐 6개와 MEDIA 시청각 시범 자산을 유지·통합하고, 타이틀→학습→응용→완료까지 하나의 플레이 흐름을 완성한다. UI/UX 원칙은 PRODUCT-001의 설계 명세를 참고하되 핵심 조작/게임 규칙은 무단 변경하지 않는다. 시작/설정/도움말/저장·복원/재시작/완료 화면과 키보드·마우스, 폰트 가독성·색 외 기호·720p/1080p 대응을 점검한다. tests/slice_acceptance.gd는 SceneTree로 가능한 자동 시나리오를 수행하고 오류 시 nonzero 종료; 독립 QA 외 추가 검사이므로 커맨드와 실제 결과를 SLICE_QA.md에 기록한다. Windows export templates가 없으면 설치를 시도하지 않고 빌드 미검증과 필요한 다음 단계를 기록; 성공했을 때만 Windows 빌드 확인이라고 표기한다. 사람의 스크린샷/오디오 청취/실제 플레이 검사·상품성 판단은 미검증으로 둔다."
+    },
+    {
+      "id": "DECIDE-001",
+      "title": "C01 7일 실험 종료 평가서 및 사람 결정 관문",
+      "kind": "planning_review",
+      "priority": 50,
+      "dependencies": [
+        "SLICE-001",
+        "MARKET-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/product/"
+      ],
+      "required_files": [
+        "projects/first-game/product/c01_go_no_go_review.md"
+      ],
+      "min_file_chars": 900,
+      "instructions": "이전 작업에서 검증된 객관적 증거와 미검증 내용을 분리한 C01 7일 실험 결과를 작성하라. 6개 퍼즐 해답/최소수/undo 1000 입력열/회전/저장/입력·Godot QA, 시각 캡처/사운드 확인, 자산 권리, 작업시간, Steam 경쟁·분량·가격자료를 정리한다. 신규 플레이어 8명 관찰이 실제 수행되지 않았다면 미수행·미검증으로 남기고 성과를 만들지 않는다. 초안에는 GO/REVISE/STOP의 조건과 추가 실험 항목을 제안하되 반드시 최종 결정을 PENDING_HUMAN_APPROVAL로 기록하라. 게임 선정·상점 게시·결제·외부 자산 라이선스 승인·자동 Git 승인 금지. 이 작업 결과물은 판매 가능 인증서가 아니라 검토 자료다."
     }
   ]
 }
