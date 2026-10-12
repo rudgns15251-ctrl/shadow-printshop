@@ -88,6 +88,32 @@
       "min_file_chars": 80,
       "godot_validation": true,
       "instructions": "Build a SMALL playable Godot 4.x 2D technical prototype, NOT a release game. The experimental idea is C01 '음영 인쇄소' from projects/first-game/design/independent_concepts.md and the assessment in projects/first-game/research/market_assessment.md. Use their core game mechanics only, not previous projects or external personal context. Create a full minimal Godot project in projects/first-game/game with project.godot, main.tscn, scripts/game_state.gd, tests/smoke_test.gd, docs/PROTOTYPE_NOTES.md. Build simple, understandable board manipulation: binary cells and XOR-flip masks; a rotation choice; visible before/after preview; undo, reset, progression through 2 handcrafted puzzles; mouse/keyboard input with instructions. Maintain state independent from UI and use deterministic turn logic. Unit-test script must extend SceneTree, exercise transitions and undo/reset/rotation/goal logic and exit via quit(0) only after all tests pass, print HARNESS_SMOKE_PASS only on success, quit(1) on failures. Provide scenario input sequences and honest limitations and manual play instructions in Korean docs. Use only Godot built-in nodes/fonts/flat shapes; do not install plugins, native libraries or download assets. No OS.execute, OS.create_process, native DLL/GDExtension, network, file delete, external file read/write or shell. Do not modify files outside projects/first-game/game/. Do not change acceptance criteria, AGENTS.md or tests outside allowed path. Never claim playtesting or saleability. Codex-generated tests are not independent validation; user must play and review."
+    },
+    {
+      "id": "PROTO-002",
+      "title": "Strengthen Godot prototype regression scenarios with bounded self-repair",
+      "kind": "godot_prototype",
+      "priority": 40,
+      "dependencies": [
+        "PROTO-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/"
+      ],
+      "required_files": [
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/docs/QA_REGRESSION.md"
+      ],
+      "min_file_chars": 100,
+      "protected_files": [
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/docs/VALIDATION.json"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 2,
+      "instructions": "Modify ONLY projects/first-game/game/ in this existing Godot C01 technical prototype. User manually confirmed: select stamps, rotate, print, undo, reset, solve puzzle, advance to next puzzle all work. Do not change gameplay rules, visuals, controls, expected behavior, or levels unless an independently observed defect is found. Do not change existing tests/smoke_test.gd or docs/VALIDATION.json; they are protected. Add tests/regression_test.gd extending SceneTree with real tests of underlying game_state transitions, selection/rotation/XOR/undo/reset/goal and two puzzles, and explicit error exit code. Output HARNESS_REGRESSION_PASS ONLY AFTER assertions actually pass. Write docs/QA_REGRESSION.md in Korean, specify exact covered scenarios, any unknown coverage, and manual UI verification that tests cannot replace. No invented playtesting or sales claims. No Git commits, plugins, network, destructive OS operations or changing global harness tests. The harness independently stages and runs its own qa/scene_probe.gd. If tests fail, fix the game implementation within allowed scope; never weaken tests to get a pass."
     }
   ]
 }

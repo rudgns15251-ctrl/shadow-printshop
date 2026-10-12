@@ -6,6 +6,7 @@ External Codex authentication, sandbox support, and Windows Git must be validate
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import datetime as dt
 import json
 import re
@@ -16,6 +17,7 @@ import sys
 from pathlib import Path
 
 import engine_adapter
+import qa_gate
 
 from research_validation import validate_research
 
@@ -65,12 +67,16 @@ def is_allowed(name, prefixes):
     return any(rel.startswith(prefix.rstrip("/") + "/") for prefix in prefixes)
 
 
+@contextmanager
 def db():
     DATA.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DATA)
-    conn.execute("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, workspace TEXT, last_note TEXT, updated TEXT)")
-    conn.commit()
-    return conn
+    try:
+        with conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, workspace TEXT, last_note TEXT, updated TEXT)")
+            yield conn
+    finally:
+        conn.close()
 
 
 def initialize():
@@ -139,6 +145,8 @@ def validate_workspace(worktree, task):
     if not paths:
         return False, "Codex did not change any files."
     for rel in paths:
+        if rel in task.get('protected_files', []):
+            return False, f'Protected file changed: {rel}'
         if not is_allowed(rel, task["allowed_prefixes"]):
             return False, f"Out-of-scope file changed: {rel}"
         path = worktree / rel
@@ -179,6 +187,26 @@ def codex_command_for_task(task, workspace):
     search = ['--search'] if task.get('web_search') else []
     return ['codex', *search, 'exec', '--sandbox', 'workspace-write',
             '-C', str(workspace), '--json', '-']
+
+
+def can_auto_fix(note, task):
+    """Retry only errors a game code change may repair; never retry policy violations."""
+    if task.get('kind') != 'godot_prototype':
+        return False
+    forbidden = ('Out-of-scope', 'Symlink', 'Unexpected Git commit',
+                 'Required file too short', 'Git did not', 'Native executable',
+                 'Source preflight', 'Blocked potentially destructive',
+                 'not configured', 'not found', 'outside workspace',
+                 'protected file', 'Required file missing:')
+    if any(x.lower() in note.lower() for x in forbidden):
+        return False
+    return note.startswith(('Godot ', 'Harness QA ', 'Execution or validation failed:'))
+
+
+def check_qa_gate(workspace, task, passed, note):
+    if passed and task.get('qa_validation'):
+        return qa_gate.validate(workspace, task)
+    return passed, note
 
 
 def check_godot_gate(workspace, task, passed, note):
@@ -222,19 +250,37 @@ def execute(task_id, live):
         conn.execute("UPDATE tasks SET status='running', workspace=?, attempts=attempts+1, updated=? WHERE id=?", (str(workspace), stamp(), task_id))
     log_path = LOGS / f"{task_id}.jsonl.log"
     try:
-        prompt = build_prompt(task)
-        cmd = codex_command_for_task(task, workspace)
-        result = run_command(cmd, cwd=workspace, stdin=prompt, timeout=900)
-        log_path.write_text(result.stdout, encoding="utf-8")
-        if result.returncode:
-            note = f"Codex exited with code {result.returncode}. See {log_path.relative_to(ROOT)}"
-            final = "blocked"
-        else:
+        max_fixes = max(0, min(int(task.get('auto_fix_limit', 0)), 2))
+        feedback = ''
+        attempt_logs = []
+        final = 'blocked'
+        for fix_attempt in range(max_fixes + 1):
+            prompt = build_prompt(task, feedback)
+            cmd = codex_command_for_task(task, workspace)
+            result = run_command(cmd, cwd=workspace, stdin=prompt, timeout=900)
+            attempt_logs.append(f'\n=== Codex attempt {fix_attempt + 1} exit={result.returncode} ===\n' + result.stdout)
+            log_path.write_text('\n'.join(attempt_logs), encoding='utf-8')
+            if result.returncode:
+                note = f"Codex exited with code {result.returncode}. See {log_path.relative_to(ROOT)}"
+                break
             passed, note = validate_workspace(workspace, task)
-            if passed and task.get("research_validation"):
+            if passed and task.get('research_validation'):
                 passed, note = validate_research(workspace, task, result.stdout)
             passed, note = check_godot_gate(workspace, task, passed, note)
-            final = "review" if passed else "blocked"
+            passed, note = check_qa_gate(workspace, task, passed, note)
+            if passed:
+                final = 'review'
+                break
+            if fix_attempt >= max_fixes or not can_auto_fix(note, task):
+                break
+            # Feedback is bounded and scoped; don't trust self-reported agent tests.
+            detail = ''
+            for report in (ROOT / 'logs' / 'godot' / f'{task_id}.log',
+                           ROOT / 'logs' / 'qa' / f'{task_id}.json'):
+                if report.is_file():
+                    detail += '\n' + report.read_text(encoding='utf-8', errors='replace')[-3000:]
+            feedback = (f'Independent validation failed: {note}.\n' + detail)[-6500:]
+            print(f'AUTO_FIX {task_id}: repair attempt {fix_attempt + 1}/{max_fixes} after: {note}', flush=True)
     except subprocess.TimeoutExpired:
         final = "blocked"
         note = "Codex timed out after 900 seconds. Investigate workspace before retrying."
@@ -289,6 +335,7 @@ def approve(task_id):
             raise RuntimeError("Research evidence log missing; cannot approve")
         valid, note = validate_research(ws, task, audit_log.read_text(encoding="utf-8"))
     valid, note = check_godot_gate(ws, task, valid, note)
+    valid, note = check_qa_gate(ws, task, valid, note)
     if not valid:
         raise RuntimeError(note)
     changed = changed_paths(ws)
