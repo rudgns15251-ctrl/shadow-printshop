@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-12",
+  "kind": "Node filesystem/source and puzzle-data audit; NOT GDScript execution",
+  "source_audit_checks": 49,
+  "checks": [
+    "Nonempty source: project.godot",
+    "Regular file: project.godot",
+    "Resource exists: main.tscn",
+    "Nonempty source: main.tscn",
+    "Regular file: main.tscn",
+    "Resource exists: scripts/main.gd",
+    "Nonempty source: scripts/game_state.gd",
+    "Regular file: scripts/game_state.gd",
+    "No prohibited API/resource pattern: scripts/game_state.gd",
+    "Nonempty source: scripts/main.gd",
+    "Regular file: scripts/main.gd",
+    "Resource exists: scripts/game_state.gd",
+    "Resource exists: scripts/board_view.gd",
+    "No prohibited API/resource pattern: scripts/main.gd",
+    "Nonempty source: scripts/board_view.gd",
+    "Regular file: scripts/board_view.gd",
+    "No prohibited API/resource pattern: scripts/board_view.gd",
+    "Nonempty source: tests/smoke_test.gd",
+    "Regular file: tests/smoke_test.gd",
+    "Resource exists: scripts/game_state.gd",
+    "Resource exists: main.tscn",
+    "No prohibited API/resource pattern: tests/smoke_test.gd",
+    "Exactly two masks and two handcrafted puzzles",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Binary 3x3 data for puzzle 1",
+    "Offline exhaustive shortest path = 2 for puzzle 1",
+    "Documented two-print witness reaches puzzle 1",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Binary 3x3 data for puzzle 2",
+    "Offline exhaustive shortest path = 2 for puzzle 2",
+    "Documented two-print witness reaches puzzle 2",
+    "Smoke script extends SceneTree",
+    "Success marker and exit follow failure branch (static inspection only)"
+  ],
+  "offline_puzzle_results": [
+    {
+      "puzzle": 1,
+      "minimum_prints": 2,
+      "reachable_board_states": 256,
+      "mask_rotation_indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "puzzle": 2,
+      "minimum_prints": 2,
+      "reachable_board_states": 256,
+      "mask_rotation_indices": [
+        2,
+        5
+      ]
+    }
+  ],
+  "engine_attempts": [
+    {
+      "name": "godot",
+      "error_code": "ENOENT",
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "godot4",
+      "error_code": "ENOENT",
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "engine_runtime_validation": "NOT RUN: engine unavailable on PATH, GODOT_BIN unset, no workspace engine configuration or executable found",
+  "human_playtest": "NOT PERFORMED",
+  "independent_validation": "NOT PERFORMED",
+  "final_scope_check": {
+    "changed_files": [
+      "projects/first-game/game/docs/PROTOTYPE_NOTES.md",
+      "projects/first-game/game/docs/VALIDATION.json",
+      "projects/first-game/game/main.tscn",
+      "projects/first-game/game/project.godot",
+      "projects/first-game/game/scripts/board_view.gd",
+      "projects/first-game/game/scripts/game_state.gd",
+      "projects/first-game/game/scripts/main.gd",
+      "projects/first-game/game/tests/smoke_test.gd"
+    ],
+    "all_changes_inside_allowed_path": true,
+    "all_five_acceptance_files_present": true,
+    "commits_created": false
+  }
+}
