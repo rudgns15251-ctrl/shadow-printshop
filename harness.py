@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from research_validation import validate_research
+
 ROOT = Path(__file__).resolve().parent
 TASKS = ROOT / "tasks" / "backlog.json"
 DATA = ROOT / ".data" / "state.sqlite3"
@@ -167,6 +169,13 @@ PREVIOUS VALIDATION FAILURE (if any): {feedback or 'none'}
 """
 
 
+def codex_command_for_task(task, workspace):
+    """Enable live Codex search only for explicitly marked research tasks."""
+    search = ['--search'] if task.get('web_search') else []
+    return ['codex', *search, 'exec', '--sandbox', 'workspace-write',
+            '-C', str(workspace), '--json', '-']
+
+
 def execute(task_id, live):
     initialize()
     tasks = {t["id"]: t for t in read_tasks()}
@@ -201,7 +210,7 @@ def execute(task_id, live):
     log_path = LOGS / f"{task_id}.jsonl.log"
     try:
         prompt = build_prompt(task)
-        cmd = ["codex", "exec", "--sandbox", "workspace-write", "-C", str(workspace), "--json", "-"]
+        cmd = codex_command_for_task(task, workspace)
         result = run_command(cmd, cwd=workspace, stdin=prompt, timeout=900)
         log_path.write_text(result.stdout, encoding="utf-8")
         if result.returncode:
@@ -209,6 +218,8 @@ def execute(task_id, live):
             final = "blocked"
         else:
             passed, note = validate_workspace(workspace, task)
+            if passed and task.get("research_validation"):
+                passed, note = validate_research(workspace, task, result.stdout)
             final = "review" if passed else "blocked"
     except subprocess.TimeoutExpired:
         final = "blocked"
@@ -258,6 +269,11 @@ def approve(task_id):
     if git("status", "--porcelain").stdout.strip():
         raise RuntimeError("Main repository has uncommitted changes. Commit or clean them first.")
     valid, note = validate_workspace(ws, task)
+    if valid and task.get("research_validation"):
+        audit_log = LOGS / f"{task_id}.jsonl.log"
+        if not audit_log.is_file():
+            raise RuntimeError("Research evidence log missing; cannot approve")
+        valid, note = validate_research(ws, task, audit_log.read_text(encoding="utf-8"))
     if not valid:
         raise RuntimeError(note)
     changed = changed_paths(ws)

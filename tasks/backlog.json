@@ -29,6 +29,43 @@
       ],
       "instructions": "Write projects/first-game/design/independent_concepts.md IN KOREAN. This is a FRESH game concept exploration. Do not read, quote or reuse projects/first-game/design/concepts.md, any prior project designs, ChatGPT conversations, Codex conversations, or files outside this repository. Use ONLY these requirements: Windows PC single-player, paid Steam release as a goal, target production up to 12 weeks, no AAA/large-scale/high-fidelity production burden; budget is flexible but flag any anticipated spending and do not make purchases. Create TEN genuinely distinct, implementable game concepts across AT LEAST SEVEN genres, with no genre or theme favored in advance. For each: provide a short hook, target player, moment-to-moment core loop, up to 3 key mechanics, proposed 2D/3D and engine, minimum saleable scope as a hypothesis, concrete prototype for one week, technical and content risks, automatic tests and human-playtest acceptance metrics, and a plausible 12-week scope adjustment. Clearly label all estimates as guesses. Then shortlist THREE concepts using stated criteria including player appeal hypotheses, originality risks, production feasibility, testability, and marketing clarity. Do not treat a numerical score as evidence of sales or fun. Provide an explicit MARKET-RESEARCH-TO-DO checklist for Steam competitors, recent reviews, discoverability, pricing, and target audience; say RESEARCH NOT DONE if no reliable sources were inspected. Do not fabricate evidence, sources, or sales stats. Do not lock in or begin development of any game and do not modify files outside the allowed path.",
       "min_file_chars": 3500
+    },
+    {
+      "id": "RESEARCH-001",
+      "title": "Investigate Steam competitors for three independent game concepts",
+      "kind": "market_research",
+      "priority": 30,
+      "dependencies": [
+        "PLAN-002"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/research/"
+      ],
+      "required_files": [
+        "projects/first-game/research/steam_competitors.json",
+        "projects/first-game/research/steam_market_report.md"
+      ],
+      "min_file_chars": 400,
+      "web_search": true,
+      "research_validation": true,
+      "instructions": "한국어로 실제 Steam 경쟁작 시장 조사를 수행하라. 현재 저장소에 승인되어 있는 projects/first-game/design/independent_concepts.md에서 C01 음영 인쇄소, C04 순회 극단, C08 부표 슬라럼의 핵심 메커니즘만 읽어라. 이전 PLAN-001 또는 개인 기록은 읽지 마라. Codex web_search를 반드시 사용하고 가능하면 실제 Steam 상점 페이지 내용을 확인하라. 공식 Steam 페이지 URL을 근거로 각 후보별 비교작 3~5개를 찾는다. 웹 검색으로 충분히 확인하지 못하면 허위 링크를 만들지 말고 후보의 evidence_status를 insufficient_evidence로 두고 evidence_gaps를 구체적으로 작성하라. projects/first-game/research/steam_competitors.json을 UTF-8의 다음 JSON 구조로 작성하라: {\"source_policy\":\"steam_links_are_leads_not_verified_sales\",\"research_date\":\"YYYY-MM-DD\",\"candidates\":[{\"id\":\"C01\",\"evidence_status\":\"enough_links_for_manual_review 또는 insufficient_evidence\",\"comparables\":[{\"app_id\":정수,\"url\":\"https://store.steampowered.com/app/숫자/\",\"title\":\"게임 제목\",\"overlap\":\"기획과 겹치는 핵심 기능\",\"evidence_note\":\"출처에서 실제 확인한 설명 또는 검색 결과의 한계\",\"claim_status\":\"observed_in_search 또는 unconfirmed\"}],\"evidence_gaps\":[\"확인하지 못한 사항\"]}, C04와 C08 객체]}. 각 후보별 비교작이 3개 미만이면 반드시 insufficient_evidence와 non-empty evidence_gaps를 사용하라. URL, app_id, 타이틀을 추측해서 만들지 마라. projects/first-game/research/steam_market_report.md에는 후보별 검증된 근거와 추정, 게임 간 실제 규칙 중복, 차별점 가설, 출시 분량·가격 조사에서 빠진 근거, 검색 시각, 어떤 자료를 직접 열람했는지/검색 결과만 보았는지, 사용자 검토가 필요한 사항을 적어라. 각각의 핵심 주장마다 URL을 붙여라. 현재 가격·리뷰·판매·매출은 확인하지 못하면 확인 불가로 표시한다. 리뷰 수를 판매량으로 환산하거나 성공 확률을 만들어내지 말라. Steam 앱 상세·리뷰의 접근 및 이용 가능 조건을 준수하고 자동 대량 수집하지 마라. 이번 작업은 조사 문서 2개 외의 수정, 코드 제작, 구매, 외부 공개를 금지한다."
+    },
+    {
+      "id": "ASSESS-001",
+      "title": "Independently assess commercial risks and next prototype experiments",
+      "kind": "planning_review",
+      "priority": 25,
+      "dependencies": [
+        "RESEARCH-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/research/"
+      ],
+      "required_files": [
+        "projects/first-game/research/market_assessment.md"
+      ],
+      "min_file_chars": 1800,
+      "instructions": "한국어로 시장 조사 독립 평가 보고서를 작성하라. projects/first-game/design/independent_concepts.md와 projects/first-game/research/steam_competitors.json, projects/first-game/research/steam_market_report.md만 기획·시장 판단의 입력으로 사용하라. 기존 PLAN-001이나 외부 개인 폴더를 열지 마라. 세 후보 C01,C04,C08의 메커니즘 중복, 명확한 차별점, 범위·리스크·상품성 가설을 검토하고 각 주장에 해당 출처 URL 또는 미검증 표시를 남겨라. 관찰 사실과 모델 판단을 분리하고, insufficient_evidence 후보는 정량 점수로 보완하지 마라. 한 후보를 선택해야 한다면 잠정 실험 후보로만 제시하고 다른 후보와의 1주 프로토타입 검증 계획, 실패 및 중단 기준, 새 데이터 필요 항목을 작성하라. 시장 조사 자료가 부족하면 추가 조사 요구로 판단을 보류하라. 파일 projects/first-game/research/market_assessment.md만 만들고 최종 게임 확정, 실제 개발, 구매, 게시 및 출시를 수행하지 마라."
     }
   ]
 }
