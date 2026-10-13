@@ -61,12 +61,12 @@ func minimum(row: Dictionary) -> Array:
 	return [distances.get(packed(row["target"]), -1), queue.size()]
 
 func _run() -> void:
-	check(DATA.PUZZLES.size(), 6, "six puzzles")
+	check(DATA.PUZZLES.size(), 8, "eight puzzles")
 	check(Original.PUZZLES.size(), 2, "original count preserved")
 	for i in range(2):
 		for field in ["title", "start", "target"]:
 			check(DATA.PUZZLES[i][field], Original.PUZZLES[i][field], "original fixture preserved")
-	for index in range(6):
+	for index in range(8):
 		var row: Dictionary = DATA.PUZZLES[index]
 		var state = at(index)
 		var initial: Dictionary = state.snapshot()
@@ -94,7 +94,7 @@ func _run() -> void:
 				break
 		state.reset()
 		solve(state, row)
-		check(state.can_advance(), index < 5, "last boundary")
+		check(state.can_advance(), index < 7, "last boundary")
 		state.reset()
 		# 1000 deterministic length-12 input sequences per board, no RNG.
 		# First print uses default selection so complete undo restores full initial snapshot.
@@ -126,6 +126,6 @@ func _run() -> void:
 			check(state.undo(), false, "empty undo")
 			state.reset()
 			sequences += 1
-	check(sequences, 6000, "all sequence cases finished")
+	check(sequences, 8000, "all sequence cases finished")
 	print("MECH checks=%d sequences=%d failures=%d" % [checks, sequences, failures])
 	quit(1 if failures else 0)

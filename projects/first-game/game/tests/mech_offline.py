@@ -10,11 +10,18 @@ def packed(board):
     assert len(board) == 9 and all(v in (0, 1) for v in board)
     return sum(v << i for i, v in enumerate(board))
 assert json.loads((ROOT / "data/mech_data.gd").read_text().split("const PUZZLES := ", 1)[1]) == ROWS
-assert len(ROWS) == 6
+assert len(ROWS) == 8
 assert ROWS[0]['start'] == [0]*9
 assert ROWS[0]['target'] == [1,0,1,1,0,1,0,0,0]
 assert ROWS[1]['start'] == [0,1,0,1,0,0,0,0,1]
 assert ROWS[1]['target'] == [0,1,1,1,0,0,0,1,1]
+assert ROWS[6]['allowed_masks'] == [0]
+assert ROWS[6]['target'] == [0]*9
+assert ROWS[6]['solution'] == [0, 1, 2, 3]
+assert ROWS[7]['allowed_masks'] == [0, 1]
+assert ROWS[7]['minimum_prints'] == 5
+assert len({(tuple(r['start']), tuple(r['target']), tuple(r['allowed_masks'])) for r in ROWS}) == 8
+assert len({packed(r['start']) ^ packed(r['target']) for r in ROWS}) == 8
 for row in ROWS:
     start, target = packed(row['start']), packed(row['target'])
     allowed = [s*4+r for s in row['allowed_masks'] for r in range(4)]
@@ -53,4 +60,4 @@ for row in ROWS:
         seen.add(tuple(sequence))
     assert len(seen) == 1000
     print(row['id'], 'minimum', distances[target], 'reachable', len(distances), 'unique undo cases', len(seen))
-print('PASS offline cases 6000 (Python reference only)')
+print('PASS offline cases 8000 (Python reference only)')

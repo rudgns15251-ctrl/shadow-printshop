@@ -1,5 +1,5 @@
 extends Control
-## C01 six-puzzle playable slice. Legacy scenes/tests remain unchanged.
+## C01 eight-puzzle playable slice. Legacy scenes/tests remain unchanged.
 const State = preload("res://scripts/slice_state.gd")
 const Board = preload("res://scripts/slice_board.gd")
 const SAVE_PATH := "user://c01_progress_v1.json"
@@ -37,7 +37,7 @@ var dialog_back: Callable
 var audio: Dictionary = {}
 var animation: Tween
 var text_controls: Array = []
-var hint_levels: Array = [0, 0, 0, 0, 0, 0]
+var hint_levels: Array = [0, 0, 0, 0, 0, 0, 0, 0]
 var settings: Dictionary = {"master": 0.8, "sfx": 0.7, "bgm": 0.3, "mute": false, "font_scale": 1.0, "reduce_motion": false}
 var autosave_enabled := true
 var game_active := false
@@ -53,14 +53,29 @@ func _ready() -> void:
 	_refresh()
 	_open_start()
 
-func _exit_tree() -> void:
-	# Release an unfinished stamp reaction when the UI is freed or the game exits.
+func _finish_reaction() -> void:
 	if animation != null:
-		# Finish both property tweeners while their target still exists,
-		# even when shutdown happens before another animation tick.
-		animation.custom_step(0.20)
-		animation.kill()
+		# Drain tweeners before cancellation, including rapid consecutive inputs.
+		if animation.is_valid():
+			animation.custom_step(0.20)
+			animation.kill()
 		animation = null
+
+func _clear_impression() -> void:
+	if before_view == null:
+		return
+	var tween: Tween = before_view.impression_tween
+	if tween != null and tween.is_valid():
+		# Complete the property tweener and its cleanup callback while the board exists.
+		tween.custom_step(0.32)
+	before_view.clear_impression()
+
+func _exit_tree() -> void:
+	_finish_reaction()
+	_clear_impression()
+	for player in audio.values():
+		player.stop()
+		player.stream = null
 
 func _panel_style(color: Color, radius: int = 10) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -319,8 +334,7 @@ func _play_sound(key: String) -> void:
 
 func _react(kind: String = "print") -> void:
 	reaction_label.text = {"print": "● 인쇄 완료", "undo": "↶ 되돌림 완료", "solve": "✓ 목표 일치"}[kind]
-	if animation != null:
-		animation.kill()
+	_finish_reaction()
 	stamp_view.scale = Vector2.ONE
 	stamp_view.modulate = Color.WHITE
 	if bool(settings["reduce_motion"]):
@@ -333,7 +347,7 @@ func _react(kind: String = "print") -> void:
 	animation.tween_property(stamp_view, "modulate", Color.WHITE, 0.20)
 
 func _refresh() -> void:
-	before_view.clear_impression()
+	_clear_impression()
 	var data: Dictionary = state.snapshot()
 	var idx: int = data["puzzle"]
 	heading.text = "퍼즐 %d / %d     ·     %s" % [idx + 1, state.puzzle_count(), data["title"]]
@@ -358,7 +372,7 @@ func _refresh() -> void:
 	hint_label.text = "힌트 %d / 3단계 사용" % hint_levels[idx] if hint_levels[idx] > 0 else "힌트 사용 전"
 	feedback.add_theme_color_override("font_color", GREEN if data["solved"] else INK)
 	if data["solved"]:
-		feedback.text = "✓ 목표 일치! N 또는 '다음 퍼즐'로 진행하세요. U / Z로 완료를 되돌릴 수 있습니다." if state.can_advance() else "✓ 6개 퍼즐을 모두 해결했습니다! 메뉴에서 다시 시작할 수 있습니다."
+		feedback.text = "✓ 목표 일치! N 또는 '다음 퍼즐'로 진행하세요. U / Z로 완료를 되돌릴 수 있습니다." if state.can_advance() else "✓ 8개 퍼즐을 모두 해결했습니다! 메뉴에서 다시 시작할 수 있습니다."
 	elif idx == 0 and data["moves"] == 0:
 		feedback.text = "도장 선택(1/2) → 회전(Q/E) → AFTER(예상) 확인 → PRINT(인쇄·SPACE)."
 	elif idx == 0:
@@ -515,7 +529,7 @@ func _dialog_action(command: Callable) -> void:
 func _open_start() -> void:
 	game_active = false
 	var found: bool = _has_valid_save()
-	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요.\n6개 퍼즐과 간단한 사운드·저장 기능을 시험할 수 있습니다.", [
+	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요.\n8개 퍼즐과 간단한 사운드·저장 기능을 시험할 수 있습니다.", [
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
 		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start")},
 		{"label": "도움말", "call": Callable(self, "_open_help")},
@@ -534,7 +548,7 @@ func _ask_new_game() -> void:
 
 func _new_game() -> void:
 	state = State.new()
-	hint_levels = [0, 0, 0, 0, 0, 0]
+	hint_levels = [0, 0, 0, 0, 0, 0, 0, 0]
 	game_active = true
 	_autosave()
 	_refresh()
@@ -619,9 +633,8 @@ func _settings_close() -> void:
 func _setting_value_changed(value: Variant, key: String) -> void:
 	settings[key] = value
 	if key == "reduce_motion" and bool(value):
-		before_view.clear_impression()
-		if animation != null:
-			animation.kill()
+		_clear_impression()
+		_finish_reaction()
 		stamp_view.scale = Vector2.ONE
 		stamp_view.modulate = Color.WHITE
 	_update_audio()
@@ -735,7 +748,7 @@ func _serialize_progress() -> Dictionary:
 func _valid_progress(data: Variant) -> bool:
 	if not data is Dictionary or not data.has("hints") or not data["hints"] is Array:
 		return false
-	if data["hints"].size() != 6:
+	if data["hints"].size() != state.puzzle_count() and not (data["hints"].size() == 6 and State._whole(data.get("puzzle"), 0, 5)):
 		return false
 	for value in data["hints"]:
 		if not ((typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and value == floorf(float(value)) and value >= 0 and value <= 3):
@@ -798,6 +811,8 @@ func _load_progress() -> bool:
 	hint_levels = []
 	for level in data["hints"]:
 		hint_levels.append(int(level))
+	while hint_levels.size() < state.puzzle_count():
+		hint_levels.append(0)
 	return true
 
 func _save_settings() -> void:

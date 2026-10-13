@@ -1,5 +1,5 @@
 extends "res://scripts/mech_state.gd"
-## Six-puzzle state with verified, lossless undo history persistence.
+## Eight-puzzle state with verified, lossless undo history persistence.
 const SCHEMA_VERSION := 1
 const PUZZLE_SET_VERSION := 1
 

@@ -235,5 +235,87 @@ const PUZZLES := [
     "print_limit": null,
     "rotation_limit": null,
     "order_required": false
+  },
+  {
+    "id": "C01-07",
+    "title": "Four elbows, empty paper",
+    "start": [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+    ],
+    "target": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "allowed_masks": [
+      0
+    ],
+    "solution": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "minimum_prints": 4,
+    "reachable_states": 16,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  },
+  {
+    "id": "C01-08",
+    "title": "Five-print finale",
+    "start": [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    "target": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "allowed_masks": [
+      0,
+      1
+    ],
+    "solution": [
+      0,
+      1,
+      2,
+      4,
+      6
+    ],
+    "minimum_prints": 5,
+    "reachable_states": 256,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
   }
 ]
