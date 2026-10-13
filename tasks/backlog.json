@@ -355,6 +355,42 @@
       "require_regression": true,
       "auto_fix_limit": 2,
       "instructions": "Improve actual visual hierarchy and readability in projects/first-game/game/scripts/slice_main.gd only. Improve menu, puzzle information, button appearance, focus/hover/disabled text contrast and layout readability. Preserve all six puzzles, controls, saves, audio and mechanics. Do not change tests, assets, other scripts, scenes, project settings or harness code. Create projects/first-game/game/docs/UI-001_NOTES.md describing exact changes, validation and limitations. Maintain usability at 1280x720 and 1920x1080. Never claim human visual approval. No Git commits."
+    },
+    {
+      "id": "ART-001",
+      "title": "Implement C01 printshop art and responsive visual feedback",
+      "kind": "godot_prototype",
+      "priority": 1500,
+      "dependencies": [
+        "PRODUCT-001",
+        "MECH-001",
+        "MEDIA-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/scripts/",
+        "projects/first-game/game/assets/art/",
+        "projects/first-game/game/docs/"
+      ],
+      "required_files": [
+        "projects/first-game/game/docs/ART-001_NOTES.md"
+      ],
+      "min_file_chars": 300,
+      "protected_files": [
+        "projects/first-game/game/scripts/game_state.gd",
+        "projects/first-game/game/scripts/mech_state.gd",
+        "projects/first-game/game/scripts/slice_state.gd",
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/tests/slice_acceptance.gd",
+        "projects/first-game/game/project.godot",
+        "projects/first-game/game/data/mech_puzzles.json",
+        "projects/first-game/game/data/mech_data.gd"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 2,
+      "instructions": "Produce ACTUAL integrated Godot art for the existing C01 six-puzzle game, NOT a plan-only report. Make the paper/woodblock/ink printshop theme cohesive and legible, in actual default game scene. Create at least one original procedural SVG texture or decoration under assets/art/ and integrate it visibly; improve puzzle-board framing, distinguish BEFORE/AFTER/TARGET and the stamp preview, add restrained visual feedback for successful print/undo/solve, and preserve contrast and text labels. Modify ONLY scripts/slice_main.gd, scripts/slice_board.gd, assets/art/* and docs/ART-001_NOTES.md. Do not change game rules, six puzzles, save/restore, audio behavior, existing tests, scenes, Godot project settings, harness, permissions, or other scripts. Keep focus, disabled, hover states readable and respect reduced motion. Fit 1280x720 and 1920x1080; do not hide content behind controls. No external art downloads, font downloads, purchases, or network requests; create original visual files only. Preserve prior user:// relative save APIs; do not call DirAccess.remove_absolute or rename_absolute. Validate with Godot import, smoke and regression as available. Record actual outputs and limitations in docs/ART-001_NOTES.md; do not claim human visual approval or Steam readiness. Do not make Git commits."
     }
   ]
 }
