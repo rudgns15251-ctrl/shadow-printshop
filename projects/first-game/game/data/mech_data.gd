@@ -1,0 +1,239 @@
+extends RefCounted
+## JSON mirror; verified by tests/mech_offline.py.
+const PUZZLES := [
+  {
+    "id": "C01-01",
+    "title": "Two elbows",
+    "start": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "target": [
+      1,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    "allowed_masks": [
+      0,
+      1
+    ],
+    "solution": [
+      0,
+      1
+    ],
+    "minimum_prints": 2,
+    "reachable_states": 256,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  },
+  {
+    "id": "C01-02",
+    "title": "Ink can disappear",
+    "start": [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "target": [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "allowed_masks": [
+      0,
+      1
+    ],
+    "solution": [
+      2,
+      5
+    ],
+    "minimum_prints": 2,
+    "reachable_states": 256,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  },
+  {
+    "id": "C01-03",
+    "title": "One edge",
+    "start": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "target": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "allowed_masks": [
+      1
+    ],
+    "solution": [
+      4
+    ],
+    "minimum_prints": 1,
+    "reachable_states": 16,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  },
+  {
+    "id": "C01-04",
+    "title": "Three edges",
+    "start": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "target": [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "allowed_masks": [
+      1
+    ],
+    "solution": [
+      4,
+      5,
+      6
+    ],
+    "minimum_prints": 3,
+    "reachable_states": 16,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  },
+  {
+    "id": "C01-05",
+    "title": "Mixed cancellation",
+    "start": [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+    ],
+    "target": [
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0
+    ],
+    "allowed_masks": [
+      0,
+      1
+    ],
+    "solution": [
+      0,
+      2,
+      4
+    ],
+    "minimum_prints": 3,
+    "reachable_states": 256,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  },
+  {
+    "id": "C01-06",
+    "title": "Four-print synthesis",
+    "start": [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    "target": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+    ],
+    "allowed_masks": [
+      0,
+      1
+    ],
+    "solution": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "minimum_prints": 4,
+    "reachable_states": 256,
+    "print_limit": null,
+    "rotation_limit": null,
+    "order_required": false
+  }
+]
