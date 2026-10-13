@@ -711,14 +711,22 @@ func _save_progress() -> bool:
 	var verify: Variant = JSON.parse_string(FileAccess.get_file_as_string(temporary))
 	if not _valid_progress(verify):
 		return false
+	# All save rotation operations stay inside Godot's user:// directory.
+	var save_dir := DirAccess.open("user://")
+	if save_dir == null:
+		return false
+	var save_name := SAVE_PATH.get_file()
+	var backup_name := SAVE_BACKUP.get_file()
+	var temporary_name := temporary.get_file()
 	if FileAccess.file_exists(SAVE_PATH):
 		if FileAccess.file_exists(SAVE_BACKUP):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_BACKUP))
-		if DirAccess.rename_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(SAVE_BACKUP)) != OK:
+			if save_dir.remove(backup_name) != OK:
+				return false
+		if save_dir.rename(save_name, backup_name) != OK:
 			return false
-	if DirAccess.rename_absolute(ProjectSettings.globalize_path(temporary), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
+	if save_dir.rename(temporary_name, save_name) != OK:
 		if FileAccess.file_exists(SAVE_BACKUP) and not FileAccess.file_exists(SAVE_PATH):
-			DirAccess.rename_absolute(ProjectSettings.globalize_path(SAVE_BACKUP), ProjectSettings.globalize_path(SAVE_PATH))
+			save_dir.rename(backup_name, save_name)
 		return false
 	return true
 
