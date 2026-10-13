@@ -324,6 +324,37 @@
       ],
       "min_file_chars": 900,
       "instructions": "이전 작업에서 검증된 객관적 증거와 미검증 내용을 분리한 C01 7일 실험 결과를 작성하라. 6개 퍼즐 해답/최소수/undo 1000 입력열/회전/저장/입력·Godot QA, 시각 캡처/사운드 확인, 자산 권리, 작업시간, Steam 경쟁·분량·가격자료를 정리한다. 신규 플레이어 8명 관찰이 실제 수행되지 않았다면 미수행·미검증으로 남기고 성과를 만들지 않는다. 초안에는 GO/REVISE/STOP의 조건과 추가 실험 항목을 제안하되 반드시 최종 결정을 PENDING_HUMAN_APPROVAL로 기록하라. 게임 선정·상점 게시·결제·외부 자산 라이선스 승인·자동 Git 승인 금지. 이 작업 결과물은 판매 가능 인증서가 아니라 검토 자료다."
+    },
+    {
+      "id": "UI-001",
+      "title": "Improve integrated C01 visual clarity",
+      "kind": "godot_prototype",
+      "priority": 1000,
+      "dependencies": [
+        "PRODUCT-001",
+        "MECH-001",
+        "MEDIA-001"
+      ],
+      "allowed_prefixes": [
+        "projects/first-game/game/scripts/",
+        "projects/first-game/game/docs/"
+      ],
+      "required_files": [
+        "projects/first-game/game/docs/UI-001_NOTES.md"
+      ],
+      "min_file_chars": 200,
+      "protected_files": [
+        "projects/first-game/game/scripts/game_state.gd",
+        "projects/first-game/game/scripts/mech_state.gd",
+        "projects/first-game/game/tests/smoke_test.gd",
+        "projects/first-game/game/tests/regression_test.gd",
+        "projects/first-game/game/tests/slice_acceptance.gd"
+      ],
+      "godot_validation": true,
+      "qa_validation": true,
+      "require_regression": true,
+      "auto_fix_limit": 2,
+      "instructions": "Improve actual visual hierarchy and readability in projects/first-game/game/scripts/slice_main.gd only. Improve menu, puzzle information, button appearance, focus/hover/disabled text contrast and layout readability. Preserve all six puzzles, controls, saves, audio and mechanics. Do not change tests, assets, other scripts, scenes, project settings or harness code. Create projects/first-game/game/docs/UI-001_NOTES.md describing exact changes, validation and limitations. Maintain usability at 1280x720 and 1920x1080. Never claim human visual approval. No Git commits."
     }
   ]
 }
