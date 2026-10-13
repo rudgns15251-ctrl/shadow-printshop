@@ -29,6 +29,8 @@ var stamp_buttons: Array[Button] = []
 var overlay: ColorRect
 var dialog: VBoxContainer
 var boards_grid: GridContainer
+var popup_panel: PanelContainer
+var popup_scroll: ScrollContainer
 var dialog_back: Callable
 var audio: Dictionary = {}
 var animation: Tween
@@ -90,9 +92,12 @@ func _button(parent: Node, caption: String, action: Callable, min_width: float =
 	item.add_theme_color_override("font_focus_color", INK)
 	item.add_theme_color_override("font_hover_color", INK)
 	item.add_theme_color_override("font_pressed_color", PAPER)
+	item.add_theme_color_override("font_disabled_color", Color("#62584c"))
+	item.add_theme_color_override("font_hover_pressed_color", PAPER)
 	item.add_theme_stylebox_override("normal", _panel_style(PAPER, 6))
 	item.add_theme_stylebox_override("hover", _panel_style(Color("#efe1cf"), 6))
 	item.add_theme_stylebox_override("pressed", _panel_style(ACCENT, 6))
+	item.add_theme_stylebox_override("disabled", _panel_style(Color("#ddd4c6"), 6))
 	item.add_theme_stylebox_override("focus", _focus_style())
 	item.add_theme_font_size_override("font_size", int(round(16 * float(settings["font_scale"]))))
 	item.set_meta("font_base", 16)
@@ -104,10 +109,24 @@ func _button(parent: Node, caption: String, action: Callable, min_width: float =
 func _focus_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color.TRANSPARENT
-	style.border_color = ACCENT
+	style.border_color = Color("#153f60")
 	style.set_border_width_all(3)
 	style.set_expand_margin_all(2)
 	return style
+
+func _primary_button(item: Button) -> void:
+	item.add_theme_stylebox_override("normal", _panel_style(ACCENT, 6))
+	item.add_theme_stylebox_override("hover", _panel_style(Color("#6f301c"), 6))
+	item.add_theme_color_override("font_color", PAPER)
+	item.add_theme_color_override("font_focus_color", PAPER)
+	item.add_theme_color_override("font_hover_color", PAPER)
+
+func _flow(parent: Node) -> HFlowContainer:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("v_separation", 8)
+	parent.add_child(flow)
+	return flow
 
 func _row(parent: Node, separation: int = 12) -> HBoxContainer:
 	var row := HBoxContainer.new()
@@ -122,6 +141,13 @@ func _column(parent: Node, separation: int = 10) -> VBoxContainer:
 	return col
 
 func _build_interface() -> void:
+	var ui_theme := Theme.new()
+	ui_theme.default_font_size = 18
+	for control_type in ["CheckBox", "HSlider"]:
+		for color_name in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color", "font_hover_pressed_color"]:
+			ui_theme.set_color(color_name, control_type, INK)
+		ui_theme.set_stylebox("focus", control_type, _focus_style())
+	theme = ui_theme
 	var background := ColorRect.new()
 	background.color = PAPER
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -148,10 +174,10 @@ func _build_interface() -> void:
 	layout.add_child(scroll)
 	var content := _column(scroll, 14)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var header := _row(content, 16)
+	var header := _column(content, 4)
 	heading = _label(header, "", 21)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	progress_label = _label(header, "", 17, GREEN)
+	progress_label = _label(header, "", 18, GREEN)
 
 	boards_grid = GridContainer.new()
 	boards_grid.columns = 3
@@ -183,21 +209,24 @@ func _build_interface() -> void:
 	var buttons := _column(controls, 9)
 	buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail = _label(buttons, "", 18)
-	var select_row := _row(buttons, 8)
+	_label(buttons, "1  도장 선택 · 회전", 16, ACCENT)
+	var select_row := _flow(buttons)
 	stamp_buttons.append(_button(select_row, "1 · A (꺾임)", _select.bind(0), 135))
 	stamp_buttons.append(_button(select_row, "2 · B (막대)", _select.bind(1), 135))
 	_button(select_row, "Q · ↶ 90°", _rotate.bind(-1), 115)
 	_button(select_row, "E · ↷ 90°", _rotate.bind(1), 115)
-	var action_row := _row(buttons, 8)
+	_label(buttons, "2  미리보기 확인 · 인쇄", 16, ACCENT)
+	var action_row := _flow(buttons)
 	print_button = _button(action_row, "SPACE · 인쇄", _print, 150)
+	_primary_button(print_button)
 	undo_button = _button(action_row, "U / Z · 되돌리기", _undo, 170)
 	_button(action_row, "R · 초기화", _ask_reset, 120)
 	next_button = _button(action_row, "N · 다음 퍼즐", _next, 145)
-	var extras := _row(buttons, 8)
+	var extras := _flow(buttons)
 	_button(extras, "힌트", _open_hint, 100)
 	_button(extras, "진행 저장", _save_manually, 110)
 	_button(extras, "저장 불러오기", _ask_load, 135)
-	hint_label = _label(buttons, "힌트 사용 전", 14)
+	hint_label = _label(buttons, "힌트 사용 전", 16)
 
 	var footer := PanelContainer.new()
 	footer.add_theme_stylebox_override("panel", _panel_style(Color("#eee1ce"), 6))
@@ -212,14 +241,25 @@ func _build_interface() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(center)
-	var popup := PanelContainer.new()
-	popup.custom_minimum_size = Vector2(550, 0)
-	popup.add_theme_stylebox_override("panel", _panel_style(PAPER, 14))
-	center.add_child(popup)
-	dialog = _column(popup, 16)
+	popup_panel = PanelContainer.new()
+	popup_panel.add_theme_stylebox_override("panel", _panel_style(PAPER, 14))
+	center.add_child(popup_panel)
+	popup_scroll = ScrollContainer.new()
+	popup_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	popup_panel.add_child(popup_scroll)
+	dialog = _column(popup_scroll, 16)
+	dialog.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialog.minimum_size_changed.connect(_fit_dialog.call_deferred)
 	overlay.hide()
 
+func _fit_dialog() -> void:
+	if popup_panel == null:
+		return
+	popup_panel.custom_minimum_size.x = minf(720.0, size.x - 64.0)
+	popup_scroll.custom_minimum_size.y = minf(dialog.get_combined_minimum_size().y, size.y - 96.0)
+
 func _update_responsive() -> void:
+	_fit_dialog.call_deferred()
 	if boards_grid != null:
 		boards_grid.columns = 3 if size.x >= 1170.0 and float(settings["font_scale"]) <= 1.25 else 2
 
@@ -229,14 +269,14 @@ func _board_card(parent: Node, title: String, description: String, index: int) -
 	outer.add_theme_stylebox_override("panel", _panel_style(Color("#f9f3e9"), 8))
 	parent.add_child(outer)
 	var col := _column(outer, 6)
-	var title_label := _label(col, title, 19)
+	var title_label := _label(col, "%d  /  %s" % [index + 1, title], 20, GREEN if index == 2 else INK)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var view := Board.new()
 	view.custom_minimum_size = Vector2(175, 175)
 	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(view)
-	var description_label := _label(col, description, 14, ACCENT)
+	var description_label := _label(col, description, 16, ACCENT)
 	description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return view
 
@@ -286,15 +326,17 @@ func _refresh() -> void:
 	before_view.show_cells(state.get_board(), affected)
 	after_view.show_cells(state.preview(), affected)
 	target_view.show_cells(state.get_target())
-	detail.text = "도장 %s  ·  회전 %d°  ·  미리보기는 횟수에 포함되지 않음" % ["A" if data["selected_mask"] == 0 else "B", data["rotation"] * 90]
+	detail.text = "선택: 도장 %s  ·  회전 %d°\n미리보기는 인쇄 횟수에 포함되지 않습니다." % ["A" if data["selected_mask"] == 0 else "B", data["rotation"] * 90]
 	var allowed: Array = state.puzzle_data()[idx]["allowed_masks"]
 	for i in range(stamp_buttons.size()):
 		stamp_buttons[i].disabled = not i in allowed
+		stamp_buttons[i].add_theme_stylebox_override("normal", _panel_style(Color("#d8e8de") if i == data["selected_mask"] else PAPER, 6))
 		stamp_buttons[i].text = ("1 · A (꺾임)" if i == 0 else "2 · B (막대)") + (" ✓ 선택" if i == data["selected_mask"] else "")
 	print_button.disabled = data["solved"]
 	undo_button.disabled = data["history_size"] == 0
 	next_button.disabled = not state.can_advance()
 	hint_label.text = "힌트 %d / 3단계 사용" % hint_levels[idx] if hint_levels[idx] > 0 else "힌트 사용 전"
+	feedback.add_theme_color_override("font_color", GREEN if data["solved"] else INK)
 	if data["solved"]:
 		feedback.text = "✓ 목표 일치! N 또는 '다음 퍼즐'로 진행하세요. U / Z로 완료를 되돌릴 수 있습니다." if state.can_advance() else "✓ 6개 퍼즐을 모두 해결했습니다! 메뉴에서 다시 시작할 수 있습니다."
 	else:
@@ -412,13 +454,16 @@ func _show_dialog(title: String, message: String, options: Array) -> void:
 		dialog_back = options[0]["call"]
 	_label(dialog, title, 27)
 	_label(dialog, message, 17)
-	var buttons := _row(dialog, 10)
+	var buttons := _column(dialog, 8)
 	for i in range(options.size()):
 		var option: Dictionary = options[i]
 		var command: Callable = option["call"]
 		var btn := _button(buttons, option["label"], _dialog_action.bind(command), 130)
 		if i == 0:
+			if title in ["음영 인쇄소  ·  C01 수직 슬라이스", "일시정지"]:
+				_primary_button(btn)
 			btn.grab_focus()
+	_fit_dialog.call_deferred()
 
 func _dialog_action(command: Callable) -> void:
 	overlay.hide()
@@ -504,16 +549,24 @@ func _open_settings() -> void:
 	mute.button_pressed = bool(settings["mute"])
 	mute.toggled.connect(_setting_value_changed.bind("mute"))
 	dialog.add_child(mute)
+	_register_setting_text(mute)
 	var reduce := CheckBox.new()
 	reduce.text = "모션 축소 (도장 반응 애니메이션 끄기)"
 	reduce.button_pressed = bool(settings["reduce_motion"])
 	reduce.toggled.connect(_setting_value_changed.bind("reduce_motion"))
 	dialog.add_child(reduce)
-	var font_row := _row(dialog, 9)
+	_register_setting_text(reduce)
+	var font_row := _flow(dialog)
 	_label(font_row, "글자 크기", 17)
 	for value in [1.0, 1.25, 1.5]:
 		_button(font_row, "%d%%" % int(value * 100.0), _set_font_scale.bind(value), 90)
 	_button(dialog, "돌아가기", _settings_close, 150).grab_focus()
+	_fit_dialog.call_deferred()
+
+func _register_setting_text(item: CheckBox) -> void:
+	item.set_meta("font_base", 17)
+	item.add_theme_font_size_override("font_size", int(round(17 * float(settings["font_scale"]))))
+	text_controls.append(item)
 
 func _settings_close() -> void:
 	overlay.hide()
