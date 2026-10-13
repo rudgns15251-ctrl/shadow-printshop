@@ -131,6 +131,18 @@ def _harness_wsl_dispatch_command(args, cwd):
     cli = os.environ.get("GAME_HARNESS_WSL_CODEX", "/home/newsjw/.local/bin/codex")
     linux_args = list(args[1:])
     linux_args[position - 1] = linux_wd
+    # Opt-in, native WSL Git shadow. Windows worktree and .git stay authoritative.
+    if os.environ.get("GAME_HARNESS_WSL_MODE", "legacy").lower() == "shadow":
+        helper = ROOT / "wsl_shadow_runner.py"
+        if not helper.is_file():
+            raise RuntimeError("WSL shadow runner missing; refusing Codex invocation")
+        return [
+            "wsl.exe", "-d", distro, "--cd", linux_wd, "--",
+            "/usr/bin/python3", to_linux(helper),
+            "--source", linux_wd, "--cli", cli,
+            "--lock", to_linux(ROOT / ".data" / "autopilot.lock"),
+            "--", *linux_args
+        ]
     return [
         "wsl.exe", "-d", distro, "--cd", linux_wd, "--", "/usr/bin/env",
         "GIT_DIR=" + linux_gitdir, "GIT_WORK_TREE=" + linux_wd,
