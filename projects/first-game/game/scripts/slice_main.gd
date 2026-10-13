@@ -333,6 +333,7 @@ func _react(kind: String = "print") -> void:
 	animation.tween_property(stamp_view, "modulate", Color.WHITE, 0.20)
 
 func _refresh() -> void:
+	before_view.clear_impression()
 	var data: Dictionary = state.snapshot()
 	var idx: int = data["puzzle"]
 	heading.text = "퍼즐 %d / %d     ·     %s" % [idx + 1, state.puzzle_count(), data["title"]]
@@ -378,20 +379,30 @@ func _rotate(direction: int) -> void:
 func _print() -> void:
 	if not game_active or overlay.visible:
 		return
+	var printed_cells: Array = state.get_mask()
 	if state.print_mask():
 		_play_sound("complete" if state.is_solved() else "print")
 		_autosave()
 		_refresh()
 		_react("solve" if state.is_solved() else "print")
+		if not bool(settings["reduce_motion"]):
+			before_view.animate_impression(printed_cells)
 
 func _undo() -> void:
 	if not game_active or overlay.visible:
 		return
+	var previous_cells: Array = state.get_board()
 	if state.undo():
 		_play_sound("undo")
 		_autosave()
 		_refresh()
 		_react("undo")
+		if not bool(settings["reduce_motion"]):
+			var changed: Array = []
+			var restored: Array = state.get_board()
+			for i in range(9):
+				changed.append(1 if previous_cells[i] != restored[i] else 0)
+			before_view.animate_impression(changed)
 
 func _ask_reset() -> void:
 	if not game_active or overlay.visible:
@@ -599,6 +610,7 @@ func _settings_close() -> void:
 func _setting_value_changed(value: Variant, key: String) -> void:
 	settings[key] = value
 	if key == "reduce_motion" and bool(value):
+		before_view.clear_impression()
 		if animation != null:
 			animation.kill()
 		stamp_view.scale = Vector2.ONE
