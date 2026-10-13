@@ -16,6 +16,8 @@ var before_view: Control
 var after_view: Control
 var target_view: Control
 var stamp_view: TextureRect
+var stamp_mask_view: Control
+var reaction_label: Label
 var heading: Label
 var subheading: Label
 var feedback: Label
@@ -149,7 +151,7 @@ func _build_interface() -> void:
 		ui_theme.set_stylebox("focus", control_type, _focus_style())
 	theme = ui_theme
 	var background := ColorRect.new()
-	background.color = PAPER
+	background.color = Color("#d8c7ad")
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
@@ -158,7 +160,7 @@ func _build_interface() -> void:
 	for edge in ["left", "right", "top", "bottom"]:
 		margins.add_theme_constant_override("margin_" + edge, 16)
 	add_child(margins)
-	var layout := _column(margins, 10)
+	var layout := _column(margins, 6)
 	var top := _row(layout, 18)
 	var title_area := _column(top, 1)
 	title_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -172,7 +174,7 @@ func _build_interface() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	layout.add_child(scroll)
-	var content := _column(scroll, 14)
+	var content := _column(scroll, 8)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var header := _column(content, 4)
 	heading = _label(header, "", 21)
@@ -186,27 +188,36 @@ func _build_interface() -> void:
 	boards_grid.add_theme_constant_override("v_separation", 12)
 	content.add_child(boards_grid)
 	var boards: Node = boards_grid
-	before_view = _board_card(boards, "현재 무늬", "현재 종이", 0)
-	after_view = _board_card(boards, "인쇄 후 미리보기", "적용 전 예상", 1)
-	target_view = _board_card(boards, "목표 무늬", "이 모양과 일치시키세요", 2)
+	before_view = _board_card(boards, "BEFORE · 현재", "인쇄 전 종이", 0)
+	after_view = _board_card(boards, "AFTER · 예상", "선택한 도장을 찍으면", 1)
+	target_view = _board_card(boards, "TARGET · 목표", "이 모양과 일치시키세요", 2)
 	var note := _label(content, "0 = 밝은 종이   ·   1 = 검은 잉크   ·   테두리와 삼각형 = 이번에 바뀔 칸", 15)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _panel_style(PANEL))
 	content.add_child(panel)
-	var controls := _row(panel, 16)
+	var controls := _row(panel, 12)
 	var art_column := _column(controls, 6)
-	art_column.custom_minimum_size.x = 190
-	_label(art_column, "도장 미리보기", 16)
+	art_column.custom_minimum_size.x = 150
+	_label(art_column, "목판 / STAMP", 16)
 	stamp_view = TextureRect.new()
-	stamp_view.texture = load("res://assets/art/stamp_preview.svg")
+	stamp_view.texture = load("res://assets/art/press_wood.svg")
 	stamp_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	stamp_view.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	stamp_view.custom_minimum_size = Vector2(180, 84)
+	stamp_view.stretch_mode = TextureRect.STRETCH_SCALE
+	stamp_view.custom_minimum_size = Vector2(140, 116)
 	stamp_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	art_column.add_child(stamp_view)
-	var buttons := _column(controls, 9)
+	stamp_mask_view = Board.new()
+	stamp_mask_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stamp_mask_view.offset_left = 12
+	stamp_mask_view.offset_right = -12
+	stamp_mask_view.offset_top = 8
+	stamp_mask_view.offset_bottom = -8
+	stamp_view.add_child(stamp_mask_view)
+	_label(art_column, "1 = 반전할 칸", 14)
+	reaction_label = _label(art_column, "인쇄 준비", 16, ACCENT)
+	var buttons := _column(controls, 4)
 	buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail = _label(buttons, "", 18)
 	_label(buttons, "1  도장 선택 · 회전", 16, ACCENT)
@@ -269,10 +280,11 @@ func _board_card(parent: Node, title: String, description: String, index: int) -
 	outer.add_theme_stylebox_override("panel", _panel_style(Color("#f9f3e9"), 8))
 	parent.add_child(outer)
 	var col := _column(outer, 6)
-	var title_label := _label(col, "%d  /  %s" % [index + 1, title], 20, GREEN if index == 2 else INK)
+	var title_label := _label(col, "%d  /  %s" % [index + 1, title], 18, GREEN if index == 2 else INK)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var view := Board.new()
-	view.custom_minimum_size = Vector2(175, 175)
+	view.custom_minimum_size = Vector2(156, 156)
+	view.frame_color = [INK, ACCENT, GREEN][index]
 	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(view)
@@ -305,14 +317,17 @@ func _play_sound(key: String) -> void:
 	if player != null:
 		player.play()
 
-func _react() -> void:
+func _react(kind: String = "print") -> void:
+	reaction_label.text = {"print": "● 인쇄 완료", "undo": "↶ 되돌림 완료", "solve": "✓ 목표 일치"}[kind]
+	if animation != null:
+		animation.kill()
+	stamp_view.scale = Vector2.ONE
+	stamp_view.modulate = Color.WHITE
 	if bool(settings["reduce_motion"]):
 		return
-	if animation != null and animation.is_running():
-		animation.kill()
 	stamp_view.pivot_offset = stamp_view.size / 2.0
 	stamp_view.scale = Vector2(0.91, 0.91)
-	stamp_view.modulate = Color("#bd8a6e")
+	stamp_view.modulate = Color("#d8c7ad")
 	animation = create_tween().set_parallel(true)
 	animation.tween_property(stamp_view, "scale", Vector2.ONE, 0.14)
 	animation.tween_property(stamp_view, "modulate", Color.WHITE, 0.20)
@@ -326,7 +341,11 @@ func _refresh() -> void:
 	before_view.show_cells(state.get_board(), affected)
 	after_view.show_cells(state.preview(), affected)
 	target_view.show_cells(state.get_target())
-	detail.text = "선택: 도장 %s  ·  회전 %d°\n미리보기는 인쇄 횟수에 포함되지 않습니다." % ["A" if data["selected_mask"] == 0 else "B", data["rotation"] * 90]
+	detail.text = "선택: 도장 %s  ·  회전 %d°" % ["A" if data["selected_mask"] == 0 else "B", data["rotation"] * 90]
+	stamp_mask_view.show_cells(state.get_mask())
+	stamp_view.tooltip_text = "현재 선택·회전을 반영한 도장. 1인 칸을 반전합니다. 미리보기는 인쇄 횟수에 포함되지 않습니다."
+	reaction_label.text = "✓ 목표 일치" if data["solved"] else "인쇄 준비"
+	before_view.set_completed(data["solved"])
 	var allowed: Array = state.puzzle_data()[idx]["allowed_masks"]
 	for i in range(stamp_buttons.size()):
 		stamp_buttons[i].disabled = not i in allowed
@@ -360,10 +379,10 @@ func _print() -> void:
 	if not game_active or overlay.visible:
 		return
 	if state.print_mask():
-		_react()
 		_play_sound("complete" if state.is_solved() else "print")
 		_autosave()
 		_refresh()
+		_react("solve" if state.is_solved() else "print")
 
 func _undo() -> void:
 	if not game_active or overlay.visible:
@@ -372,6 +391,7 @@ func _undo() -> void:
 		_play_sound("undo")
 		_autosave()
 		_refresh()
+		_react("undo")
 
 func _ask_reset() -> void:
 	if not game_active or overlay.visible:
@@ -578,6 +598,11 @@ func _settings_close() -> void:
 
 func _setting_value_changed(value: Variant, key: String) -> void:
 	settings[key] = value
+	if key == "reduce_motion" and bool(value):
+		if animation != null:
+			animation.kill()
+		stamp_view.scale = Vector2.ONE
+		stamp_view.modulate = Color.WHITE
 	_update_audio()
 	_save_settings()
 
