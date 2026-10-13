@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="96" viewBox="0 0 240 96">
+  <title>Procedural paper and ink stamp preview</title>
+  <path d="M8 6H218L232 20V90H8Z" fill="#f3e6c9" stroke="#b8a17b" stroke-width="2"/>
+  <path d="M218 6V20H232M20 30H112M20 44H98M20 58H108M20 72H84" fill="none" stroke="#c5b18c" stroke-width="2"/>
+  <g transform="rotate(-7 174 48)" fill="none" stroke="#943f39">
+    <rect x="134" y="14" width="78" height="68" rx="5" stroke-width="4"/>
+    <rect x="141" y="21" width="64" height="54" rx="2" stroke-width="1.5"/>
+    <path d="M150 32H162V44H150ZM166 32H178V44H166ZM150 48H162V60H150Z" fill="#943f39" stroke="none"/>
+    <path d="M185 35H196M185 43H196M174 61H196" stroke-width="3"/>
+  </g>
+</svg>
