@@ -123,6 +123,7 @@ func _run() -> void:
 	view.queue_free()
 	await process_frame
 	await process_frame
+	await create_timer(0.75).timeout
 	if failures == 0:
 		print("SLICE_ACCEPTANCE_PASS checks=%d" % assertions)
 		quit(0)

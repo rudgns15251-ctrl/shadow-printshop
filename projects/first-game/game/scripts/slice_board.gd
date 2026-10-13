@@ -12,27 +12,64 @@ var impression := 0.0:
 	set(value):
 		impression = value
 		queue_redraw()
-var impression_tween: Tween
+var undo_impression := false
+var impression_time := 0.0
+var success := 0.0:
+	set(value):
+		success = value
+		queue_redraw()
+var success_time := 0.0
+const IMPRESSION_DURATION := 0.32
+const SUCCESS_DURATION := 0.70
+
+func clear_success() -> void:
+	success_time = 0.0
+	success = 0.0
+	set_process(impression_time > 0.0)
+
+func animate_success() -> void:
+	success_time = SUCCESS_DURATION
+	success = 1.0
+	set_process(true)
 
 func clear_impression() -> void:
-	if impression_tween != null:
-		impression_tween.kill()
-		impression_tween = null
+	impression_time = 0.0
 	impression = 0.0
 	impression_cells.clear()
+	set_process(success_time > 0.0)
 
-func animate_impression(affected: Array) -> void:
-	clear_impression()
+func animate_impression(affected: Array, is_undo: bool = false) -> void:
+	undo_impression = is_undo
 	impression_cells = affected.duplicate()
+	impression_time = IMPRESSION_DURATION
 	impression = 1.0
-	impression_tween = create_tween()
-	impression_tween.tween_property(self, "impression", 0.0, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	impression_tween.tween_callback(clear_impression)
+	set_process(true)
+
+func _ready() -> void:
+	super._ready()
+	set_process(false)
+
+func _process(delta: float) -> void:
+	# Node-owned clocks avoid retaining callback tweeners when rapid input
+	# cancels an effect or the scene exits before the effect finishes.
+	if impression_time > 0.0:
+		impression_time = maxf(0.0, impression_time - delta)
+		var remaining: float = impression_time / IMPRESSION_DURATION
+		impression = remaining * remaining
+		if impression_time == 0.0:
+			impression_cells.clear()
+	if success_time > 0.0:
+		success_time = maxf(0.0, success_time - delta)
+		success = 1.0 - sin((1.0 - success_time / SUCCESS_DURATION) * PI / 2.0)
+	set_process(impression_time > 0.0 or success_time > 0.0)
 
 func _exit_tree() -> void:
 	clear_impression()
+	clear_success()
 
 func set_completed(value: bool) -> void:
+	if not value:
+		clear_success()
 	completed = value
 	queue_redraw()
 
@@ -45,6 +82,18 @@ func _draw() -> void:
 	var frame := Rect2(offset - Vector2(8, 8), Vector2(edge + 16, edge + 16))
 	draw_texture_rect(WOOD, frame, false)
 	draw_rect(frame.grow(-2), Color("#315d49") if completed else frame_color, false, 3.0)
+	if success > 0.0:
+		# Trace clockwise inside the existing paper frame, without covering text.
+		var rim := frame.grow(-5.0)
+		var corners: PackedVector2Array = PackedVector2Array([rim.position, Vector2(rim.end.x, rim.position.y), rim.end, Vector2(rim.position.x, rim.end.y), rim.position])
+		var elapsed: float = clampf(1.0 - success_time / SUCCESS_DURATION, 0.0, 1.0)
+		var travel: float = smoothstep(0.0, 0.85, elapsed) * 4.0
+		var glow := Color("#315d49")
+		glow.a = minf(1.0, success * 3.0)
+		for side in range(4):
+			var portion: float = clampf(travel - side, 0.0, 1.0)
+			if portion > 0.0:
+				draw_line(corners[side], corners[side].lerp(corners[side + 1], portion), glow, 3.0, true)
 	var font: Font = ThemeDB.fallback_font
 	var text_size: int = int(maxf(18.0, minf(31.0, width * 0.32)))
 	for y in range(3):
@@ -52,18 +101,30 @@ func _draw() -> void:
 			var idx: int = y * 3 + x
 			var rect := Rect2(offset + Vector2(x, y) * width + Vector2(3.0, 3.0), Vector2(width - 6.0, width - 6.0))
 			var dark: bool = cells[idx] == 1
+			# A small paper compression/lift stays inside the tile and never moves text.
+			var active: bool = impression > 0.0 and impression_cells.size() == 9 and impression_cells[idx] == 1
+			var pressure: float = sin((1.0 - impression_time / IMPRESSION_DURATION) * PI) if active else 0.0
+			var paper_rect: Rect2 = rect.grow(-pressure * 1.5)
 			# A shallow paper edge and deterministic fibers keep every tile legible.
-			draw_rect(Rect2(rect.position + Vector2(0.0, 2.0), rect.size), Color("#75634e"))
-			draw_rect(rect, INK if dark else PAPER)
+			draw_rect(Rect2(paper_rect.position + Vector2(0.0, 2.0 + pressure * (2.0 if undo_impression else -1.0)), paper_rect.size), Color("#75634e"))
+			draw_rect(paper_rect, INK if dark else PAPER)
 			var fiber := Color(0.95, 0.89, 0.78, 0.07) if dark else Color(0.40, 0.31, 0.22, 0.08)
 			for line in range(4):
 				var fiber_y: float = rect.position.y + rect.size.y * (0.16 + line * 0.21)
 				draw_line(Vector2(rect.position.x + 5.0, fiber_y), Vector2(rect.end.x - 5.0, fiber_y + 0.8), fiber, 1.0)
-			if impression > 0.0 and impression_cells.size() == 9 and impression_cells[idx] == 1:
-				# The impression settles inward without moving the board or its text.
+			if active:
+				# Print settles inward; undo lifts an outward blue paper rim.
 				var rim := Color("#efba76") if dark else ACCENT
+				if undo_impression:
+					rim = Color("#a4d4e8") if dark else Color("#153f60")
 				rim.a = impression * 0.85
-				draw_rect(rect.grow(-2.0 - (1.0 - impression) * 4.0), rim, false, 1.0 + impression * 2.0)
+				var inset: float = 2.0 + (impression if undo_impression else 1.0 - impression) * 6.0
+				draw_rect(rect.grow(-inset), rim, false, 1.0 + impression * 2.0)
+			if success > 0.0:
+				var settled: float = clampf(success * 1.8 - idx * 0.08, 0.0, 1.0)
+				var seal := Color("#a9d6b6") if dark else Color("#315d49")
+				seal.a = settled * 0.75
+				draw_rect(rect.grow(-5.0), seal, false, 2.0)
 			draw_rect(rect, INK, false, 1.5)
 			if highlights.size() == 9 and highlights[idx] == 1:
 				draw_rect(rect.grow(-4.0), Color("#efba76") if dark else ACCENT, false, 3.0)

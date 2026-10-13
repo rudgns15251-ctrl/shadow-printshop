@@ -35,7 +35,8 @@ var popup_panel: PanelContainer
 var popup_scroll: ScrollContainer
 var dialog_back: Callable
 var audio: Dictionary = {}
-var animation: Tween
+var reaction_time := 0.0
+var reaction_kind := "print"
 var text_controls: Array = []
 var hint_levels: Array = [0, 0, 0, 0, 0, 0, 0, 0]
 var settings: Dictionary = {"master": 0.8, "sfx": 0.7, "bgm": 0.3, "mute": false, "font_scale": 1.0, "reduce_motion": false}
@@ -48,34 +49,40 @@ func _ready() -> void:
 	_load_settings()
 	_build_interface()
 	_build_audio()
+	set_process(false)
 	resized.connect(_update_responsive)
 	_update_responsive()
 	_refresh()
 	_open_start()
 
 func _finish_reaction() -> void:
-	if animation != null:
-		# Drain tweeners before cancellation, including rapid consecutive inputs.
-		if animation.is_valid():
-			animation.custom_step(0.20)
-			animation.kill()
-		animation = null
+	reaction_time = 0.0
+	set_process(false)
+	if stamp_view != null:
+		stamp_view.scale = Vector2.ONE
+		stamp_view.modulate = Color.WHITE
+		stamp_view.rotation = 0.0
 
 func _clear_impression() -> void:
 	if before_view == null:
 		return
-	var tween: Tween = before_view.impression_tween
-	if tween != null and tween.is_valid():
-		# Complete the property tweener and its cleanup callback while the board exists.
-		tween.custom_step(0.32)
 	before_view.clear_impression()
+	before_view.clear_success()
 
 func _exit_tree() -> void:
 	_finish_reaction()
 	_clear_impression()
+	# Disconnect deferred layout work before child controls leave the tree.
+	if dialog != null and dialog.minimum_size_changed.is_connected(_fit_dialog):
+		dialog.minimum_size_changed.disconnect(_fit_dialog)
+	dialog_back = Callable()
 	for player in audio.values():
 		player.stop()
 		player.stream = null
+	audio.clear()
+	text_controls.clear()
+	stamp_buttons.clear()
+	state = null
 
 func _panel_style(color: Color, radius: int = 10) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -275,11 +282,11 @@ func _build_interface() -> void:
 	popup_panel.add_child(popup_scroll)
 	dialog = _column(popup_scroll, 16)
 	dialog.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dialog.minimum_size_changed.connect(_fit_dialog.call_deferred)
+	dialog.minimum_size_changed.connect(_fit_dialog, CONNECT_DEFERRED)
 	overlay.hide()
 
 func _fit_dialog() -> void:
-	if popup_panel == null:
+	if not is_inside_tree() or popup_panel == null:
 		return
 	popup_panel.custom_minimum_size.x = minf(720.0, size.x - 64.0)
 	popup_scroll.custom_minimum_size.y = minf(dialog.get_combined_minimum_size().y, size.y - 96.0)
@@ -340,13 +347,38 @@ func _react(kind: String = "print") -> void:
 	if bool(settings["reduce_motion"]):
 		return
 	stamp_view.pivot_offset = stamp_view.size / 2.0
-	stamp_view.scale = Vector2(0.91, 0.91)
-	stamp_view.modulate = Color("#d8c7ad")
-	animation = create_tween().set_parallel(true)
-	animation.tween_property(stamp_view, "scale", Vector2.ONE, 0.14)
-	animation.tween_property(stamp_view, "modulate", Color.WHITE, 0.20)
+	reaction_kind = kind
+	reaction_time = 0.0
+	set_process(true)
+	_update_reaction_pose()
+	if kind == "solve":
+		before_view.animate_success()
+
+func _process(delta: float) -> void:
+	reaction_time += delta
+	if reaction_time >= (0.22 if reaction_kind == "undo" else 0.24):
+		_finish_reaction()
+	else:
+		_update_reaction_pose()
+
+func _update_reaction_pose() -> void:
+	if reaction_kind == "undo":
+		# Lift and unwind with a gentle ease out.
+		var lift: float = 1.0 - sin(clampf(reaction_time / 0.22, 0.0, 1.0) * PI / 2.0)
+		stamp_view.scale = Vector2.ONE * (1.0 - 0.04 * lift)
+		stamp_view.rotation = -0.045 * lift
+	else:
+		# A quick press followed by a slower release, using the existing wood.
+		var pressure: float
+		if reaction_time < 0.06:
+			pressure = 1.0 - pow(1.0 - reaction_time / 0.06, 2.0)
+		else:
+			pressure = 1.0 - sin(clampf((reaction_time - 0.06) / 0.18, 0.0, 1.0) * PI / 2.0)
+		stamp_view.scale = Vector2(1.0 + 0.035 * pressure, 1.0 - 0.10 * pressure)
+		stamp_view.modulate = Color.WHITE.lerp(Color("#d8c7ad"), pressure)
 
 func _refresh() -> void:
+	_finish_reaction()
 	_clear_impression()
 	var data: Dictionary = state.snapshot()
 	var idx: int = data["puzzle"]
@@ -425,7 +457,7 @@ func _undo() -> void:
 			var restored: Array = state.get_board()
 			for i in range(9):
 				changed.append(1 if previous_cells[i] != restored[i] else 0)
-			before_view.animate_impression(changed)
+			before_view.animate_impression(changed, true)
 
 func _ask_reset() -> void:
 	if not game_active or overlay.visible:
