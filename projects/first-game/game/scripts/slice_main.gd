@@ -359,8 +359,17 @@ func _refresh() -> void:
 	feedback.add_theme_color_override("font_color", GREEN if data["solved"] else INK)
 	if data["solved"]:
 		feedback.text = "✓ 목표 일치! N 또는 '다음 퍼즐'로 진행하세요. U / Z로 완료를 되돌릴 수 있습니다." if state.can_advance() else "✓ 6개 퍼즐을 모두 해결했습니다! 메뉴에서 다시 시작할 수 있습니다."
+	elif idx == 0 and data["moves"] == 0:
+		feedback.text = "도장 선택(1/2) → 회전(Q/E) → AFTER(예상) 확인 → PRINT(인쇄·SPACE)."
+	elif idx == 0:
+		feedback.text = "도장의 1인 칸은 0 ↔ 1로 반전됩니다. 회전(Q/E)·되돌리기(U/Z) 후 AFTER를 확인하고 다시 인쇄하세요."
 	else:
 		feedback.text = "현재와 목표를 비교해 도장을 고르세요. 색과 숫자 0/1을 함께 확인할 수 있습니다."
+	# Derive guidance from the same snapshot as the boards, including undo/load/reset.
+	if idx == 0:
+		subheading.text = "목표 완성! NEXT(다음 퍼즐) 버튼 또는 N을 눌러 직접 진행하세요." if data["solved"] else "첫 퍼즐 · CURRENT(현재·BEFORE)와 TARGET(목표)을 비교하세요."
+	else:
+		subheading.text = "종이 위에 도장을 찍어 목표 무늬를 완성하세요."
 	if not last_save_message.is_empty():
 		feedback.text += "   |   " + last_save_message
 
