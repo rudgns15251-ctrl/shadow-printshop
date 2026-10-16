@@ -278,6 +278,16 @@ class Coordinator(unittest.TestCase):
         self.assertIsNotNone(a.auto.ERRORS.search(text))
         self.assertEqual(a.read(run / 'autonomous.json')['processes'][0]['exit_code'], 0)
 
+    def test_repeated_qa_process_names_preserve_earlier_logs(self):
+        run = self.here / 'runs/log-fixture'; run.mkdir(parents=True)
+        data = {}
+        a.process([sys.executable, '-c', 'print("first evidence")'], run, data, 'same-gate')
+        a.process([sys.executable, '-c', 'print("second evidence")'], run, data, 'same-gate')
+        first, second = data['processes']
+        self.assertNotEqual(first['log'], second['log'])
+        self.assertIn('first evidence', (run / first['log']).read_text())
+        self.assertIn('second evidence', (run / second['log']).read_text())
+
     def test_real_subprocess_timeout_is_recorded(self):
         run = self.here / 'runs/timeout-fixture'; run.mkdir(parents=True)
         data = {}

@@ -178,11 +178,13 @@ def process(cmd, run, data, name, timeout=240, env=None, stdin=None, cwd=None):
     logs = run / 'logs'
     logs.mkdir(parents=True, exist_ok=True)
     log = logs / (name + '.log')
+    if log.exists():
+        log = logs / (name + '-' + uuid.uuid4().hex[:12] + '.log')
     record = {'name': name, 'started': now(), 'log': log.relative_to(run).as_posix(), 'status': 'RUNNING'}
     data.setdefault('processes', []).append(record)
     checkpoint(run, data)
     # File redirection prevents unbounded capture of verbose JSON events.
-    with log.open('wb') as out:
+    with log.open('xb') as out:
         p = subprocess.Popen([str(x) for x in cmd], cwd=cwd, env=env, stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
                              stdout=out, stderr=subprocess.STDOUT,
                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
