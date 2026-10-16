@@ -1,0 +1,227 @@
+{
+  "generated_utc": "2026-10-16T16:15:23.856126+00:00",
+  "local_date": "2026-10-17",
+  "timezone": "Asia/Seoul",
+  "status": "INCOMPLETE",
+  "AUTONOMOUS_HARNESS_READY": false,
+  "baseline_commit": "83294f2eb49d261bce020e45985eb40983ace229",
+  "code_commit": "75d375033270f3c29b95cd361cbe543f928ee6ad",
+  "development_branch": "codex/autonomous-harness-20261017",
+  "stable_branch_unchanged": true,
+  "game_source_unchanged": true,
+  "preserved_review_run": {
+    "id": "20261014-013323-606cc",
+    "status": "review"
+  },
+  "tests": [
+    {
+      "name": "legacy_windows",
+      "kind": "existing tests",
+      "run": 111,
+      "skipped": 11,
+      "success": true,
+      "log": ".data/harness-upgrade-20261017/final-legacy-windows.log",
+      "sha256": "400bab5b9c467cb9fc7d9195e72fe3567f516f63b9813f54ef6bac670eab99ae"
+    },
+    {
+      "name": "legacy_wsl",
+      "kind": "existing tests including Linux native Git",
+      "run": 111,
+      "skipped": 0,
+      "success": true,
+      "log": ".data/harness-upgrade-20261017/legacy-wsl.log",
+      "sha256": "eddd639daebf5d9c945c60f9a3a0984ff8e2fd848a3b56a93c4977719b338a38"
+    },
+    {
+      "name": "autonomous_faults",
+      "kind": "mock model/engine, real temporary Git and selected subprocess tests",
+      "run": 24,
+      "skipped": 1,
+      "success": true,
+      "log": ".data/harness-upgrade-20261017/final-autonomous-tests.log",
+      "sha256": "6ca658c8aab3bf751684b2c742c19bcde1e216d0064a785047877b668ed3570e"
+    },
+    {
+      "name": "transaction_faults",
+      "kind": "mock model/engine, real temporary Git and Windows junction",
+      "run": 6,
+      "skipped": 0,
+      "success": true,
+      "log": ".data/harness-upgrade-20261017/final-transaction-tests.log",
+      "sha256": "98fd39229c7456f3dbd16cb7aaf9427e16ef7f753bdc388e9e2d0ceac90828fc"
+    },
+    {
+      "name": "legacy_pipeline",
+      "kind": "mock providers",
+      "run": 2,
+      "skipped": 0,
+      "success": true,
+      "log": ".data/harness-upgrade-20261017/final-pipeline-wsl.log",
+      "sha256": "274e1d5a8439885b24471b451d5c50ef6d7d9a06a3949fd1dda6f74fb9af01b0"
+    },
+    {
+      "name": "legacy_worker",
+      "kind": "mock Codex, real Linux temporary Git",
+      "run": 1,
+      "skipped": 0,
+      "success": true,
+      "log": ".data/harness-upgrade-20261017/final-worker-wsl.log",
+      "sha256": "42b98798fbf07d048a6921c7eeae5ebfd0b49f23a9835cc97a7e1e0fe228aeed"
+    }
+  ],
+  "real_e2e": {
+    "planning_run": "20261017-005027-815f9",
+    "implementation_run": "20261017-005228-b1610",
+    "task_1": "BLOCKED",
+    "task_2": "PENDING",
+    "consecutive_tasks_certified": 0,
+    "initial_import_exit": 3221225477,
+    "independent_import_retry_passed": true,
+    "standard_qa_rerun": [
+      {
+        "name": "STATIC",
+        "pass": true
+      },
+      {
+        "name": "IMPORT",
+        "pass": true,
+        "exit_code": 0,
+        "marker": null
+      },
+      {
+        "name": "SMOKE",
+        "pass": true,
+        "exit_code": 0,
+        "marker": "HARNESS_SMOKE_PASS"
+      },
+      {
+        "name": "REGRESSION",
+        "pass": true,
+        "exit_code": 0,
+        "marker": "HARNESS_REGRESSION_PASS"
+      },
+      {
+        "name": "SLICE",
+        "pass": true,
+        "exit_code": 0,
+        "marker": "SLICE_ACCEPTANCE_PASS"
+      },
+      {
+        "name": "OFFLINE",
+        "pass": true
+      },
+      {
+        "name": "QUALITY",
+        "pass": true
+      },
+      {
+        "name": "EXPORT",
+        "pass": true
+      },
+      {
+        "name": "BUILD_RUN",
+        "pass": true,
+        "exit_code": 0
+      }
+    ],
+    "candidate_build": {
+      "C01_Windows_Test.exe": {
+        "sha256": "76269a403bb832599edeee4432a5b7a7e88c018eb5c9c798dfd8289359b0ec07",
+        "bytes": 109212160
+      },
+      "C01_Windows_Test.pck": {
+        "sha256": "e13149cc2bdc757511a2d0bf8e94408d132e94b2a20085597a62baedd8110fc2",
+        "bytes": 172844
+      }
+    },
+    "independent_immediate_audio": [
+      {
+        "attempt": 1,
+        "exit_code": 0,
+        "pass": false,
+        "wav_leaks": 3,
+        "playback_leaks": 33
+      },
+      {
+        "attempt": 2,
+        "exit_code": 0,
+        "pass": true,
+        "wav_leaks": 0,
+        "playback_leaks": 0
+      },
+      {
+        "attempt": 3,
+        "exit_code": 0,
+        "pass": true,
+        "wav_leaks": 0,
+        "playback_leaks": 0
+      },
+      {
+        "attempt": 4,
+        "exit_code": 0,
+        "pass": false,
+        "wav_leaks": 3,
+        "playback_leaks": 12
+      },
+      {
+        "attempt": 5,
+        "exit_code": 0,
+        "pass": false,
+        "wav_leaks": 3,
+        "playback_leaks": 9
+      }
+    ],
+    "acceptance_blockers": [
+      {
+        "gate": "independent_immediate_audio",
+        "failed": 3,
+        "attempts": 5,
+        "summary": "logs/result.json",
+        "reason": "AudioStreamWAV and AudioStreamPlaybackWAV leaks on real WASAPI at immediate shutdown; all exits were zero."
+      }
+    ],
+    "evidence_notes": [
+      {
+        "issue": "Earlier coordinator reused attempt log filenames during explicit QA rerun. Initial IMPORT raw log was overwritten. Original process exit code, recorded hash and failure detail remain in this JSON.",
+        "recovered_excerpt": "logs/recovered-initial-import-failure.txt",
+        "fix": "Future process log files are unique and opened exclusively; regression test added."
+      }
+    ],
+    "candidate_integrated": false
+  },
+  "additional_actual_game_checks": {
+    "mechanical_checks": 367008,
+    "mechanical_sequences": 8000,
+    "progress_clarity_checks": 74,
+    "slice_checks": 277,
+    "python_offline_cases": 8000,
+    "quality_checks": 155,
+    "layout_matrix": "2 resolutions x 3 font scales",
+    "screenshots": 6
+  },
+  "runtime": {
+    "worker_lock_exists": false,
+    "run_child_pid": null,
+    "project_process_wmi_check": "No matching project development process found after execution"
+  },
+  "backup": {
+    "final_verification_file": ".data/harness-upgrade-20261017/finalization.json",
+    "scope": "tracked source and reports; local run logs, builds and state excluded"
+  },
+  "shutdown": {
+    "requested": true,
+    "executed": false,
+    "reasons": [
+      "Real two-task E2E incomplete",
+      "Known immediate-audio acceptance failure",
+      "Unsaved work in all Windows applications cannot be verified"
+    ]
+  },
+  "unverified": [
+    "Final-version successful real consecutive E2E",
+    "Global unsaved application state",
+    "Full visual quality and all text overlap",
+    "Audio listening/clipping",
+    "Fun and learning curve"
+  ]
+}
