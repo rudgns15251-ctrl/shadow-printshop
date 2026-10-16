@@ -269,6 +269,23 @@ class Coordinator(unittest.TestCase):
             with self.assertRaises(a.ERROR): a.integrate(run, data, plan['tasks'][0], self.c, self.p)
         self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
 
+    def test_model_blocker_and_unverified_acceptance_are_not_success(self):
+        run = self.here / 'runs/model-contract'; run.mkdir(parents=True)
+        for status, unverified, valid in [('implemented', [], True), ('blocked', [], False),
+                                          ('implemented', ['Audio leak remains'], False)]:
+            def provider(cmd, *args, **kwargs):
+                if '--help' in cmd:
+                    return 0, '--sandbox --json --output-last-message --output-schema'
+                last = Path(cmd[cmd.index('--output-last-message') + 1])
+                a.write(last, {'status': status, 'summary': 'fixture', 'unverified_acceptance': unverified,
+                               'tests_actually_run': []})
+                return 0, '{"type":"turn.completed"}'
+            with self.subTest(status=status, unverified=unverified), patch.object(a, 'process', provider), patch.object(a, 'codex_executable', return_value=sys.executable):
+                if valid:
+                    self.assertTrue(a.codex(self.game, run, {}, 'fixture', self.c, self.p, 'model').is_file())
+                else:
+                    with self.assertRaises(a.ERROR): a.codex(self.game, run, {}, 'fixture', self.c, self.p, 'model')
+
 
 def contextlib_exit_stack():
     import contextlib
