@@ -246,6 +246,16 @@ class Coordinator(unittest.TestCase):
             with self.assertRaises(a.ERROR): a.integrate(run, data, plan['tasks'][0], self.c, self.p)
         self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
 
+    def test_independent_acceptance_blocker_prevents_integration(self):
+        plan = self.plan()
+        run, data = a.new_run(plan['tasks'][0], self.c, self.p, plan)
+        with self.providers():
+            self.coder(run / 'game', run, data)
+            a.qa(run / 'game', run, data, self.c, self.p, plan['tasks'][0])
+            data['acceptance_blockers'] = ['Independent repeated audio exit test failed']
+            with self.assertRaises(a.ERROR): a.integrate(run, data, plan['tasks'][0], self.c, self.p)
+        self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
+
     def test_pause_before_execution(self):
         self.plan()
         a.write(a.PAUSE, {'requested': a.now()})

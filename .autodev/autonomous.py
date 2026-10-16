@@ -482,6 +482,7 @@ def remote_backup(p, commit, branch):
 def integrate(run, data, task, c, p):
     """Journal before copying; resume either finishes the exact copy or recognizes its commit."""
     checkpoint(run, data, 'INTEGRATE')
+    require(not data.get('acceptance_blockers'), 'Unresolved independent acceptance failures; integration refused')
     require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES), 'Full QA missing')
     require(all(any(q['name'] == 'ACCEPTANCE:' + probe and q['pass'] for q in data['qa'])
                 for probe in task.get('acceptance_probes', [])), 'Task acceptance probe missing')
