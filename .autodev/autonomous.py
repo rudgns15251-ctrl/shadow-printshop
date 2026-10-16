@@ -301,13 +301,21 @@ def spec(task):
     return {key: value for key, value in task.items() if key not in {
         'status', 'attempts', 'run', 'commit', 'backup', 'last_failure', 'phase'}}
 
-def goal(text):
+def goal(text, replace_incomplete=False):
     require(text.strip() and len(text) <= 12000, 'Goal must be 1..12000 characters')
     with locked():
         if PLAN.exists():
             old = read(PLAN)
-            require(all(t['status'] in {'DONE', 'BLOCKED'} for t in old.get('tasks', [])), 'Unfinished plan must be completed or explicitly reviewed first')
+            finished = all(t['status'] in {'DONE', 'BLOCKED'} for t in old.get('tasks', []))
+            require(finished or replace_incomplete, 'Use --replace-incomplete to archive an unfinished plan explicitly')
+            for task in old.get('tasks', []):
+                if task.get('run'):
+                    previous = read(inside(HERE / 'runs', task['run']) / 'autonomous.json')
+                    require(not alive(previous.get('child_pid')), 'Previous child is alive')
+                    require(previous['phase'] not in {'INTEGRATE', 'COMMITTED', 'BACKUP'}, 'Finish/reconcile partial integration or backup first')
             write(STATE / ('plan-history-' + uuid.uuid4().hex + '.json'), old)
+            old.update(status='SUPERSEDED', superseded=now())
+            write(PLAN, old)
         write(STATE / 'goal.json', {'text': text, 'registered': now()})
     print('GOAL_REGISTERED')
 
@@ -318,7 +326,7 @@ def make_plan(c, p):
         require((STATE / 'goal.json').exists(), 'Register a goal first')
         if PLAN.exists():
             existing = read(PLAN)
-            require(all(t['status'] in {'DONE', 'BLOCKED'} for t in existing['tasks']), 'Existing unfinished plan preserved')
+            require(existing.get('status') == 'SUPERSEDED' or all(t['status'] in {'DONE', 'BLOCKED'} for t in existing['tasks']), 'Existing unfinished plan preserved')
         run = auto.create_run_root()
         stage = run / 'game'
         game = source(c)
@@ -391,7 +399,7 @@ def qa(stage, run, data, c, p, task):
         data['qa'].append({'name': name, 'pass': ok, 'exit_code': rc, 'marker': marker})
         checkpoint(run, data)
         print(('PASS ' if ok else 'FAIL ') + name, flush=True)
-        require(ok, name + ': ' + text[-14000:])
+        require(ok, name + ': exit=' + str(rc) + '\n' + text[-14000:])
     rc, text = process([sys.executable, stage / 'tests/mech_offline.py'], run, data,
                        'attempt-%d-OFFLINE' % data['attempts'], 120, env)
     ok = rc == 0 and 'PASS offline cases' in text and not auto.ERRORS.search(text)
@@ -635,6 +643,7 @@ def run_plan(c, p, recover=False, push=False, limit=None):
     with locked(recover):
         require(PLAN.exists(), 'Run plan first')
         plan = read(PLAN)
+        require(plan.get('status') != 'SUPERSEDED', 'New goal registered; generate its plan first')
         require(plan['branch'] == branch_ok(p), 'Plan branch mismatch')
         require(plan['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed; review/replan required')
         if not recover:
@@ -680,6 +689,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Durable C01 autonomous development, using existing AutoDev QA')
     sub = parser.add_subparsers(dest='command', required=True)
     q = sub.add_parser('goal'); q.add_argument('text')
+    q.add_argument('--replace-incomplete', action='store_true', help='Archive an inactive unfinished plan, preserving every run')
     sub.add_parser('plan')
     for name in ('run', 'resume'):
         q = sub.add_parser(name)
@@ -694,7 +704,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         c, p = config(), policy()
-        if args.command == 'goal': goal(args.text)
+        if args.command == 'goal': goal(args.text, args.replace_incomplete)
         elif args.command == 'plan': make_plan(c, p)
         elif args.command in {'run', 'resume'}:
             return run_plan(c, p, args.command == 'resume', args.push, args.max_tasks)

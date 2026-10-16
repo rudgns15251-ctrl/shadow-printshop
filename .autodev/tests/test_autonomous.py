@@ -163,6 +163,19 @@ class Coordinator(unittest.TestCase):
         data = a.read(self.here / 'runs' / task['run'] / 'autonomous.json')
         self.assertEqual(data['failures'][0]['category'], 'GAME_CODE')
 
+    def test_engine_access_violation_revalidates_without_regenerating_code(self):
+        plan = self.plan()
+        imports = []
+        def crash_once(*args, **kwargs):
+            if args[3].endswith('IMPORT'):
+                imports.append(True)
+                if len(imports) == 1: return 3221225477, 'Godot import stopped unexpectedly'
+            return self.provider(*args, **kwargs)
+        with self.providers(process=crash_once): a.execute(plan['tasks'][0], plan, self.c, self.p)
+        self.assertEqual(plan['tasks'][0]['status'], 'DONE')
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(len(imports), 2)
+
     def test_zero_exit_error_and_leak_never_integrate(self):
         for text in ['ERROR: export invalid', 'WARNING: 6 ObjectDB instances were leaked at exit', 'ERROR: resources still in use at exit']:
             with self.subTest(text=text):
@@ -285,6 +298,17 @@ class Coordinator(unittest.TestCase):
                     self.assertTrue(a.codex(self.game, run, {}, 'fixture', self.c, self.p, 'model').is_file())
                 else:
                     with self.assertRaises(a.ERROR): a.codex(self.game, run, {}, 'fixture', self.c, self.p, 'model')
+
+    def test_explicit_goal_replacement_preserves_unfinished_plan(self):
+        plan = self.plan()
+        with self.assertRaises(a.ERROR): a.goal('new goal')
+        a.goal('new goal', replace_incomplete=True)
+        archived = list(a.STATE.glob('plan-history-*.json'))
+        self.assertEqual(len(archived), 1)
+        self.assertEqual(a.read(archived[0]), plan)
+        self.assertEqual(a.read(a.PLAN)['status'], 'SUPERSEDED')
+        self.assertEqual(a.read(a.STATE / 'goal.json')['text'], 'new goal')
+        with self.assertRaises(a.ERROR): a.run_plan(self.c, self.p)
 
 
 def contextlib_exit_stack():
