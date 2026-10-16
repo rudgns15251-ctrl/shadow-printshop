@@ -481,7 +481,6 @@ def remote_backup(p, commit, branch):
 
 def integrate(run, data, task, c, p):
     """Journal before copying; resume either finishes the exact copy or recognizes its commit."""
-    checkpoint(run, data, 'INTEGRATE')
     require(not data.get('acceptance_blockers'), 'Unresolved independent acceptance failures; integration refused')
     require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES), 'Full QA missing')
     require(all(any(q['name'] == 'ACCEPTANCE:' + probe and q['pass'] for q in data['qa'])
@@ -516,7 +515,6 @@ def integrate(run, data, task, c, p):
         require(actual == data['source_snapshot'], 'Source files changed')
         data['expected_source'] = expected
         data['changes'] = changes
-        checkpoint(run, data, 'INTEGRATE')
     else:
         # Recovery allows only either baseline or exact validated bytes per target.
         for rel in actual.keys() | expected.keys():
@@ -525,6 +523,7 @@ def integrate(run, data, task, c, p):
         require(set(staged) <= {c['game_dir'] + '/' + rel for rel in changes}, 'Unrelated index content')
         dirty = git('status', '--porcelain', '--untracked-files=all')
         require(all(line[3:] in {c['game_dir'] + '/' + rel for rel in changes} for line in dirty.splitlines()), 'Unrelated dirty files')
+    checkpoint(run, data, 'INTEGRATE')
     backup = run / 'before_integrate'
     for rel in changes:
         dest = inside(game, rel)
@@ -726,6 +725,9 @@ def main(argv=None):
                 run = inside(HERE / 'runs', args.run_id)
                 data = read(run / 'autonomous.json')
                 qa(run / 'game', run, data, c, p, read(run / 'task.json'))
+                if data.get('acceptance_blockers'):
+                    print('STANDARD_QA_PASS_ACCEPTANCE_BLOCKED')
+                    return 2
                 print('QA_VERIFIED')
         return 0
     except (ERROR, ValueError, KeyError, OSError, subprocess.SubprocessError) as exc:

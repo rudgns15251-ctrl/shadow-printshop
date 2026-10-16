@@ -256,6 +256,14 @@ class Coordinator(unittest.TestCase):
             with self.assertRaises(a.ERROR): a.integrate(run, data, plan['tasks'][0], self.c, self.p)
         self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
 
+    def test_qa_cli_does_not_report_success_with_independent_blocker(self):
+        plan = self.plan()
+        run, data = a.new_run(plan['tasks'][0], self.c, self.p, plan)
+        data['acceptance_blockers'] = ['Known independent failure']
+        a.checkpoint(run, data)
+        with patch.object(a, 'config', return_value=self.c), patch.object(a, 'policy', return_value=self.p), patch.object(a, 'qa'):
+            self.assertEqual(a.main(['qa', '--run-id', run.name]), 2)
+
     def test_pause_before_execution(self):
         self.plan()
         a.write(a.PAUSE, {'requested': a.now()})
