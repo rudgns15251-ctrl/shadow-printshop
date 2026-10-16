@@ -217,6 +217,15 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
     rc, help_text = process([exe, 'exec', '--help'], run, data, name + '-help', 30)
     require(rc == 0 and all(flag in help_text for flag in ('--sandbox', '--json', '--output-last-message')), 'Installed CLI options unsupported')
     last = run / (name + '-last.txt')
+    implementation_schema = schema is None
+    if implementation_schema:
+        schema = run / (name + '-schema.json')
+        write(schema, {'type': 'object', 'additionalProperties': False,
+                       'properties': {'status': {'type': 'string', 'enum': ['implemented', 'blocked']},
+                                      'summary': {'type': 'string'},
+                                      'unverified_acceptance': {'type': 'array', 'items': {'type': 'string'}},
+                                      'tests_actually_run': {'type': 'array', 'items': {'type': 'string'}}},
+                       'required': ['status', 'summary', 'unverified_acceptance', 'tests_actually_run']})
     cmd = [exe, 'exec', '--sandbox', 'read-only' if read_only else 'workspace-write',
            '-C', stage, '--json', '--output-last-message', last]
     if schema:
@@ -237,6 +246,10 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
         except ValueError:
             continue
     require(any(e.get('type') == 'turn.completed' for e in events) and not any(e.get('type') in {'turn.failed', 'error'} for e in events), 'CODEX: no clean completed turn')
+    if implementation_schema:
+        outcome = read(last)
+        require(outcome['status'] == 'implemented' and not outcome['unverified_acceptance'],
+                'ACCEPTANCE_UNVERIFIED: model reported a blocker; preserve source and inspect final JSON')
     return last
 
 def classify(step, text):
@@ -442,7 +455,8 @@ def task_prompt(task, failure=None):
     text = auto.build_prompt(task, failure)
     text += ('\nTrusted harness probe autodev_quality_probe.gd is protected. Do not edit it. '
              'Do not edit presets, .git, .import, .uid, saves or other files. Do not invoke other agents. '
-             'No permission bypasses. End with a concise account of actual changes and limits.\n'
+             'No permission bypasses. Report status=blocked and list unverified_acceptance if any required criterion fails or is unverified; never claim implemented in that case. '
+             'List only tests actually executed. End with the required structured response.\n'
              'ACCEPTANCE: ' + json.dumps(task['acceptance']) + '\nDELIVERABLES: ' + json.dumps(task['deliverables']))
     return text
 
