@@ -5,7 +5,6 @@ edits only. Snapshots are isolation from accidental edits, not a hostile-code VM
 """
 from __future__ import annotations
 import argparse
-import ast
 import contextlib
 import datetime as dt
 import hashlib
@@ -280,6 +279,10 @@ def next_task(plan):
     done = {t['id'] for t in plan['tasks'] if t['status'] == 'DONE'}
     return next((t for t in plan['tasks'] if t['status'] == 'PENDING' and set(t['depends_on']) <= done), None)
 
+def spec(task):
+    return {key: value for key, value in task.items() if key not in {
+        'status', 'attempts', 'run', 'commit', 'backup', 'last_failure', 'phase'}}
+
 def goal(text):
     require(text.strip() and len(text) <= 12000, 'Goal must be 1..12000 characters')
     with locked():
@@ -444,12 +447,13 @@ def integrate(run, data, task, c, p):
     require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES), 'Full QA missing')
     stage = run / 'game'
     require(snapshot(stage) == data['validated_snapshot'], 'Validated stage tampered')
+    require(all((run / 'release' / name).is_file() and auto.sha(run / 'release' / name) == info['sha256']
+                for name, info in data['build'].items()), 'Validated build tampered')
     game = source(c)
     branch = branch_ok(p)
     require(branch == data['branch'], 'Integration branch changed')
     changes = checked_changes(data['baseline'], snapshot(stage), task, p)
-    # export_presets.cfg was present in the original snapshot in this project. In
-    # other projects it is a trusted generated file, excluded from source copying.
+    # The generated export preset belongs to the trusted stage, not source copying.
     changes = [rel for rel in changes if rel != 'export_presets.cfg']
     require(changes, 'No real game edits')
     current = git('rev-parse', 'HEAD')
@@ -529,7 +533,7 @@ def execute(task, plan, c, p, recover=False, push=False):
         require(recover, 'Interrupted task requires resume')
         require(not alive(data.get('child_pid')), 'Previous child still running')
         require(data['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed since run')
-        require(read(run / 'task.json')['objective'] == task['objective'], 'Task changed since run')
+        require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')
     else:
         run, data = new_run(task, c, p, plan)
         task['run'] = run.name
@@ -601,6 +605,9 @@ def run_plan(c, p, recover=False, push=False, limit=None):
         plan = read(PLAN)
         require(plan['branch'] == branch_ok(p), 'Plan branch mismatch')
         require(plan['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed; review/replan required')
+        if not recover:
+            require(not any(t['status'] in {'RUNNING', 'PAUSED'} for t in plan['tasks']),
+                    'Interrupted/paused task requires resume before new work')
         if recover and PAUSE.exists():
             PAUSE.rename(STATE / ('pause-handled-' + uuid.uuid4().hex + '.json'))
         count = 0
@@ -611,7 +618,8 @@ def run_plan(c, p, recover=False, push=False, limit=None):
                     count += 1
                     if task['status'] != 'DONE':
                         break
-        while not PAUSE.exists() and (limit is None or count < limit):
+        unsafe_pending = any(t['status'] != 'DONE' and t.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP'} for t in plan['tasks'])
+        while not unsafe_pending and not PAUSE.exists() and (limit is None or count < limit):
             task = next_task(plan)
             if task is None:
                 break
