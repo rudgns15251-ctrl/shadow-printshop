@@ -10,3 +10,9 @@ logs/
 
 # Generated Godot import cache (not source assets)
 .godot/
+
+# Local credentials-free configuration, run evidence, builds and checkpoints.
+.autodev/config.json
+.autodev/runs/
+.autodev/state/
+.autodev/doctor_godot.log

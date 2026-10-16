@@ -1,0 +1,14 @@
+{
+    "objective":  "Extend the EXISTING playable C01 Shadow Printshop game from\nsix puzzles to eight puzzles.\n\nThis is an actual game implementation task, not harness work.\n\nIMPORTANT AUTHORIZATION:\nExisting tests may be updated ONLY where the six-puzzle\ncount or final-completion assumptions must change.\n\nRequired implementation:\n\n1. Preserve the original six puzzles unchanged.\n2. Append two new handcrafted puzzles using existing mechanics.\n3. Ensure puzzles 7 and 8 are solvable and meaningfully distinct.\n4. Integrate both into the normal game progression.\n5. Update progress indicators and final completion behavior.\n6. Preserve compatibility with existing saved progress.\n7. Preserve current UI, assets, controls, audio and animations.\n\nTEST REQUIREMENTS:\n\n- Update exact-six assertions to exact-eight where appropriate.\n- Preserve all existing tests for puzzles 1 through 6.\n- Add explicit tests for puzzles 7 and 8.\n- Verify valid solutions and distinct puzzle designs.\n- Verify progression and final completion after puzzle 8.\n- Verify undo/reset and existing saved progress compatibility.\n- Do not delete, skip, weaken or bypass existing assertions.\n- Do not weaken the existing 6000-case offline validation.\n- Extend coverage when required by the new puzzle count.\n- Never claim a test passed unless it actually executed.\n\nRun:\n- Python offline validation\n- Godot import\n- Smoke tests\n- Regression tests\n- Slice acceptance\n- Windows export\n\nIf an independent test outside the allowlist requires\nmodification, stop and report the exact blocker.\n\nDo not modify harness code, Git history, project settings,\nexternal assets, or unrelated files.\n\nDo not create Git commits.\n\nPrioritize working game functionality over documentation\nor harness improvements.\nAUTHORIZATION UPDATE:\ntests/mech_cases.gd may be modified to support eight puzzles.\nPreserve the original six puzzle checks.\nExtend expected case coverage from 6000 to 8000.\nUpdate puzzle-count and final-boundary assertions.\nDo not weaken or skip existing tests.",
+    "allowed":  [
+                    "data/mech_data.gd",
+                    "data/mech_puzzles.json",
+                    "scripts/slice_state.gd",
+                    "scripts/slice_main.gd",
+                    "tests/mech_offline.py",
+                    "tests/slice_acceptance.gd",
+                    "tests/smoke_test.gd",
+                    "tests/regression_test.gd",
+                    "tests/mech_cases.gd"
+                ]
+}

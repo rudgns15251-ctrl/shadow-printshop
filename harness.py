@@ -352,7 +352,7 @@ def execute(task_id, live):
         note = f"Execution or validation failed: {e}"
     with db() as conn:
         conn.execute("UPDATE tasks SET status=?, last_note=?, updated=? WHERE id=?", (final, note, stamp(), task_id))
-    print(f"{task_id}: {final} — {note}")
+    print(f"{task_id}: {final} - {note}")
     print(f"Workspace: {workspace}")
     if final == "review":
         print(f"Inspect: python harness.py inspect {task_id}")
@@ -367,7 +367,7 @@ def inspect(task_id):
     if not row or not row[1] or not Path(row[1]).exists():
         raise RuntimeError("No workspace available for this task.")
     ws = Path(row[1])
-    print(f"Status: {row[0]} — {row[2]}")
+    print(f"Status: {row[0]} - {row[2]}")
     print(f"Workspace: {ws}")
     print("Changed files:", changed_paths(ws))
     print("Tracked changes:")

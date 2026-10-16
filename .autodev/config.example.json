@@ -1,0 +1,11 @@
+{
+  "game_dir": "projects/first-game/game",
+  "godot": "godot",
+  "codex_mode": "native",
+  "exe_name": "C01_Windows_Test.exe",
+  "tests": [
+    {"name": "SMOKE", "script": "tests/smoke_test.gd", "marker": "HARNESS_SMOKE_PASS"},
+    {"name": "REGRESSION", "script": "tests/regression_test.gd", "marker": "HARNESS_REGRESSION_PASS"},
+    {"name": "SLICE", "script": "tests/slice_acceptance.gd", "marker": "SLICE_ACCEPTANCE_PASS"}
+  ]
+}

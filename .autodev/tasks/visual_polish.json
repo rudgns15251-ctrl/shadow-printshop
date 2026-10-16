@@ -1,0 +1,8 @@
+{
+  "objective": "Improve the actual C01 Godot gameplay visual feedback and tactile paper-print animation in small, verifiable steps. Preserve all six puzzles, controls, accessibility, save/restore, UI text, audio behavior, and gameplay rules. Avoid adding dependencies. Modify visuals using local procedural shapes or SVG artwork only. Actual game screen must show the result; no documentation-only work.",
+  "allowed": [
+    "scripts/slice_board.gd",
+    "scripts/slice_main.gd",
+    "assets/art/*.svg"
+  ]
+}

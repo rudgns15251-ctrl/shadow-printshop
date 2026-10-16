@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "development_branch_prefix": "codex/",
+  "remote": "origin",
+  "remote_url": "https://github.com/rudgns15251-ctrl/shadow-printshop.git",
+  "approved_game_files": ["scripts/slice_main.gd", "scripts/slice_board.gd"],
+  "max_tasks": 8,
+  "max_fixes": 3,
+  "codex_timeout_seconds": 900,
+  "direction": "Preserve the approved C01 eight-puzzle XOR game, saves, controls, animations and audio. Make small UI, feedback and accessibility improvements using existing assets. No new game concept or puzzle rules.",
+  "protected": ["tests/", "data/", "project.godot", "export_presets.cfg", "tools/", ".git/", ".autodev/"]
+}

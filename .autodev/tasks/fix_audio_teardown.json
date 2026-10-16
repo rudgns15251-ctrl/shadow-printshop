@@ -1,0 +1,5 @@
+{
+  "objective": "Fix a confirmed Godot acceptance test teardown audio resource leak while preserving all 144 existing assertions. At test exit, stop ongoing sound playback and release streams before scene destruction. Do not ignore errors, remove tests, alter game scripts, weaken success markers, or change acceptance requirements. This is the only authorized test change.",
+  "allowed": ["tests/slice_acceptance.gd"],
+  "test_edit_allowed": true
+}

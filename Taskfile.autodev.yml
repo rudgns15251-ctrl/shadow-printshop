@@ -1,0 +1,36 @@
+version: '3'
+
+# Optional convenience commands after installing https://taskfile.dev/
+# No Task installation is required: Python commands in README work directly.
+# Set GODOT_BIN environment variable once if Godot.exe is not on PATH.
+tasks:
+  doctor:
+    cmds:
+      - python .autodev/auto.py doctor
+  build:
+    cmds:
+      - python .autodev/auto.py run
+  polish:
+    cmds:
+      - python .autodev/auto.py run --task visual_polish
+  fix-audio-test:
+    cmds:
+      - python .autodev/auto.py run --task fix_audio_teardown
+  status:
+    cmds:
+      - python .autodev/auto.py status
+  plan:
+    cmds:
+      - python .autodev/auto.py plan
+  autonomous:
+    cmds:
+      - python .autodev/auto.py run --autonomous
+  pause:
+    cmds:
+      - python .autodev/auto.py pause
+  resume:
+    cmds:
+      - python .autodev/auto.py resume
+  report:
+    cmds:
+      - python .autodev/auto.py report

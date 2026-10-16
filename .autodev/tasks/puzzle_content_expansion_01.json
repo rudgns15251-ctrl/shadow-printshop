@@ -1,0 +1,9 @@
+{
+  "objective": "Extend the EXISTING playable C01 Shadow Printshop game from 6 to 8 handcrafted puzzles. This is real game content production, NOT harness development or a planning-only task. Preserve all six existing puzzles, their order, mechanics, solutions and saved progress compatibility. Inspect the current puzzle data schema and progression logic, then append two genuinely distinct, solvable puzzles using existing XOR stamp and rotation mechanics. Verify each new puzzle has a valid solution and is not merely a duplicate or trivial rotation of an existing puzzle. Integrate puzzles 7 and 8 into normal progression, completion handling, progress display and save/load behavior. Reuse the existing UI, art and sound. Do not add new scenes, dependencies or external assets. Keep the code changes minimal and compatible with existing tests. Do not modify, weaken or delete existing tests or acceptance criteria. If the existing six-puzzle test contract prevents safe extension, report the specific blocker instead of bypassing validation. Validate through Godot import, smoke, regression, slice acceptance and Windows export. Never claim successful testing without actual results. Do not modify the harness, Git files or files outside the allowlist. Do not make Git commits.",
+  "allowed": [
+    "data/mech_data.gd",
+    "data/mech_puzzles.json",
+    "scripts/slice_state.gd",
+    "scripts/slice_main.gd"
+  ]
+}
