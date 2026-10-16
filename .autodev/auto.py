@@ -56,6 +56,8 @@ def source_files(game):
     """Snapshot only substantive content; Godot owns sidecars and import caches."""
     out = {}
     for path in game.rglob('*'):
+        if path.is_symlink() or (hasattr(path, 'is_junction') and path.is_junction()):
+            raise StopRun('Linked path in project (refusing): ' + str(path))
         if any(p in IGNORE_DIR for p in path.relative_to(game).parts):
             continue
         if path.is_symlink():
@@ -84,6 +86,8 @@ def check_changes(before, after, allowed):
 def copy_game(source, target):
     require((source / 'project.godot').exists(), 'Missing game/project.godot')
     require(not target.exists(), 'Staging folder already exists: ' + str(target))
+    require(not source.is_symlink() and not (hasattr(source, 'is_junction') and source.is_junction()), 'Linked source root refused')
+    source_files(source)  # Reject linked paths before copytree can dereference them.
     def ignore(_, names):
         return {n for n in names if n in IGNORE_DIR or n.endswith('.bak')}
     shutil.copytree(source, target, ignore=ignore, symlinks=False)
@@ -203,7 +207,7 @@ def task_file(task_name):
     require(path.exists(), 'No task file: ' + str(path))
     task = load_json(path)
     require(task.get('allowed') and task.get('objective'), 'Task requires allowed + objective')
-    require(all(isinstance(s,str) and not s.startswith('/') and '..' not in Path(s).parts for s in task['allowed']), 'Invalid allowed paths')
+    require(all(isinstance(s,str) and not s.startswith('/') and not PureWindowsPath(s).drive and '\\' not in s and '..' not in s.split('/') for s in task['allowed']), 'Invalid allowed paths')
     return task
 
 def make_export_preset(game):
@@ -285,6 +289,7 @@ def do_run(args, config):
     baseline = source_files(stage)
     state = {'run_id':run_root.name,'task':args.task,'source_commit':before_repo,'status':'running',
              'allowed':task['allowed'] if task else [],'changes':[], 'stage':str(stage)}
+    state['source_snapshot'] = baseline
     save_result(run_root,state)
     print('STAGE:',stage,flush=True)
     # Single stage folder is used for import, testing and final export.
@@ -322,6 +327,7 @@ def do_run(args, config):
             if not args.skip_export:
                 archive = make_release(godot,stage,run_root,config)
             state['status']='review'
+            state['validated_snapshot'] = source_files(stage)
             state['build_zip']=str(archive) if archive else None
             print('AUTODEV_PASS (HUMAN_REVIEW_REQUIRED)',flush=True)
         else:
@@ -353,6 +359,9 @@ def do_accept(args, config):
     baseline = source_files(source)
     new_snapshot = source_files(stage)
     changes = report['changes']
+    require(report.get('source_snapshot') == baseline, 'Source snapshot differs; preserve historical run and revalidate')
+    require(report.get('validated_snapshot') == new_snapshot, 'Stage was not validated or has changed since QA')
+    require(check_changes(baseline,new_snapshot,allowed) == changes, 'Recorded change list differs from actual stage')
     require(all(p in new_snapshot and path_permitted(p,allowed) for p in changes), 'Unsafe changed paths')
     # Validate that only listed allowed changes exist in source before applying.
     require(all(p not in baseline or (source/p).exists() for p in changes),'Destination state invalid')

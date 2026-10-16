@@ -247,6 +247,28 @@ class Coordinator(unittest.TestCase):
         self.assertIsNotNone(a.auto.ERRORS.search(text))
         self.assertEqual(a.read(run / 'autonomous.json')['processes'][0]['exit_code'], 0)
 
+    def test_real_subprocess_timeout_is_recorded(self):
+        run = self.here / 'runs/timeout-fixture'; run.mkdir(parents=True)
+        data = {}
+        rc, text = a.process([sys.executable, '-c', 'import time;time.sleep(30)'], run, data, 'timeout', timeout=0.1)
+        self.assertEqual(rc, -1)
+        self.assertIn('TIMEOUT', text)
+        self.assertTrue(a.read(run / 'autonomous.json')['processes'][0]['timed_out'])
+
+    def test_registered_acceptance_probe_is_required_before_integration(self):
+        task = self.task(); task['acceptance_probes'] = ['context_tooltips']
+        plan = self.plan([task])
+        run, data = a.new_run(plan['tasks'][0], self.c, self.p, plan)
+        def provider(cmd, run, data, name, *args, **kwargs):
+            rc, text = self.provider(cmd, run, data, name, *args, **kwargs)
+            return rc, text + ' TOOLTIP_ACCEPTANCE_PASS'
+        with self.providers(process=provider):
+            self.coder(run / 'game', run, data)
+            a.qa(run / 'game', run, data, self.c, self.p, plan['tasks'][0])
+            data['qa'] = [q for q in data['qa'] if not q['name'].startswith('ACCEPTANCE:')]
+            with self.assertRaises(a.ERROR): a.integrate(run, data, plan['tasks'][0], self.c, self.p)
+        self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
+
 
 def contextlib_exit_stack():
     import contextlib
