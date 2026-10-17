@@ -788,6 +788,12 @@ func _valid_progress(data: Variant) -> bool:
 	var candidate = State.new()
 	return candidate.import_progress(data)
 
+func _parse_json_quietly(content: String) -> Variant:
+	var parser := JSON.new()
+	if parser.parse(content) != OK:
+		return null
+	return parser.data
+
 func _save_progress() -> bool:
 	var content: Dictionary = _serialize_progress()
 	if not _valid_progress(content):
@@ -799,7 +805,7 @@ func _save_progress() -> bool:
 	handle.store_string(JSON.stringify(content))
 	handle.flush()
 	handle.close()
-	var verify: Variant = JSON.parse_string(FileAccess.get_file_as_string(temporary))
+	var verify: Variant = _parse_json_quietly(FileAccess.get_file_as_string(temporary))
 	if not _valid_progress(verify):
 		return false
 	# All save rotation operations stay inside Godot's user:// directory.
@@ -824,7 +830,7 @@ func _save_progress() -> bool:
 func _read_valid_progress(path: String) -> Variant:
 	if not FileAccess.file_exists(path):
 		return null
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var data: Variant = _parse_json_quietly(FileAccess.get_file_as_string(path))
 	return data if _valid_progress(data) else null
 
 func _has_valid_save() -> bool:
@@ -856,7 +862,7 @@ func _save_settings() -> void:
 func _load_settings() -> void:
 	if not FileAccess.file_exists(SETTINGS_PATH):
 		return
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(SETTINGS_PATH))
+	var data: Variant = _parse_json_quietly(FileAccess.get_file_as_string(SETTINGS_PATH))
 	if not data is Dictionary:
 		return
 	for key in ["master", "sfx", "bgm"]:
