@@ -1,0 +1,730 @@
+{
+  "status": "BLOCKED",
+  "AUDIO_LEAK_RESOLVED": false,
+  "local_date": "2026-10-17",
+  "timezone": "Asia/Seoul",
+  "baseline_commit": "30f37f5529ef6e7f4e50a78ad8c34b5ecd967e9b",
+  "branch": "codex/autonomous-harness-20261017",
+  "environment": {
+    "system": "Windows",
+    "release": "10",
+    "version": "10.0.19045",
+    "machine": "AMD64",
+    "python": "3.14.3"
+  },
+  "engine_version": "4.7.1.stable.official.a13da4feb",
+  "engine_sha256": "323f9c4cc5db674e98815cdd8e69da007d5efc779abedc8c0e42883b7fdea12a",
+  "engine_replaced": false,
+  "dependencies_installed": false,
+  "shutdown_executed": false,
+  "asset_hashes": {
+    "slice_print.wav": "791cb7409b5eac25a9f1d7a8f4a1f163702c343447d93f6e8598fdf368dd2a3d",
+    "slice_undo.wav": "59916de817c3e38e97810b84b27706841d7029336df5bc2008e845b64afc1171",
+    "slice_complete.wav": "177644e5299203223f72b2d8074fd24b5fcf348ac270ce216424644bf940bd76"
+  },
+  "probe_sha256": "c890d08ce2dbc82f2c7cf6387033b380ae5c1b973bd46d12191e5a3d6018d1d9",
+  "original_immediate_probe_sha256": "c2d324affd3f97c4e59eec50397ed35ba86c762b84d7c4b29854f9da8d49273d",
+  "attempts": 320,
+  "passed": 243,
+  "failed": 77,
+  "groups": {
+    "minimal/A/WASAPI": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.242281,
+        "median": 0.272373,
+        "max": 0.358843
+      }
+    },
+    "minimal/A/Dummy": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.291404,
+        "median": 0.299205,
+        "max": 0.299278
+      }
+    },
+    "minimal/B/WASAPI": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.237898,
+        "median": 0.243378,
+        "max": 0.252896
+      }
+    },
+    "minimal/B/Dummy": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.290224,
+        "median": 0.297385,
+        "max": 0.300197
+      }
+    },
+    "minimal/C/WASAPI": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamPlaybackWAV": 5,
+        "AudioStreamWAV": 5
+      },
+      "duration_s": {
+        "min": 0.239799,
+        "median": 0.25123,
+        "max": 0.258719
+      }
+    },
+    "minimal/C/Dummy": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamPlaybackWAV": 5,
+        "AudioStreamWAV": 5
+      },
+      "duration_s": {
+        "min": 0.290503,
+        "median": 0.295756,
+        "max": 0.31212
+      }
+    },
+    "minimal/D/WASAPI": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamWAV": 15,
+        "AudioStreamPlaybackWAV": 241
+      },
+      "duration_s": {
+        "min": 0.264004,
+        "median": 0.273332,
+        "max": 0.289447
+      }
+    },
+    "minimal/D/Dummy": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamWAV": 15,
+        "AudioStreamPlaybackWAV": 1500
+      },
+      "duration_s": {
+        "min": 0.295608,
+        "median": 0.297709,
+        "max": 0.299855
+      }
+    },
+    "minimal/E/WASAPI": {
+      "attempts": 35,
+      "passed": 21,
+      "failed": 14,
+      "leaked_objects": {
+        "AudioStreamWAV": 42,
+        "AudioStreamPlaybackWAV": 572
+      },
+      "duration_s": {
+        "min": 0.243522,
+        "median": 0.261732,
+        "max": 0.296645
+      }
+    },
+    "minimal/E/Dummy": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamWAV": 15,
+        "AudioStreamPlaybackWAV": 1500
+      },
+      "duration_s": {
+        "min": 0.295199,
+        "median": 0.296798,
+        "max": 0.304279
+      }
+    },
+    "minimal/E_queue/WASAPI": {
+      "attempts": 5,
+      "passed": 4,
+      "failed": 1,
+      "leaked_objects": {
+        "AudioStreamWAV": 3,
+        "AudioStreamPlaybackWAV": 59
+      },
+      "duration_s": {
+        "min": 0.251542,
+        "median": 0.264103,
+        "max": 0.273425
+      }
+    },
+    "minimal/E_queue/Dummy": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamWAV": 15,
+        "AudioStreamPlaybackWAV": 1500
+      },
+      "duration_s": {
+        "min": 0.290296,
+        "median": 0.301394,
+        "max": 0.302094
+      }
+    },
+    "minimal/F/WASAPI": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.804832,
+        "median": 0.823141,
+        "max": 0.956476
+      }
+    },
+    "minimal/F/Dummy": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.84153,
+        "median": 0.84835,
+        "max": 0.850595
+      }
+    },
+    "minimal/E_drain/WASAPI": {
+      "attempts": 35,
+      "passed": 35,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.266668,
+        "median": 0.374934,
+        "max": 0.4683
+      }
+    },
+    "minimal/E_drain/Dummy": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.38087,
+        "median": 0.393994,
+        "max": 0.402853
+      }
+    },
+    "game-original/H_quit/WASAPI": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.40125,
+        "median": 0.444919,
+        "max": 0.557132
+      }
+    },
+    "game-original/H_quit/Dummy": {
+      "attempts": 5,
+      "passed": 0,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamWAV": 15,
+        "AudioStreamPlaybackWAV": 1047
+      },
+      "duration_s": {
+        "min": 0.397766,
+        "median": 0.498595,
+        "max": 0.508091
+      }
+    },
+    "game-previous-candidate/H_quit/WASAPI": {
+      "attempts": 5,
+      "passed": 3,
+      "failed": 2,
+      "leaked_objects": {
+        "AudioStreamWAV": 6,
+        "AudioStreamPlaybackWAV": 6
+      },
+      "duration_s": {
+        "min": 0.422353,
+        "median": 0.431117,
+        "max": 0.444121
+      }
+    },
+    "game-previous-candidate/H_quit/Dummy": {
+      "attempts": 5,
+      "passed": 2,
+      "failed": 3,
+      "leaked_objects": {
+        "AudioStreamWAV": 9,
+        "AudioStreamPlaybackWAV": 159
+      },
+      "duration_s": {
+        "min": 0.395565,
+        "median": 0.480883,
+        "max": 0.494991
+      }
+    },
+    "game-original/H_free/WASAPI": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.413918,
+        "median": 0.442054,
+        "max": 0.84586
+      }
+    },
+    "game-original/H_free/Dummy": {
+      "attempts": 5,
+      "passed": 1,
+      "failed": 4,
+      "leaked_objects": {
+        "AudioStreamWAV": 12,
+        "AudioStreamPlaybackWAV": 650
+      },
+      "duration_s": {
+        "min": 0.392279,
+        "median": 0.490728,
+        "max": 0.493608
+      }
+    },
+    "game-previous-candidate/H_free/WASAPI": {
+      "attempts": 5,
+      "passed": 4,
+      "failed": 1,
+      "leaked_objects": {
+        "AudioStreamWAV": 3,
+        "AudioStreamPlaybackWAV": 6
+      },
+      "duration_s": {
+        "min": 0.395163,
+        "median": 0.433513,
+        "max": 0.441851
+      }
+    },
+    "game-previous-candidate/H_free/Dummy": {
+      "attempts": 5,
+      "passed": 1,
+      "failed": 4,
+      "leaked_objects": {
+        "AudioStreamWAV": 12,
+        "AudioStreamPlaybackWAV": 312
+      },
+      "duration_s": {
+        "min": 0.385631,
+        "median": 0.387582,
+        "max": 0.483745
+      }
+    },
+    "game-original/H_drain/WASAPI": {
+      "attempts": 35,
+      "passed": 35,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.443917,
+        "median": 0.624094,
+        "max": 0.943625
+      }
+    },
+    "game-original/H_drain/Dummy": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.480188,
+        "median": 0.500565,
+        "max": 0.605502
+      }
+    },
+    "game-previous-candidate/H_drain/WASAPI": {
+      "attempts": 35,
+      "passed": 35,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.417057,
+        "median": 0.605973,
+        "max": 0.662057
+      }
+    },
+    "game-previous-candidate/H_drain/Dummy": {
+      "attempts": 5,
+      "passed": 5,
+      "failed": 0,
+      "leaked_objects": {},
+      "duration_s": {
+        "min": 0.479212,
+        "median": 0.480993,
+        "max": 0.492406
+      }
+    },
+    "game-original/ORIGINAL_IMMEDIATE/WASAPI": {
+      "attempts": 30,
+      "passed": 25,
+      "failed": 5,
+      "leaked_objects": {
+        "AudioStreamWAV": 15,
+        "AudioStreamPlaybackWAV": 172
+      },
+      "duration_s": {
+        "min": 0.400755,
+        "median": 0.430389,
+        "max": 1.004619
+      }
+    },
+    "game-previous-candidate/ORIGINAL_IMMEDIATE/WASAPI": {
+      "attempts": 30,
+      "passed": 22,
+      "failed": 8,
+      "leaked_objects": {
+        "AudioStreamWAV": 24,
+        "AudioStreamPlaybackWAV": 42
+      },
+      "duration_s": {
+        "min": 0.375528,
+        "median": 0.408564,
+        "max": 0.934858
+      }
+    }
+  },
+  "observed_retirement_delays": {
+    "minimal": {
+      "condition": "E_drain",
+      "samples": 35,
+      "median_ms": 16.857,
+      "max_ms": 21.879
+    },
+    "game-original": {
+      "condition": "H_drain",
+      "samples": 35,
+      "median_ms": 6.11,
+      "max_ms": 22.368
+    },
+    "game-previous-candidate": {
+      "condition": "H_drain",
+      "samples": 35,
+      "median_ms": 14.932,
+      "max_ms": 19.343
+    }
+  },
+  "independent_audit": {
+    "evidence_consistent": true,
+    "errors": [],
+    "attempts": 320,
+    "independently_passed": 243,
+    "independently_failed": 77,
+    "unique_raw_logs": 320,
+    "strict_wasapi_30_all_pass": false,
+    "AUDIO_LEAK_RESOLVED": false,
+    "status": "BLOCKED",
+    "reason": "Original immediate-exit acceptance failed or evidence is inconsistent; no resolution is certified."
+  },
+  "regression_gates": [
+    {
+      "name": "game-original-SMOKE",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 0.634115,
+      "log": "regression-01-game-original-SMOKE.log",
+      "sha256": "b096e96f1aee69e4ea34d96931a38e0c52be1cf750af12b2c4cce3015906b2cf",
+      "marker": "HARNESS_SMOKE_PASS",
+      "error_lines": []
+    },
+    {
+      "name": "game-original-REGRESSION",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 0.498795,
+      "log": "regression-02-game-original-REGRESSION.log",
+      "sha256": "8db2592823fc60607703cc3b259265be56d897e534bedb23231bcc4ba1f7edb1",
+      "marker": "HARNESS_REGRESSION_PASS",
+      "error_lines": []
+    },
+    {
+      "name": "game-original-SLICE",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 1.210253,
+      "log": "regression-03-game-original-SLICE.log",
+      "sha256": "d0461e1d3b3c7130e424209ba2c6c23b3cf47ddc9276583e8d2ade13b7473d50",
+      "marker": "SLICE_ACCEPTANCE_PASS",
+      "error_lines": []
+    },
+    {
+      "name": "game-original-OFFLINE",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": false,
+      "duration_s": 0.122065,
+      "log": "regression-04-game-original-OFFLINE.log",
+      "sha256": "019a27e11472782eddacdb849e709f13de37a0faea826e9b2947992e30125190",
+      "marker": "PASS offline cases 8000",
+      "error_lines": []
+    },
+    {
+      "name": "game-original-QUALITY",
+      "passed": false,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 1.602163,
+      "log": "regression-05-game-original-QUALITY.log",
+      "sha256": "bb8643a1d551732193f890fbe90ca22474092cbfe65a7e1cf23310e765cdf6e6",
+      "marker": "AUTODEV_QUALITY_PASS checks=155",
+      "error_lines": [
+        "ERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'invalid'",
+        "ERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'invalid'",
+        "ERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'invalid'"
+      ]
+    },
+    {
+      "name": "game-original-EXPORT",
+      "passed": true,
+      "archive": "export-game-original\\Windows_Test_Build.zip"
+    },
+    {
+      "name": "game-original-BUILD_RUN",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 1.089684,
+      "log": "regression-07-game-original-BUILD_RUN.log",
+      "sha256": "81da9feee6ac0813ee588cf053eb573c52ffe8c8ddb37780de40aa92c9e8d2a5",
+      "marker": "Godot Engine",
+      "error_lines": []
+    },
+    {
+      "name": "game-previous-candidate-SMOKE",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 2.15756,
+      "log": "regression-08-game-previous-candidate-SMOKE.log",
+      "sha256": "b096e96f1aee69e4ea34d96931a38e0c52be1cf750af12b2c4cce3015906b2cf",
+      "marker": "HARNESS_SMOKE_PASS",
+      "error_lines": []
+    },
+    {
+      "name": "game-previous-candidate-REGRESSION",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 0.505228,
+      "log": "regression-09-game-previous-candidate-REGRESSION.log",
+      "sha256": "8db2592823fc60607703cc3b259265be56d897e534bedb23231bcc4ba1f7edb1",
+      "marker": "HARNESS_REGRESSION_PASS",
+      "error_lines": []
+    },
+    {
+      "name": "game-previous-candidate-SLICE",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 1.235137,
+      "log": "regression-10-game-previous-candidate-SLICE.log",
+      "sha256": "d0461e1d3b3c7130e424209ba2c6c23b3cf47ddc9276583e8d2ade13b7473d50",
+      "marker": "SLICE_ACCEPTANCE_PASS",
+      "error_lines": []
+    },
+    {
+      "name": "game-previous-candidate-OFFLINE",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": false,
+      "duration_s": 0.128114,
+      "log": "regression-11-game-previous-candidate-OFFLINE.log",
+      "sha256": "019a27e11472782eddacdb849e709f13de37a0faea826e9b2947992e30125190",
+      "marker": "PASS offline cases 8000",
+      "error_lines": []
+    },
+    {
+      "name": "game-previous-candidate-QUALITY",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 1.63091,
+      "log": "regression-12-game-previous-candidate-QUALITY.log",
+      "sha256": "508b9a40207da767caef9ecdbfb3166ba87484b7b57b15d9426ad65c9fb039e0",
+      "marker": "AUTODEV_QUALITY_PASS checks=155",
+      "error_lines": []
+    },
+    {
+      "name": "game-previous-candidate-EXPORT",
+      "passed": true,
+      "archive": "export-game-previous-candidate\\Windows_Test_Build.zip"
+    },
+    {
+      "name": "game-previous-candidate-BUILD_RUN",
+      "passed": true,
+      "exit_code": 0,
+      "wasapi_activated": true,
+      "duration_s": 0.973087,
+      "log": "regression-14-game-previous-candidate-BUILD_RUN.log",
+      "sha256": "81da9feee6ac0813ee588cf053eb573c52ffe8c8ddb37780de40aa92c9e8d2a5",
+      "marker": "Godot Engine",
+      "error_lines": []
+    }
+  ],
+  "builds": {
+    "game-original": {
+      "C01_Windows_Test.exe": {
+        "bytes": 109212160,
+        "sha256": "76269a403bb832599edeee4432a5b7a7e88c018eb5c9c798dfd8289359b0ec07"
+      },
+      "C01_Windows_Test.pck": {
+        "bytes": 173132,
+        "sha256": "93a7aaf0479410f614d395cc8e4f9928aff70ac32067c963662daa545acc6c26"
+      }
+    },
+    "game-previous-candidate": {
+      "C01_Windows_Test.exe": {
+        "bytes": 109212160,
+        "sha256": "76269a403bb832599edeee4432a5b7a7e88c018eb5c9c798dfd8289359b0ec07"
+      },
+      "C01_Windows_Test.pck": {
+        "bytes": 177992,
+        "sha256": "4cec5af5db88d88a7e3e0457d81ebd9c4008d9ac4af4d535d5fa59f71f92e06d"
+      }
+    }
+  },
+  "unit_tests": [
+    {
+      "log": ".data/audio-lab-unit.log",
+      "sha256": "fc3d79d3b79ec34af3bbf1703e85278afc39f6e7bd63fa45c432c334f5417298",
+      "count": 10,
+      "skipped": 0,
+      "suite_success": true
+    },
+    {
+      "log": ".data/audio-rootcause-legacy-tests.log",
+      "sha256": "8a36c69d6c75db32a4b3417785a837c235770a33dc162f2c3fcb672f36301f14",
+      "count": 111,
+      "skipped": 11,
+      "suite_success": true
+    },
+    {
+      "log": ".data/audio-rootcause-harness-tests.log",
+      "sha256": "bc36dc8929f1579b1e936e4c31e1eba6dc98a4d33ba48632582b5f1e3bc5ebc0",
+      "count": 34,
+      "skipped": 1,
+      "suite_success": true
+    },
+    {
+      "log": ".data/audio-rootcause-transaction-tests.log",
+      "sha256": "27d9a9757bd360f2fcd413f60051949b62d1eb6d7e2f8bed76651d62769e9a3e",
+      "count": 6,
+      "skipped": 0,
+      "suite_success": true
+    }
+  ],
+  "engine_source_audit": {
+    "sources": [
+      {
+        "version": "4.7-stable",
+        "path": "servers/audio/audio_server.cpp",
+        "url": "https://raw.githubusercontent.com/godotengine/godot/4.7-stable/servers/audio/audio_server.cpp",
+        "sha256": "d7641ef5852aa86f75c4d506759de2838a2c3886c29f7eb25fd9e9310d87c102",
+        "bytes": 76637,
+        "finish_explicitly_drains_playbacks": false
+      },
+      {
+        "version": "4.7.1-stable",
+        "path": "servers/audio/audio_server.cpp",
+        "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.1-stable/servers/audio/audio_server.cpp",
+        "sha256": "d7641ef5852aa86f75c4d506759de2838a2c3886c29f7eb25fd9e9310d87c102",
+        "bytes": 76637,
+        "finish_explicitly_drains_playbacks": false
+      },
+      {
+        "version": "a13da4feb",
+        "path": "servers/audio/audio_server.cpp",
+        "url": "https://raw.githubusercontent.com/godotengine/godot/a13da4feb/servers/audio/audio_server.cpp",
+        "sha256": "d7641ef5852aa86f75c4d506759de2838a2c3886c29f7eb25fd9e9310d87c102",
+        "bytes": 76637,
+        "finish_explicitly_drains_playbacks": false
+      },
+      {
+        "version": "master",
+        "path": "servers/audio/audio_server.cpp",
+        "url": "https://raw.githubusercontent.com/godotengine/godot/master/servers/audio/audio_server.cpp",
+        "sha256": "60eb704d4cf417a9929bfebc315aa2bb5855b7d5d58cbbc0d7cc70085f921b68",
+        "bytes": 67591,
+        "finish_explicitly_drains_playbacks": false
+      },
+      {
+        "version": "4.7.1-stable",
+        "path": "core/templates/safe_list.h",
+        "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.1-stable/core/templates/safe_list.h",
+        "sha256": "b9cd8f7c2faf6bf906fbc7a09b84e7503792c34618405ce43159740986a98aff",
+        "bytes": 8256
+      },
+      {
+        "version": "4.7.1-stable",
+        "path": "scene/audio/audio_stream_player_internal.cpp",
+        "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.1-stable/scene/audio/audio_stream_player_internal.cpp",
+        "sha256": "5c1c5646ac29673fa22050feaaaf823b82323405ba1b55e3a94e823c4a7b1be9",
+        "bytes": 12782
+      }
+    ],
+    "patch_compiled": false,
+    "patch_applied_to_installed_engine": false,
+    "patch_scope": "AudioServer::finish after all audio drivers stop, before bus deletion",
+    "release_tag_matches_binary_commit_source": true
+  },
+  "engine_patch": {
+    "path": ".autodev/audio_lab/engine_patch/godot-4.7.1-drain-at-finish.patch",
+    "sha256": "7b3d02f1066c600c3a72bdf90c61f736cdc94fa62679c5e68fa96d74079805d3",
+    "git_apply_check": true,
+    "compiled": false,
+    "runtime_verified": false,
+    "blocker": "No Windows/WSL C++ compiler or SCons available on the inspected PATH; installation/replacement was not performed."
+  },
+  "e2e": {
+    "resumed": false,
+    "task_1": "BLOCKED",
+    "task_2": "PENDING",
+    "reason": "Unchanged strict immediate-exit acceptance still fails. No past run was force-integrated."
+  },
+  "evidence_directory": ".data/audio-rootcause-20261017-101018-680375",
+  "raw_evidence": {
+    "results.json": "8605ace9a8a57dcbd6509cb6060df598631e35a0160ae87533164970f01bdb91",
+    "independent-audit.json": "cf1d48b88ff71d6f8a342233ff0fc96be7102120a17bdd7f893c6901d25f093a",
+    "regression.json": "447de4580f0c7b53148f50e93124f56c265496265e8ee67e126a2b31fa6c9ace",
+    "references/audit.json": "cb040429d0c48d3670fe2133f8644df058fdb037dc923ea10870ab215627c112"
+  },
+  "preservation": {
+    "game_diff_from_baseline": [],
+    "stable_branch": "83294f2eb49d261bce020e45985eb40983ace229",
+    "existing_tests_modified": false,
+    "old_run_modified": false
+  },
+  "limitations": [
+    "No patched engine binary or export template has been built or executed.",
+    "Reference-drain mitigation passes a different condition and does not satisfy same-frame immediate exit.",
+    "One runtime engine version tested; other version comparison was source-only.",
+    "No native C++ debugger trace; ownership conclusion combines minimal runtime experiments with exact version source.",
+    "Listening, clipping and all-environment absence of leaks are not certified."
+  ]
+}
