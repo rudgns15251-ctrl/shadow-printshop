@@ -401,7 +401,7 @@ func _refresh() -> void:
 	print_button.disabled = data["solved"]
 	undo_button.disabled = data["history_size"] == 0
 	next_button.disabled = not state.can_advance()
-	print_button.tooltip_text = "이미 목표 무늬를 완성했습니다." if data["solved"] else "선택한 도장을 종이에 찍습니다. (Space/Enter)"
+	print_button.tooltip_text = "이미 목표 무늬를 완성했습니다." if data["solved"] else "선택한 도장의 표시된 칸을 반전해 인쇄합니다. (Space/Enter)"
 	undo_button.tooltip_text = "되돌릴 인쇄 기록이 없습니다." if data["history_size"] == 0 else "마지막 인쇄를 되돌립니다. (U/Z)"
 	if not next_button.disabled:
 		next_button.tooltip_text = "다음 퍼즐로 직접 진행합니다. (N)"
