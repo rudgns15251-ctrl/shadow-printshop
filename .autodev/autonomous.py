@@ -197,12 +197,17 @@ def process(cmd, run, data, name, timeout=240, env=None, stdin=None, cwd=None):
         except subprocess.TimeoutExpired:
             # Terminate only this launched process tree; never all Godot/Codex processes.
             if os.name == 'nt':
-                subprocess.run(['taskkill.exe', '/PID', str(p.pid), '/T', '/F'], capture_output=True, timeout=20)
-            p.kill()
-            p.wait(timeout=20)
+                from windows_process import terminate_tree
+                record['termination'] = terminate_tree(p)
+            else:
+                p.kill()
+                p.wait(timeout=20)
             code = -1
             record['timed_out'] = True
             out.write(b'\nTIMEOUT: launched process exceeded its deadline\n')
+    if os.name == 'nt' and record.get('timed_out'):
+        from windows_process import wait_log_released
+        record['termination'].update(wait_log_released(log))
     data['child_pid'] = None
     text = log.read_text(encoding='utf-8', errors='replace')
     record.update(exit_code=code, finished=now(), status='PASS' if code == 0 else 'FAIL', sha256=auto.sha(log))
@@ -426,8 +431,11 @@ def qa(stage, run, data, c, p, task):
     # Verify source after QA; tests cannot secretly mutate allowed game content.
     data['validated_snapshot'] = snapshot(stage)
     data['changes'] = checked_changes(data['baseline'], data['validated_snapshot'], task, p)
-    auto.make_export_preset(stage)
-    auto.check_template(godot)
+    auto.make_export_preset(stage, c)
+    data['engine_version'] = auto.check_template(godot, c)
+    data['engine_sha256'] = auto.sha(godot)
+    if c.get('engine_profile'):
+        data['engine_profile'] = c['engine_profile']
     release = run / 'release'
     release.mkdir(exist_ok=True)
     exe = release / c.get('exe_name', 'C01_Windows_Test.exe')
@@ -556,7 +564,7 @@ def new_run(task, c, p, plan):
     require(snapshot(stage) == baseline, 'Snapshot copy mismatch')
     shutil.copy2(HERE / 'checks/quality_probe.gd', stage / 'autodev_quality_probe.gd')
     (stage / 'autodev_quality_probe.gd.uid').write_text('uid://c6devquality01\n', encoding='utf-8')
-    auto.make_export_preset(stage)
+    auto.make_export_preset(stage, c)
     git('init', '-q', cwd=stage)
     git('add', '--', '.', cwd=stage)
     git('-c', 'user.name=AutoDev', '-c', 'user.email=autodev@invalid', 'commit', '-qm', 'Disposable snapshot', cwd=stage)

@@ -1,0 +1,31 @@
+{
+  "source_repository": "https://github.com/godotengine/godot.git",
+  "source_tag": "4.7.1-stable",
+  "source_commit": "a13da4feb8d8aefc283c3763d33a2f170a18d541",
+  "original_audio_source_sha256": "d7641ef5852aa86f75c4d506759de2838a2c3886c29f7eb25fd9e9310d87c102",
+  "patched_audio_source_sha256": "0c1a17182b54e141900b745ef92d798d028d64026adf0c7182c017b81cd40b98",
+  "upstream_reference": "https://github.com/godotengine/godot/pull/122742",
+  "upstream_head_observed": "eb5f8e774b5ca29cfbec745829767f82a7e8ec98",
+  "build_tools": {
+    "python": "3.14.3 x64",
+    "scons": "4.11.1",
+    "msvc": "19.43.34809 x64",
+    "windows_sdk": "10.0.22621.0"
+  },
+  "common_scons_arguments": [
+    "platform=windows", "arch=x86_64", "msvc_version=14.3",
+    "mssdk_version=10.0.22621.0", "d3d12=no", "angle=no",
+    "accesskit=no", "debug_symbols=yes", "lto=none", "-j8"
+  ],
+  "targets": ["editor", "template_debug", "template_release"],
+  "existing_probes_must_remain_unchanged": ["probe.gd", "original_immediate.gd"],
+  "original_immediate_sha256": "c2d324affd3f97c4e59eec50397ed35ba86c762b84d7c4b29854f9da8d49273d",
+  "minimum_repeats_per_stress_group": 30,
+  "required_drivers": ["WASAPI", "Dummy"],
+  "notes": [
+    "This file records a reproducible recipe, not a claim that any build or runtime gate passed.",
+    "Use separate source checkouts and output paths. Never replace installed Godot or export templates.",
+    "D3D12, ANGLE and AccessKit are disabled equally in the comparison; this is a C01 GL Compatibility validation profile.",
+    "Record all failures and independently audit raw logs. Compilation alone never certifies a leak fix."
+  ]
+}

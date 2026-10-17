@@ -40,3 +40,22 @@ ERROR·ObjectDB 누수·리소스 잔류 또는 잘못된 드라이버가 있으
 뜻이 아닙니다. 전체 완료는 수정된 엔진/게임의 동일 조건 재검증이 필요합니다.
 
 검토용 엔진 패치와 미검증 범위는 [engine_patch/README_KO.md](engine_patch/README_KO.md)에 있습니다.
+
+## 별도 Windows 엔진 비교
+
+`engine_validation.py --engine ENGINE --run-dir .data/NEW_RUN --phase control --repeats 5`로
+명시한 엔진의 새 증거 디렉터리를 준비합니다. 같은 경로에 `--phase stress --repeats 30`,
+`--phase original --repeats 30`을 실행하면 기존 probe를 수정하지 않고 570회 전체를 기록합니다.
+엔진이나 probe 해시가 바뀌면 이전 증거에 덧붙이지 않습니다.
+독립 감사는 기존 `verify_evidence.py`를 그대로 사용합니다.
+
+`engine_regression.py`는 `--engine`, `--run-dir`, `--template-debug`, `--template-release`를
+명시해 기존 게임 QA와 export를 수행합니다. `--label`은 이전 실패를 보존하는 별도 실행 이름이며
+이미 있는 보고서나 빌드 디렉터리를 덮어쓰지 않습니다. 기본값은 export당 독립 프로세스 30회입니다.
+일반 게임 EXE의 기본 장면 실행과 별도 QA pack의 즉시 종료·그래픽 재생을 구분합니다.
+기본 template의 CLI 경로 제한을 유지하기 위해 QA pack의 main loop만 원본 probe를 상속합니다.
+원본 probe의 바이트·누수 판정 기준·게임 원본·기존 acceptance 테스트는 변경하지 않습니다.
+추가 `playback_verification.gd`는 실제 WASAPI와 9개 SFX 믹서 peak를 측정합니다.
+물리적인 스피커 청취나 주관적 클리핑 평가는 별도입니다.
+
+실제 시행 결과와 중간 실패 원인은 [Windows 검증 보고서](../../docs/AUDIO_ENGINE_WINDOWS_20261017_KO.md)에 기록합니다.

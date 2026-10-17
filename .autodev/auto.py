@@ -210,17 +210,55 @@ def task_file(task_name):
     require(all(isinstance(s,str) and not s.startswith('/') and not PureWindowsPath(s).drive and '\\' not in s and '..' not in s.split('/') for s in task['allowed']), 'Invalid allowed paths')
     return task
 
-def make_export_preset(game):
+def profile_templates(godot, config):
+    """Bind a verified custom engine to workspace-local, hash-pinned templates."""
+    profile = (config or {}).get('engine_profile')
+    if not profile:
+        return None
+    require(sha(godot) == profile.get('engine_sha256'), 'Custom engine hash mismatch')
+    templates = {}
+    for mode in ('debug', 'release'):
+        entry = profile.get(mode, {})
+        path = Path(entry.get('path', ''))
+        require(path.is_absolute() and path.is_file(), 'Custom template missing: ' + mode)
+        resolved = path.resolve()
+        require(resolved.is_relative_to((ROOT / '.data').resolve()), 'Custom template must remain in workspace .data')
+        require(resolved.stat().st_size > 100000 and sha(resolved) == entry.get('sha256'), 'Custom template hash mismatch: ' + mode)
+        with resolved.open('rb') as stream:
+            require(stream.read(2) == b'MZ', 'Custom template is not a Windows executable: ' + mode)
+        templates[mode] = resolved
+    return templates
+
+
+def make_export_preset(game, config=None):
     p = game/'export_presets.cfg'
+    templates = profile_templates(resolve_godot(None, config), config) if config and config.get('engine_profile') else None
+    if templates:
+        folder = game.resolve()
+        require(any(folder.is_relative_to(root.resolve()) for root in (ROOT / '.data', HERE / 'runs')),
+                'Custom export presets may only be configured in isolated workspace copies')
+        text = p.read_text(encoding='utf-8') if p.exists() else PRESET
+        for mode, path in templates.items():
+            line = 'custom_template/' + mode + '='
+            replacement = line + '"' + path.as_posix() + '"'
+            matches = [row for row in text.splitlines() if row.startswith(line)]
+            require(len(matches) == 1 and matches[0] in (line + '""', replacement),
+                    'Refusing to overwrite an unrelated custom export template: ' + mode)
+            text = text.replace(matches[0], replacement)
+        if not p.exists() or p.read_text(encoding='utf-8') != text:
+            p.write_text(text, encoding='utf-8', newline='\n')
+        return
     if not p.exists():
         p.write_text(PRESET,encoding='utf-8',newline='\n')
 
-def check_template(godot):
+def check_template(godot, config=None):
     version_log = subprocess.run([str(godot), '--version'],capture_output=True,timeout=20)
     require(version_log.returncode==0, 'Cannot determine Godot version')
     version = version_log.stdout.decode('utf-8','replace').strip()
     m = re.match(r'(\d+\.\d+\.\d+\.[a-zA-Z0-9]+)',version)
     require(bool(m), 'Unrecognized Godot version: ' + version)
+    if profile_templates(godot, config):
+        return version
     appdata = os.environ.get('APPDATA')
     require(bool(appdata), 'Windows APPDATA not found for export template')
     template = Path(appdata)/'Godot'/'export_templates'/m.group(1)/'windows_release_x86_64.exe'
@@ -228,8 +266,8 @@ def check_template(godot):
     return version
 
 def make_release(godot, stage, run_root, config):
-    make_export_preset(stage)
-    version = check_template(godot)
+    make_export_preset(stage, config)
+    version = check_template(godot, config)
     release = run_root/'release'; release.mkdir(exist_ok=True)
     exe = release / config.get('exe_name','C01_Windows_Test.exe')
     rc, output = run_process([str(godot),'--headless','--path',str(stage),
