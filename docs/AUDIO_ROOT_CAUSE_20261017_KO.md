@@ -103,7 +103,8 @@ SHA-256: `c2d324affd3f97c4e59eec50397ed35ba86c762b84d7c4b29854f9da8d49273d`.
    게임 원본에 적용하거나 안정 기능으로 통합하지 않았습니다.
 3. [검토용 엔진 패치](../.autodev/audio_lab/engine_patch/godot-4.7.1-drain-at-finish.patch)를 준비했습니다.
    `AudioServer::finish()`에서 모든 드라이버 정지 후 잔여 playback을 기존 삭제 함수로 제거하고,
-   버스 삭제 전에 회수하도록 한 함수만 변경합니다. 정확한 공식 소스 복사본에 `git apply --check`가 통과했습니다.
+   버스 삭제 전에 회수하도록 한 함수만 변경합니다. 정확한 공식 소스 복사본에
+   `git apply --check --unidiff-zero`가 통과했습니다. 원본 SHA 확인이 필요한 문맥 없는 패치 형식입니다.
 4. 현재 PATH에서 Windows C++/SCons와 WSL C++/SCons 도구를 찾지 못했습니다.
    새 의존성을 설치하지 않았고 패치를 컴파일·링크·실행하지 못했습니다.
    기존 Godot와 export template도 교체하지 않았습니다. 따라서 패치 적용 후의 실제 결과는 **미검증**입니다.

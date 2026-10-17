@@ -1,7 +1,6 @@
 --- a/servers/audio/audio_server.cpp
 +++ b/servers/audio/audio_server.cpp
-@@ -1657,2 +1657,9 @@
- 
+@@ -1657,0 +1658,7 @@
 +	// The drivers are stopped. Retire every remaining server-owned playback;
 +	// stop_playback_stream() only schedules deletion on a future mix step.
 +	for (AudioStreamPlaybackListNode *playback : playback_list) {
@@ -9,4 +8,3 @@
 +	}
 +	_cleanup_lists();
 +
- 	for (int i = 0; i < buses.size(); i++) {

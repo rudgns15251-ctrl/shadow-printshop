@@ -695,11 +695,12 @@
   },
   "engine_patch": {
     "path": ".autodev/audio_lab/engine_patch/godot-4.7.1-drain-at-finish.patch",
-    "sha256": "7b3d02f1066c600c3a72bdf90c61f736cdc94fa62679c5e68fa96d74079805d3",
+    "sha256": "f26e785233051cfab5df3de4e3875d0a0b0233daf42da71b0043b4c0045f74d5",
     "git_apply_check": true,
     "compiled": false,
     "runtime_verified": false,
-    "blocker": "No Windows/WSL C++ compiler or SCons available on the inspected PATH; installation/replacement was not performed."
+    "blocker": "No Windows/WSL C++ compiler or SCons available on the inspected PATH; installation/replacement was not performed.",
+    "git_apply_check_requires_unidiff_zero": true
   },
   "e2e": {
     "resumed": false,

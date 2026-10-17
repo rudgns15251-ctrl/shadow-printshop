@@ -6,7 +6,10 @@
 대상은 Godot `4.7.1-stable` / 바이너리 커밋 접두사 `a13da4feb`의
 `servers/audio/audio_server.cpp`이며 원본 SHA-256은
 `d7641ef5852aa86f75c4d506759de2838a2c3886c29f7eb25fd9e9310d87c102`입니다.
-해당 소스 복사본에 `git apply --check`가 통과했습니다. C++ 컴파일·링크·실행 검증은 하지 못했습니다.
+해당 소스 복사본에 `git apply --check --unidiff-zero`가 통과했습니다.
+패치 파일의 중첩 diff 공백 오탐을 피하도록 문맥 없는 형식으로 저장했으므로,
+반드시 위 원본 SHA와 `--unidiff-zero` 옵션을 함께 확인해야 합니다.
+C++ 컴파일·링크·실행 검증은 하지 못했습니다.
 
 변경 범위는 `AudioServer::finish()` 한 곳입니다. 모든 오디오 드라이버가 정지한 뒤,
 남은 playback 노드를 기존 삭제 함수로 제거하고 메인 스레드의 지연 삭제 목록을 정리합니다.
