@@ -17,11 +17,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--engine', type=Path, required=True)
     parser.add_argument('--run-dir', type=Path, required=True)
-    parser.add_argument('--template-debug', type=Path, required=True)
-    parser.add_argument('--template-release', type=Path, required=True)
+    parser.add_argument('--template-debug', type=Path)
+    parser.add_argument('--template-release', type=Path)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--qa-only', action='store_true')
+    modes.add_argument('--exports-only', action='store_true')
     parser.add_argument('--label', default='engine-regression')
     parser.add_argument('--export-repeats', type=int, choices=range(1, 101), default=30)
     args = parser.parse_args()
+    if not args.qa_only and (args.template_debug is None or args.template_release is None):
+        parser.error('Both templates are required for Windows export validation')
     engine = args.engine.resolve(strict=True)
     run = args.run_dir.resolve(strict=True)
     if not run.is_relative_to(runner.ROOT / '.data'):
@@ -34,9 +39,9 @@ def main():
     report_file = run / (args.label + '.json')
     if report_file.exists():
         raise ValueError('Preserve earlier regression evidence; use a fresh validation run')
-    templates = {name: path.resolve(strict=True) for name, path in (
+    templates = {} if args.qa_only else {name: path.resolve(strict=True) for name, path in (
         ('debug', args.template_debug), ('release', args.template_release))}
-    audit = {'engine_sha256': auto.sha(engine), 'templates': {
+    audit = {'engine_sha256': auto.sha(engine), 'qa_only': args.qa_only, 'exports_only': args.exports_only, 'templates': {
         key: {'sha256': auto.sha(path), 'path': str(path)} for key, path in templates.items()}, 'gates': []}
 
     def gate(name, cmd, marker=None, timeout=240, expect_audio=True):
@@ -131,16 +136,21 @@ def main():
         audit['gates'].append({'name': name + '-STATIC', 'passed': static_ok, 'detail': static_message})
         runner.save(report_file, audit)
         prefix = [engine, '--headless', '--audio-driver', 'WASAPI', '--verbose', '--path', stage]
-        if not gate(name + '-IMPORT', prefix + ['--import'], timeout=360):
+        if not args.exports_only:
+            if not gate(name + '-IMPORT', prefix + ['--import'], timeout=360):
+                continue
+            before = auto.source_files(stage)
+            for entry in config['tests']:
+                gate(name + '-' + entry['name'], prefix + ['--script', 'res://' + entry['script']], entry['marker'])
+            gate(name + '-MECH', prefix + ['--script', 'res://tests/mech_cases.gd'], 'MECH checks=367008 sequences=8000 failures=0')
+            gate(name + '-PROGRESS', prefix + ['--script', 'res://tests/progress_clarity_test.gd'], 'ITER_001_PROGRESS_CLARITY_PASS')
+            gate(name + '-OFFLINE', [sys.executable, stage / 'tests/mech_offline.py'], 'PASS offline cases 8000', expect_audio=False)
+            gate(name + '-QUALITY', prefix + ['--script', runner.ROOT / '.autodev/checks/quality_probe.gd'], 'AUTODEV_QUALITY_PASS checks=155')
+            gate(name + '-PLAYBACK', prefix + ['--script', runner.HERE / 'playback_verification.gd'], '"passed":true')
+        if args.qa_only:
+            if before != auto.source_files(stage):
+                raise ValueError('Regression mutated source project: ' + name)
             continue
-        before = auto.source_files(stage)
-        for entry in config['tests']:
-            gate(name + '-' + entry['name'], prefix + ['--script', 'res://' + entry['script']], entry['marker'])
-        gate(name + '-MECH', prefix + ['--script', 'res://tests/mech_cases.gd'], 'MECH checks=367008 sequences=8000 failures=0')
-        gate(name + '-PROGRESS', prefix + ['--script', 'res://tests/progress_clarity_test.gd'], 'ITER_001_PROGRESS_CLARITY_PASS')
-        gate(name + '-OFFLINE', [sys.executable, stage / 'tests/mech_offline.py'], 'PASS offline cases 8000', expect_audio=False)
-        gate(name + '-QUALITY', prefix + ['--script', runner.ROOT / '.autodev/checks/quality_probe.gd'], 'AUTODEV_QUALITY_PASS checks=155')
-        gate(name + '-PLAYBACK', prefix + ['--script', runner.HERE / 'playback_verification.gd'], '"passed":true')
         for mode in ('debug', 'release'):
             tag = name + '-' + mode
             exe = export(stage, tag, mode)

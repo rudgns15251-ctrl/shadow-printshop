@@ -66,7 +66,15 @@ D3D12·ANGLE·AccessKit은 추가 SDK 설치 없이 C01의 GL Compatibility를 �
 기존 공식 MinGW 바이너리이므로 새 MSVC template의 동일 설정 비교와 구분합니다.
 실제 OpenGL 3.3/AMD Radeon RX 6800 그래픽 실행과 WASAPI 재생 측정도 통과했습니다.
 원본 게임 QUALITY의 JSON 오류는 계속 실패로 기록했으며 이전 후보의 QUALITY는 통과했습니다.
-패치 엔진 반복 결과, 새 template 결과 및 최종 게임·E2E 인증은 아직 진행 중입니다.
+패치 editor의 동일 행렬은 **570/570 통과, 누수 시행 0건·누수 객체 0개**입니다.
+원래 WASAPI 즉시 종료 스크립트도 두 게임 복사본에서 각각 30/30 통과했습니다.
+독립 감사가 570개 원본 로그의 해시·드라이버·완료 표시·판정을 모두 확인했습니다.
+이 결과는 editor 범위이며 export template과 최종 게임·E2E 인증은 별도입니다.
+
+패치 editor의 게임 QA 20게이트는 19 통과·1 실패입니다. 실패는 현재 원본 게임의
+손상 JSON 오류(기존 task_1 대상)이며, 이전 수정 후보의 모든 QA는 통과했습니다.
+독립 감사에서도 18개 실행 로그와 20게이트의 판정이 일치했고 누수 객체는 0개입니다.
+원본 게임의 실패를 최종 완료에서 제외하지 않습니다.
 
 ## 검증 도구의 수정과 보존한 실패
 
@@ -97,6 +105,14 @@ Linux 실행 파일을 사용하는 추가 fixture 3건도 WSL에서 모두 통�
 이 검사는 profile 연결 기능의 검증이며 원본 엔진 누수 해결 판정은 아닙니다.
 
 ## 증거 위치와 남은 작업
+
+중단 후 재개 시 patched template_debug 빌드가 종료 코드 2로 끝난 것을 확인했습니다.
+최초 로그는 variant_call 및 gdextension_special_compat_hashes 오브젝트의 Error 1만
+기록하고 컴파일러의 구체적 원인 진단은 남기지 않았습니다. 원인을 단정하지 않습니다.
+첫 실패 로그·JSON을 보존하고 동일 옵션·소스·기존 오브젝트 캐시로 해당 target만
+증분 재시도합니다. 완료된 editor 빌드나 570회 행렬을 다시 실행하지 않습니다.
+뒤 단계만 기다리던 자체 archive worker는 신원을 확인한 뒤 종료했고, 실제 template
+성공을 확인한 후 이어갈 예정입니다. 사용자 프로세스는 종료하지 않았습니다.
 
 원본 증거는 `.data/engine-build-20261017/`에 보존합니다.
 `preparation-audit.json`, 빌드별 JSON/로그, `validation-original/results.json`,
