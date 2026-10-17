@@ -1,9 +1,10 @@
-# Godot 종료 정리 패치 — 격리된 Windows 검증 진행 중
+# Godot 종료 정리 패치 — C01 Windows 검증 완료
 
 `godot-4.7.1-drain-at-finish.patch`를 별도 4.7.1 소스에 적용해 Windows editor를 빌드했습니다.
 기존 설치된 Godot 실행 파일과 export template은 교체하지 않았습니다.
 Editor 570회와 전용 Windows template 즉시 종료 120회가 모두 누수 0건으로 통과했습니다.
-최종 게임 변경·전체 QA·하네스 E2E 인증은 별도이며 전체 완료를 먼저 선언하지 않습니다.
+최종 게임 QA·Windows export·실제 팝업·하네스 E2E도 통과했습니다.
+인증은 보고서에 고정한 C01 커밋·바이너리·GL Compatibility 환경에 한정합니다.
 최신 상태는 [Windows 검증 보고서](../../../docs/AUDIO_ENGINE_WINDOWS_20261017_KO.md)를 확인합니다.
 
 대상은 Godot `4.7.1-stable` / 바이너리 커밋 접두사 `a13da4feb`의
@@ -12,7 +13,7 @@ Editor 570회와 전용 Windows template 즉시 종료 120회가 모두 누수 0
 해당 소스 복사본에 `git apply --check --unidiff-zero`가 통과했습니다.
 패치 파일의 중첩 diff 공백 오탐을 피하도록 문맥 없는 형식으로 저장했으므로,
 반드시 위 원본 SHA와 `--unidiff-zero` 옵션을 함께 확인해야 합니다.
-원본/패치 editor의 MSVC 컴파일·링크가 모두 성공했습니다. 런타임 결과는 별도 검사합니다.
+원본/패치 editor·debug/release template의 MSVC 빌드와 실제 런타임 검사를 완료했습니다.
 
 변경 범위는 `AudioServer::finish()` 한 곳입니다. 모든 오디오 드라이버가 정지한 뒤,
 남은 playback 노드를 기존 삭제 함수로 제거하고 메인 스레드의 지연 삭제 목록을 정리합니다.
@@ -27,5 +28,6 @@ Editor 570회와 전용 Windows template 즉시 종료 120회가 모두 누수 0
 
 위험: 엔진 전체의 오디오 종료 순서가 바뀝니다. 플레이어·믹스 콜백·확장 기능의 수명,
 오디오 장치 변경/실패 경로와 export template까지 별도 검증해야 합니다.
-빌드가 가능해져도 기존 안정 엔진은 보존하고 별도 실행 파일로 동일 조건 30회 및 전체 QA를
-재수행해야 합니다. 이 패치로 빌드하지 않은 기존 Windows export는 패치 검증이 아닙니다.
+이번 C01 검사에서는 기존 안정 엔진을 보존하고 별도 실행 파일로 동일 조건 30회 및 전체 QA를
+검증했습니다. 다른 프로젝트나 환경은 별도 검증이 필요합니다.
+이 패치로 빌드하지 않은 기존 Windows export는 패치 검증이 아닙니다.
