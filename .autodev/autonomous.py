@@ -29,7 +29,9 @@ PAUSE = STATE / 'pause.json'
 ERROR = auto.StopRun
 require = auto.require
 FULL_GATES = ('STATIC', 'IMPORT', 'SMOKE', 'REGRESSION', 'SLICE', 'OFFLINE', 'QUALITY', 'EXPORT', 'BUILD_RUN')
-ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPTANCE_PASS')}
+ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPTANCE_PASS'),
+                     'save_settings': ('save_settings.gd', 'SAVE_SETTINGS_PASS'),
+                     'audio_immediate': ('../audio_lab/original_immediate.gd', 'RAPID_SFX_IMMEDIATE_EXIT')}
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
 def now():
@@ -101,6 +103,37 @@ def checked_changes(before, after, task, policy):
         require(rel in allowed and rel in policy['approved_game_files'], 'SCOPE: ' + rel)
         require(rel in after, 'Deletion forbidden: ' + rel)
     return changes
+
+def run_changes(data, current, task, p):
+    baseline = dict(data['baseline'])
+    for rel, digest in data.get('trusted_import_metadata', {}).items():
+        require(rel.endswith('.import') and rel in baseline and current.get(rel) == digest,
+                'SCOPE: trusted import metadata changed: ' + rel)
+        baseline[rel] = digest
+    return checked_changes(baseline, current, task, p)
+
+def record_import_metadata(stage, before, data, process_record):
+    current = snapshot(stage)
+    changes = auto.diff(before, current)
+    require(all(rel.endswith('.import') and rel in before and rel in current for rel in changes),
+            'SCOPE: trusted importer changed substantive content')
+    if changes:
+        data.setdefault('trusted_import_metadata', {}).update({rel: current[rel] for rel in changes})
+        data.setdefault('import_metadata_history', []).append({
+            'time': now(), 'process_log': process_record.get('log'), 'log_sha256': process_record.get('sha256'),
+            'before': {rel: before[rel] for rel in changes}, 'after': {rel: current[rel] for rel in changes}})
+
+def probes(task, c):
+    names = list(dict.fromkeys(task.get('acceptance_probes', []) + c.get('trusted_handoff_probes', [])))
+    require(set(names) <= set(ACCEPTANCE_PROBES), 'Unknown trusted acceptance probe')
+    return names
+
+def handoff_enabled(c):
+    if c.get('trusted_handoff_probes') != ['save_settings', 'audio_immediate']:
+        return False
+    require(c.get('engine_profile'), 'QA handoff requires a pinned qualified engine profile')
+    auto.profile_templates(auto.resolve_godot(None, c), c)
+    return True
 
 def config():
     return read(auto.CONFIG if auto.CONFIG.exists() else HERE / 'config.example.json')
@@ -228,11 +261,14 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
     if implementation_schema:
         schema = run / (name + '-schema.json')
         write(schema, {'type': 'object', 'additionalProperties': False,
-                       'properties': {'status': {'type': 'string', 'enum': ['implemented', 'blocked']},
+                       'properties': {'status': {'type': 'string', 'enum': ['implemented', 'code_ready', 'blocked']},
                                       'summary': {'type': 'string'},
                                       'unverified_acceptance': {'type': 'array', 'items': {'type': 'string'}},
-                                      'tests_actually_run': {'type': 'array', 'items': {'type': 'string'}}},
-                       'required': ['status', 'summary', 'unverified_acceptance', 'tests_actually_run']})
+                                      'tests_actually_run': {'type': 'array', 'items': {'type': 'string'}},
+                                      'verification_pending': {'type': 'array', 'items': {'type': 'string'}},
+                                      'human_review_pending': {'type': 'array', 'items': {'type': 'string'}}},
+                       'required': ['status', 'summary', 'unverified_acceptance', 'tests_actually_run',
+                                    'verification_pending', 'human_review_pending']})
     cmd = [exe, 'exec', '--sandbox', 'read-only' if read_only else 'workspace-write',
            '-C', stage, '--json', '--output-last-message', last]
     if schema:
@@ -255,7 +291,10 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
     require(any(e.get('type') == 'turn.completed' for e in events) and not any(e.get('type') in {'turn.failed', 'error'} for e in events), 'CODEX: no clean completed turn')
     if implementation_schema:
         outcome = read(last)
-        require(outcome['status'] == 'implemented' and not outcome['unverified_acceptance'],
+        data.setdefault('model_outcomes', []).append({'name': name, 'time': now(), **outcome})
+        checkpoint(run, data)
+        require((outcome['status'] == 'implemented' or
+                 (outcome['status'] == 'code_ready' and handoff_enabled(c))) and not outcome['unverified_acceptance'],
                 'ACCEPTANCE_UNVERIFIED: model reported a blocker; preserve source and inspect final JSON')
     return last
 
@@ -268,7 +307,7 @@ def classify(step, text):
     if 'timeout' in low or 'network' in low or '3221225477' in low: return 'ENVIRONMENT'
     if 'parse error' in low or 'script error' in low: return 'GAME_CODE'
     if 'assert' in low or ' fail' in low: return 'EXPECTATION_MISMATCH'
-    if step == 'IMPORT': return 'ENGINE_IMPORT'
+    if step == 'IMPORT' or low.startswith('import:'): return 'ENGINE_IMPORT'
     if step == 'CODEX': return 'CODEX'
     return 'UNKNOWN'
 
@@ -382,7 +421,7 @@ def make_plan(c, p):
     print(json.dumps(read(PLAN), ensure_ascii=True, indent=2))
 
 def static_check(stage, data, p, task):
-    checked_changes(data['baseline'], snapshot(stage), task, p)
+    run_changes(data, snapshot(stage), task, p)
     # Reuse the old source safety guard without modifying its rules.
     sys.path.insert(0, str(ROOT))
     import engine_adapter
@@ -392,6 +431,8 @@ def static_check(stage, data, p, task):
 
 def qa(stage, run, data, c, p, task):
     checkpoint(run, data, 'QA')
+    if data.get('qa'):
+        data.setdefault('qa_history', []).append({'time': now(), 'gates': data['qa']})
     data['qa'] = []
     static_check(stage, data, p, task)
     data['qa'].append({'name': 'STATIC', 'pass': True})
@@ -400,8 +441,11 @@ def qa(stage, run, data, c, p, task):
     entries = auto.qa_steps(c)
     require({name for name, _, _ in entries} >= {'IMPORT', 'SMOKE', 'REGRESSION', 'SLICE'}, 'Core QA gates cannot be omitted')
     for name, extra, marker in entries:
+        before_import = snapshot(stage) if name == 'IMPORT' else None
         rc, text = process([godot, '--headless', '--path', stage, *extra], run, data,
                            'attempt-%d-%s' % (data['attempts'], name), auto.TIMEOUT.get(name, 240), env)
+        if name == 'IMPORT':
+            record_import_metadata(stage, before_import, data, (data.get('processes') or [{}])[-1])
         ok = rc == 0 and not auto.ERRORS.search(text) and (marker is None or marker in text)
         data['qa'].append({'name': name, 'pass': ok, 'exit_code': rc, 'marker': marker})
         checkpoint(run, data)
@@ -420,8 +464,29 @@ def qa(stage, run, data, c, p, task):
     data['qa'].append({'name': 'QUALITY', 'pass': ok})
     checkpoint(run, data)
     require(ok, 'QUALITY: ' + text[-14000:])
-    for probe in task.get('acceptance_probes', []):
+    for probe in probes(task, c):
         filename, marker = ACCEPTANCE_PROBES[probe]
+        if probe == 'audio_immediate':
+            from audio_lab.runner import parse_log
+            canonical = HERE / 'audio_lab/original_immediate.gd'
+            require(auto.sha(canonical) == 'c2d324affd3f97c4e59eec50397ed35ba86c762b84d7c4b29854f9da8d49273d',
+                    'Original immediate-exit probe changed')
+            for driver in ('WASAPI', 'Dummy'):
+                for index in range(30):
+                    script = canonical if driver == 'WASAPI' else HERE / 'audio_lab/probe.gd'
+                    command = [godot, '--headless', '--audio-driver', driver, '--verbose', '--path', stage,
+                               '--script', script]
+                    if driver == 'Dummy': command += ['--', 'case=H_free']
+                    rc, text = process(command, run, data, 'attempt-%d-AUDIO-%s-%02d' %
+                                       (data['attempts'], driver, index + 1), 30, env)
+                    verdict = parse_log(text, driver, rc, original=driver == 'WASAPI')
+                    data['qa'].append({'name': 'AUDIO:%s:%02d' % (driver, index + 1),
+                                       'pass': verdict['passed'], 'leaked_objects': verdict['leaked_object_count']})
+                    checkpoint(run, data)
+                    require(verdict['passed'], 'AUDIO: ' + text[-14000:])
+            data['qa'].append({'name': 'ACCEPTANCE:audio_immediate', 'pass': True, 'independent_processes': 60})
+            checkpoint(run, data)
+            continue
         rc, text = process([godot, '--headless', '--path', stage, '--script', str(HERE / 'checks' / filename)],
                            run, data, 'attempt-%d-ACCEPTANCE-%s' % (data['attempts'], probe), 180, env)
         ok = rc == 0 and marker in text and not auto.ERRORS.search(text)
@@ -430,7 +495,7 @@ def qa(stage, run, data, c, p, task):
         require(ok, 'ACCEPTANCE: ' + text[-14000:])
     # Verify source after QA; tests cannot secretly mutate allowed game content.
     data['validated_snapshot'] = snapshot(stage)
-    data['changes'] = checked_changes(data['baseline'], data['validated_snapshot'], task, p)
+    data['changes'] = run_changes(data, data['validated_snapshot'], task, p)
     auto.make_export_preset(stage, c)
     data['engine_version'] = auto.check_template(godot, c)
     data['engine_sha256'] = auto.sha(godot)
@@ -469,13 +534,24 @@ def qa(stage, run, data, c, p, task):
     write(release / 'build_manifest.json', {'status': 'START_EXIT_VERIFIED_HUMAN_PLAYTEST_PENDING', 'files': data['build']})
     checkpoint(run, data, 'VERIFIED')
 
-def task_prompt(task, failure=None):
+def task_prompt(task, failure=None, c=None):
     text = auto.build_prompt(task, failure)
     text += ('\nTrusted harness probe autodev_quality_probe.gd is protected. Do not edit it. '
              'Do not edit presets, .git, .import, .uid, saves or other files. Do not invoke other agents. '
              'No permission bypasses. Report status=blocked and list unverified_acceptance if any required criterion fails or is unverified; never claim implemented in that case. '
              'List only tests actually executed. End with the required structured response.\n'
              'ACCEPTANCE: ' + json.dumps(task['acceptance']) + '\nDELIVERABLES: ' + json.dumps(task['deliverables']))
+    if c and handoff_enabled(c):
+        text += ('\nQualified trusted-QA handoff is enabled. The restricted model subprocess performs code edits and '
+                 'static checks. Do not launch Godot or exports here: the trusted coordinator runs those next '
+                 'with GODOT_BIN, including full core QA, save/settings/hints and 60 independent audio processes. '
+                 'For fully implemented code awaiting these checks, report status=code_ready and list the scheduled '
+                 'checks in verification_pending. List subjective visual/wording/listening reviews in '
+                 'human_review_pending and do not claim human review occurred. Keep any known implementation '
+                 'blocker or acceptance without executable coverage in unverified_acceptance and report blocked. '
+                 'Previously changed .import metadata is owned by the recorded trusted importer; preserve its '
+                 'bytes. The coordinator never copies that metadata into the source project. '
+                 'Reuse already completed edits present in this stage; do not recreate them.')
     return text
 
 def remote_backup(p, commit, branch):
@@ -492,9 +568,15 @@ def remote_backup(p, commit, branch):
 def integrate(run, data, task, c, p):
     """Journal before copying; resume either finishes the exact copy or recognizes its commit."""
     require(not data.get('acceptance_blockers'), 'Unresolved independent acceptance failures; integration refused')
+    response = run / ('coder-%d-last.txt' % data['attempts'])
+    outcome = read(response) if response.exists() else (data.get('model_outcomes') or [None])[-1]
+    if outcome:
+        require(outcome['status'] in {'implemented', 'code_ready'} and not outcome['unverified_acceptance'],
+                'Unresolved model acceptance blocker; integration refused')
+        if outcome['status'] == 'code_ready': require(handoff_enabled(c), 'Qualified QA handoff is missing')
     require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES), 'Full QA missing')
     require(all(any(q['name'] == 'ACCEPTANCE:' + probe and q['pass'] for q in data['qa'])
-                for probe in task.get('acceptance_probes', [])), 'Task acceptance probe missing')
+                for probe in probes(task, c)), 'Task acceptance probe missing')
     stage = run / 'game'
     require(snapshot(stage) == data['validated_snapshot'], 'Validated stage tampered')
     require(all((run / 'release' / name).is_file() and auto.sha(run / 'release' / name) == info['sha256']
@@ -502,7 +584,7 @@ def integrate(run, data, task, c, p):
     game = source(c)
     branch = branch_ok(p)
     require(branch == data['branch'], 'Integration branch changed')
-    changes = checked_changes(data['baseline'], snapshot(stage), task, p)
+    changes = run_changes(data, snapshot(stage), task, p)
     # The generated export preset belongs to the trusted stage, not source copying.
     changes = [rel for rel in changes if rel != 'export_presets.cfg']
     require(changes, 'No real game edits')
@@ -604,9 +686,9 @@ def execute(task, plan, c, p, recover=False, push=False):
                 task['attempts'] = data['attempts']
                 checkpoint(run, data, 'IMPLEMENT')
                 try:
-                    codex(stage, run, data, task_prompt(task, failure), c, p, 'coder-%d' % data['attempts'])
+                    codex(stage, run, data, task_prompt(task, failure, c), c, p, 'coder-%d' % data['attempts'])
                     require(git('rev-parse', 'HEAD', cwd=stage) == data['stage_commit'], 'Codex committed changes')
-                    changes = checked_changes(data['baseline'], snapshot(stage), task, p)
+                    changes = run_changes(data, snapshot(stage), task, p)
                     require(changes, 'Codex made no real allowed changes')
                     qa(stage, run, data, c, p, task)
                     break
@@ -695,6 +777,46 @@ def report():
     print(json.dumps(content, ensure_ascii=True, indent=2))
     return content
 
+def reconcile_infrastructure(run_id, c, p):
+    """Explicit recovery only: unchanged game/policy plus a reviewed infrastructure commit."""
+    with locked():
+        clean()
+        run = inside(HERE / 'runs', run_id)
+        data = read(run / 'autonomous.json')
+        require(data['phase'] not in {'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}, 'Integration journal cannot be rebased')
+        require(not alive(data.get('child_pid')), 'Previous child is alive')
+        require(branch_ok(p) == data['branch'], 'Branch changed')
+        require(data['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed')
+        require(snapshot(source(c)) == data['source_snapshot'], 'Game source changed')
+        previous, current = data['source_commit'], git('rev-parse', 'HEAD')
+        git('merge-base', '--is-ancestor', previous, current)
+        files = git('diff', '--name-only', previous, current).splitlines()
+        allowed = {'.autodev/autonomous.py', '.autodev/checks/save_settings.gd',
+                   '.autodev/tests/test_resume_metadata.py'}
+        require(set(files) <= allowed, 'Unreviewed infrastructure changes')
+        stage = run / 'game'
+        actual = snapshot(stage)
+        metadata = [rel for rel in auto.diff(data['baseline'], actual) if rel.endswith('.import')]
+        if metadata:
+            imports = [item for item in data.get('processes', []) if item['name'].endswith('-IMPORT')]
+            require(imports and any(item['name'] == 'STATIC' and item['pass'] for item in data.get('qa', [])),
+                    'No prior trusted import/static provenance')
+            record = imports[-1]
+            require(record.get('exit_code') == 0 and auto.sha(run / record['log']) == record['sha256'],
+                    'Trusted import log missing or changed')
+            before = dict(actual)
+            for rel in metadata:
+                require(rel in data['baseline'] and rel in actual, 'New/deleted metadata refused')
+                before[rel] = data['baseline'][rel]
+            record_import_metadata(stage, before, data, record)
+        run_changes(data, actual, read(run / 'task.json'), p)
+        data.setdefault('infrastructure_history', []).append({'time': now(), 'previous_source_commit': previous,
+            'source_commit': current, 'files': files, 'game_snapshot_unchanged': True,
+            'preserved_model_response': 'coder-1-last.txt'})
+        data['source_commit'] = current
+        checkpoint(run, data)
+    print('INFRASTRUCTURE_RECONCILED')
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Durable C01 autonomous development, using existing AutoDev QA')
     sub = parser.add_subparsers(dest='command', required=True)
@@ -710,6 +832,7 @@ def main(argv=None):
     sub.add_parser('status')
     sub.add_parser('report')
     q = sub.add_parser('qa'); q.add_argument('--run-id', required=True)
+    q = sub.add_parser('reconcile-infrastructure'); q.add_argument('--run-id', required=True)
     sub.add_parser('backup')
     args = parser.parse_args(argv)
     try:
@@ -725,6 +848,7 @@ def main(argv=None):
             print(json.dumps({'lock': read(LOCK) if LOCK.exists() else None,
                               'plan': read(PLAN) if PLAN.exists() else None, 'paused': PAUSE.exists()}, ensure_ascii=True, indent=2))
         elif args.command == 'report': report()
+        elif args.command == 'reconcile-infrastructure': reconcile_infrastructure(args.run_id, c, p)
         elif args.command == 'backup':
             with locked():
                 clean()
