@@ -2,7 +2,8 @@
 
 `godot-4.7.1-drain-at-finish.patch`를 별도 4.7.1 소스에 적용해 Windows editor를 빌드했습니다.
 기존 설치된 Godot 실행 파일과 export template은 교체하지 않았습니다.
-반복 누수 검사와 전용 template 검증이 진행 중이므로 해결 완료로 판단하면 안 됩니다.
+Editor 570회와 전용 Windows template 즉시 종료 120회가 모두 누수 0건으로 통과했습니다.
+최종 게임 변경·전체 QA·하네스 E2E 인증은 별도이며 전체 완료를 먼저 선언하지 않습니다.
 최신 상태는 [Windows 검증 보고서](../../../docs/AUDIO_ENGINE_WINDOWS_20261017_KO.md)를 확인합니다.
 
 대상은 Godot `4.7.1-stable` / 바이너리 커밋 접두사 `a13da4feb`의
