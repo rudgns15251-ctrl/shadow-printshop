@@ -791,9 +791,14 @@ def reconcile_infrastructure(run_id, c, p):
         previous, current = data['source_commit'], git('rev-parse', 'HEAD')
         git('merge-base', '--is-ancestor', previous, current)
         files = git('diff', '--name-only', previous, current).splitlines()
-        allowed = {'.autodev/autonomous.py', '.autodev/checks/save_settings.gd',
+        allowed = {'.autodev/autonomous.py', '.autodev/checks/save_settings.gd', '.gitattributes',
                    '.autodev/tests/test_resume_metadata.py'}
         require(set(files) <= allowed, 'Unreviewed infrastructure changes')
+        if '.gitattributes' in files:
+            require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [
+                '.autodev/audio_lab/original_immediate.gd text eol=lf',
+                '.autodev/audio_lab/probe.gd text eol=lf',
+                '.autodev/audio_lab/engine_patch/*.patch text eol=lf'], 'Unexpected attributes change')
         stage = run / 'game'
         actual = snapshot(stage)
         metadata = [rel for rel in auto.diff(data['baseline'], actual) if rel.endswith('.import')]

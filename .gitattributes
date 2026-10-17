@@ -1,0 +1,3 @@
+.autodev/audio_lab/original_immediate.gd text eol=lf
+.autodev/audio_lab/probe.gd text eol=lf
+.autodev/audio_lab/engine_patch/*.patch text eol=lf

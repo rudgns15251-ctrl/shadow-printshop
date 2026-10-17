@@ -106,4 +106,10 @@ class ResumeMetadata(unittest.TestCase):
         with self.assertRaises(a.ERROR): a.integrate(self.run, self.data, self.task, self.f.c, self.f.p)
         self.assertEqual(a.git('rev-parse', 'HEAD'), before)
 
+    def test_unrelated_git_attributes_cannot_be_reconciled(self):
+        (self.f.root / '.gitattributes').write_text('* -text\n')
+        a.git('add', '--', '.gitattributes')
+        a.git('commit', '-qm', 'unrelated attributes')
+        with self.assertRaises(a.ERROR): a.reconcile_infrastructure(self.run.name, self.f.c, self.f.p)
+
 if __name__ == '__main__': unittest.main()
