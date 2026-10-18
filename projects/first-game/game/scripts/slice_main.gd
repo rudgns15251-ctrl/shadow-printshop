@@ -50,6 +50,9 @@ var stamp_buttons: Array[Button] = []
 var overlay: ColorRect
 var dialog: VBoxContainer
 var boards_grid: GridContainer
+var title_navigation: BoxContainer
+var title_area: VBoxContainer
+var navigation: HBoxContainer
 var popup_panel: PanelContainer
 var popup_scroll: ScrollContainer
 var dialog_back: Callable
@@ -117,7 +120,7 @@ func _exit_tree() -> void:
 	progress_captions.clear()
 	state = null
 
-func _panel_style(color: Color, radius: int = 10) -> StyleBoxFlat:
+func _panel_style(color: Color, radius: int = 10, vertical_padding: int = 12) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
 	style.corner_radius_top_left = radius
@@ -127,6 +130,8 @@ func _panel_style(color: Color, radius: int = 10) -> StyleBoxFlat:
 	style.border_color = INK
 	style.set_border_width_all(1)
 	style.set_content_margin_all(12)
+	style.content_margin_top = vertical_padding
+	style.content_margin_bottom = vertical_padding
 	return style
 
 func _label(parent: Node, caption: String, font_size: int = 18, color: Color = INK) -> Label:
@@ -216,23 +221,28 @@ func _build_interface() -> void:
 		margins.add_theme_constant_override("margin_" + edge, 16)
 	add_child(margins)
 	var layout := _column(margins, 6)
-	var top := _column(layout, 4)
-	var title_area := _column(top, 1)
+	title_navigation = BoxContainer.new()
+	title_navigation.add_theme_constant_override("separation", 8)
+	title_navigation.resized.connect(_update_header_layout)
+	layout.add_child(title_navigation)
+	title_area = _column(title_navigation, 1)
 	title_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_label(title_area, "C01  /  음영 인쇄소", 30)
 	subheading = _label(title_area, "종이 위에 도장을 찍어 목표 무늬를 완성하세요.", 15)
-	var navigation := _flow(top)
+	navigation = _row(title_navigation, 8)
+	navigation.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_button(navigation, "도움말", _open_help, 98)
 	_button(navigation, "설정", _open_settings, 80)
 	_button(navigation, "메뉴", _open_pause, 80)
 
 	var scroll := ScrollContainer.new()
+	scroll.follow_focus = true
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	layout.add_child(scroll)
-	var content := _column(scroll, 8)
+	var content := _column(scroll, 4)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var header := _column(content, 4)
+	var header := _column(content, 2)
 	heading = _label(header, "", 21)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	progress_label = _label(header, "", 18, GREEN)
@@ -262,7 +272,7 @@ func _build_interface() -> void:
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _panel_style(PANEL))
+	panel.add_theme_stylebox_override("panel", _panel_style(PANEL, 10, 4))
 	content.add_child(panel)
 	var controls := _row(panel, 12)
 	var art_column := _column(controls, 6)
@@ -284,10 +294,10 @@ func _build_interface() -> void:
 	stamp_view.add_child(stamp_mask_view)
 	_label(art_column, "1 = 반전할 칸", 14)
 	reaction_label = _label(art_column, "인쇄 준비", 16, ACCENT)
-	var buttons := _column(controls, 4)
+	var buttons := _column(controls, 2)
 	buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var selection := PanelContainer.new()
-	selection.add_theme_stylebox_override("panel", _panel_style(INK, 6))
+	selection.add_theme_stylebox_override("panel", _panel_style(INK, 6, 2))
 	buttons.add_child(selection)
 	detail = _label(selection, "", 19, PAPER)
 	_label(buttons, "1  도장 선택 · 회전", 16, ACCENT)
@@ -326,6 +336,7 @@ func _build_interface() -> void:
 	popup_panel.add_theme_stylebox_override("panel", _panel_style(PAPER, 14))
 	center.add_child(popup_panel)
 	popup_scroll = ScrollContainer.new()
+	popup_scroll.follow_focus = true
 	popup_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	popup_panel.add_child(popup_scroll)
 	dialog = _column(popup_scroll, 16)
@@ -341,17 +352,30 @@ func _fit_dialog() -> void:
 
 func _update_responsive() -> void:
 	_fit_dialog.call_deferred()
+	_update_header_layout.call_deferred()
 	if boards_grid != null:
 		boards_grid.columns = 3 if size.x >= 1170.0 and float(settings["font_scale"]) <= 1.25 else 2
+
+func _update_header_layout() -> void:
+	if not is_inside_tree() or title_navigation == null or title_area == null or navigation == null:
+		return
+	# Measure complete lines at the current font size, independent of prior wrapping.
+	var title_width := 0.0
+	for label in title_area.get_children():
+		var font: Font = label.get_theme_font("font")
+		var font_size: int = label.get_theme_font_size("font_size")
+		title_width = maxf(title_width, ceilf(font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x))
+	var required_width: float = title_width + navigation.get_combined_minimum_size().x + title_navigation.get_theme_constant("separation")
+	title_navigation.vertical = required_width > title_navigation.size.x
 
 func _board_card(parent: Node, title: String, description: String, index: int) -> Control:
 	var outer := PanelContainer.new()
 	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	outer.add_theme_stylebox_override("panel", _panel_style(Color("#f9f3e9"), 8))
+	outer.add_theme_stylebox_override("panel", _panel_style(Color("#f9f3e9"), 8, 4))
 	parent.add_child(outer)
-	var col := _column(outer, 6)
+	var col := _column(outer, 4)
 	var ribbon := PanelContainer.new()
-	ribbon.add_theme_stylebox_override("panel", _panel_style([INK, ACCENT, GREEN][index], 4))
+	ribbon.add_theme_stylebox_override("panel", _panel_style([INK, ACCENT, GREEN][index], 4, 2))
 	col.add_child(ribbon)
 	var title_label := _label(ribbon, title, 18, PAPER)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -442,6 +466,8 @@ func _refresh() -> void:
 		var fill: Color = GREEN if solved else (INK if current else (PANEL if i < idx else PAPER))
 		var style := _panel_style(fill, 4)
 		style.set_content_margin_all(8)
+		style.content_margin_top = 2
+		style.content_margin_bottom = 2
 		progress_indicators[i].add_theme_stylebox_override("panel", style)
 		# '지남' describes position, never a claim about saved completion history.
 		progress_captions[i].text = str(i + 1) + (" · 완료" if solved else (" · 현재" if current else (" · 지남" if i < idx else "")))
@@ -486,6 +512,7 @@ func _refresh() -> void:
 		subheading.text = "목표 완성! NEXT(다음 퍼즐) 버튼 또는 N을 눌러 직접 진행하세요." if data["solved"] else "첫 퍼즐 · 표시된 칸은 인쇄할 때 0↔1로 반전됩니다. AFTER는 무료 미리보기입니다."
 	else:
 		subheading.text = "종이 위에 도장을 찍어 목표 무늬를 완성하세요."
+	_update_header_layout.call_deferred()
 	if not last_save_message.is_empty():
 		feedback.text += "   |   " + last_save_message
 
@@ -744,10 +771,13 @@ func _open_settings() -> void:
 	reduce.toggled.connect(_setting_value_changed.bind("reduce_motion"))
 	dialog.add_child(reduce)
 	_register_setting_text(reduce)
+	var font_label := _label(dialog, "글자 크기", 17)
+	font_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	font_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var font_row := _flow(dialog)
-	_label(font_row, "글자 크기", 17)
 	for value in [1.0, 1.25, 1.5]:
-		_button(font_row, "%d%%" % int(value * 100.0), _set_font_scale.bind(value), 90)
+		var scale_button := _button(font_row, "%d%%" % int(value * 100.0), _set_font_scale.bind(value), 90)
+		scale_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_button(dialog, "돌아가기", _settings_close, 150).grab_focus()
 	_fit_dialog.call_deferred()
 
