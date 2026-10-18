@@ -20,6 +20,7 @@ extends Control
 const State = preload("res://scripts/slice_state.gd")
 const Board = preload("res://scripts/slice_board.gd")
 const StoryOrders = preload("res://data/story_orders.gd")
+const StoryJournal = preload("res://scripts/story_journal.gd")
 const SAVE_PATH := "user://c01_progress_v1.json"
 const SAVE_BACKUP := "user://c01_progress_v1.bak"
 const SETTINGS_PATH := "user://c01_settings_v1.json"
@@ -30,6 +31,7 @@ const ACCENT := Color("#8a3f24")
 const GREEN := Color("#315d49")
 
 var state = State.new()
+var story_journal = StoryJournal.new()
 var before_view: Control
 var after_view: Control
 var target_view: Control
@@ -233,6 +235,7 @@ func _build_interface() -> void:
 	navigation = _row(title_navigation, 8)
 	navigation.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_button(navigation, "의뢰서", _open_order, 98)
+	_button(navigation, "기록함", _open_journal, 98)
 	_button(navigation, "도움말", _open_help, 98)
 	_button(navigation, "설정", _open_settings, 80)
 	_button(navigation, "메뉴", _open_pause, 80)
@@ -688,6 +691,7 @@ func _open_start() -> void:
 	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "1998년 11월 17일 밤, 임시 인쇄공으로 음영 인쇄소의 야간 작업을 맡았습니다. 의뢰서에서 이번 작업의 기록을 읽으세요.\n도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요. 8개 퍼즐의 목표 무늬를 완성한 뒤 다음 퍼즐로 직접 진행하세요.", [
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
 		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start")},
+		{"label": "기록함", "call": Callable(self, "_open_journal")},
 		{"label": "도움말", "call": Callable(self, "_open_help")},
 		{"label": "설정", "call": Callable(self, "_open_settings")},
 		{"label": "종료", "call": Callable(self, "_quit_game")},
@@ -735,10 +739,12 @@ func _open_order() -> void:
 	for row in StoryOrders.ORDERS:
 		if row["puzzle_id"] != puzzle_id:
 			continue
-		# This path only reads data: no refresh, hint consumption or save writes.
+		# Only this explicit order-reading path writes the independent archive.
 		_show_dialog("의뢰서 · %s" % row["id"], "날짜: %s\n기록 명의: %s\n\n%s" % [row["date"], row["speaker"], row["text"]], [
 			{"label": "닫기", "call": Callable(self, "_noop")},
 		])
+		if not story_journal.mark_read(row["id"]):
+			_label(dialog, "기록함에 저장하지 못했습니다. 의뢰서를 다시 열어 재시도해 주세요.", 15)
 		# Keep keyboard navigation inside this one-action modal, including Tab.
 		var close_button: Control = get_viewport().gui_get_focus_owner()
 		close_button.focus_next = close_button.get_path()
@@ -746,6 +752,56 @@ func _open_order() -> void:
 		for edge in ["left", "top", "right", "bottom"]:
 			close_button.set("focus_neighbor_" + edge, close_button.get_path())
 		return
+
+func _open_journal() -> void:
+	var ids: Array = story_journal.read_ids()
+	var options: Array = [{"label": "닫기", "call": Callable(self, "_close_journal")}]
+	# Build visible controls only from read IDs, in their first-read order.
+	for id in ids:
+		for row in StoryOrders.ORDERS:
+			if row["id"] == id:
+				options.append({"label": "%s · %s" % [id, row["speaker"]], "call": Callable(self, "_replay_order").bind(id)})
+	var message := "읽은 의뢰서를 선택하면 전문을 다시 볼 수 있습니다."
+	if ids.is_empty():
+		message = "아직 읽은 의뢰서가 없습니다. 의뢰서를 열면 이곳에 보관됩니다."
+	else:
+		message += "\n\n읽은 순서: " + " → ".join(ids)
+	_show_dialog("기록함", message, options)
+	_confine_journal_focus()
+
+func _close_journal() -> void:
+	if not game_active:
+		_open_start()
+
+func _replay_order(id: String) -> void:
+	if not story_journal.read_ids().has(id):
+		return
+	for row in StoryOrders.ORDERS:
+		if row["id"] != id:
+			continue
+		_show_dialog("의뢰서 · %s" % row["id"], "날짜: %s\n기록 명의: %s\n\n%s" % [row["date"], row["speaker"], row["text"]], [
+			{"label": "기록함으로", "call": Callable(self, "_open_journal")},
+		])
+		_confine_journal_focus()
+		return
+
+func _confine_journal_focus() -> void:
+	# Keep Tab and directional focus inside the archive rather than behind it.
+	var buttons: Array[Control] = []
+	for column in dialog.get_children():
+		if column is VBoxContainer:
+			for child in column.get_children():
+				if child is Button:
+					buttons.append(child)
+	for i in range(buttons.size()):
+		var previous: NodePath = buttons[(i + buttons.size() - 1) % buttons.size()].get_path()
+		var following: NodePath = buttons[(i + 1) % buttons.size()].get_path()
+		buttons[i].focus_previous = previous
+		buttons[i].focus_next = following
+		for edge in ["left", "top"]:
+			buttons[i].set("focus_neighbor_" + edge, previous)
+		for edge in ["right", "bottom"]:
+			buttons[i].set("focus_neighbor_" + edge, following)
 
 func _open_help() -> void:
 	_show_dialog("플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 찍을 때 0↔1로 바뀝니다. 같은 도장·방향으로 다시 찍으면 그 칸은 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\nAFTER는 무료 미리보기입니다. 미리보기·도장 선택·회전은 인쇄 횟수에 포함되지 않습니다. 막히면 힌트 버튼에서 단계별 도움을 확인하세요.\n3·4번 퍼즐은 B 도장만 허용됩니다. 완료 후 다음 퍼즐로 직접 진행하세요.", [
