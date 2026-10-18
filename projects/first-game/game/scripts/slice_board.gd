@@ -21,11 +21,26 @@ var success := 0.0:
 var success_time := 0.0
 const IMPRESSION_DURATION := 0.32
 const SUCCESS_DURATION := 0.70
+const FEEDBACK_DURATION := 0.20
+var feedback_time := 0.0
+var feedback_new_puzzle := false
+
+func clear_feedback() -> void:
+	feedback_time = 0.0
+	queue_redraw()
+	set_process(impression_time > 0.0 or success_time > 0.0)
+
+func animate_feedback(new_puzzle: bool = false) -> void:
+	# Presentation only: independent of the impression/success clocks and board data.
+	feedback_new_puzzle = new_puzzle
+	feedback_time = FEEDBACK_DURATION
+	queue_redraw()
+	set_process(true)
 
 func clear_success() -> void:
 	success_time = 0.0
 	success = 0.0
-	set_process(impression_time > 0.0)
+	set_process(impression_time > 0.0 or feedback_time > 0.0)
 
 func animate_success() -> void:
 	success_time = SUCCESS_DURATION
@@ -36,7 +51,7 @@ func clear_impression() -> void:
 	impression_time = 0.0
 	impression = 0.0
 	impression_cells.clear()
-	set_process(success_time > 0.0)
+	set_process(success_time > 0.0 or feedback_time > 0.0)
 
 func animate_impression(affected: Array, is_undo: bool = false) -> void:
 	undo_impression = is_undo
@@ -61,9 +76,13 @@ func _process(delta: float) -> void:
 	if success_time > 0.0:
 		success_time = maxf(0.0, success_time - delta)
 		success = 1.0 - sin((1.0 - success_time / SUCCESS_DURATION) * PI / 2.0)
-	set_process(impression_time > 0.0 or success_time > 0.0)
+	if feedback_time > 0.0:
+		feedback_time = maxf(0.0, feedback_time - delta)
+		queue_redraw()
+	set_process(impression_time > 0.0 or success_time > 0.0 or feedback_time > 0.0)
 
 func _exit_tree() -> void:
+	clear_feedback()
 	clear_impression()
 	clear_success()
 
@@ -82,6 +101,12 @@ func _draw() -> void:
 	var frame := Rect2(offset - Vector2(8, 8), Vector2(edge + 16, edge + 16))
 	draw_texture_rect(WOOD, frame, false)
 	draw_rect(frame.grow(-2), Color("#315d49") if completed else frame_color, false, 3.0)
+	if feedback_time > 0.0:
+		# Brief inset rim leaves numbers/markers readable; no transforms to restore.
+		var remaining: float = feedback_time / FEEDBACK_DURATION
+		var cue := Color("#315d49") if feedback_new_puzzle else ACCENT
+		cue.a = remaining
+		draw_rect(frame.grow(-4.0 - (1.0 - remaining) * 3.0), cue, false, 3.0)
 	if success > 0.0:
 		# Trace clockwise inside the existing paper frame, without covering text.
 		var rim := frame.grow(-5.0)

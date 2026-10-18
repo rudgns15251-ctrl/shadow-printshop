@@ -6,6 +6,17 @@ extends Control
 ## Coordinator QA: 2 resolutions x 3 font scales, label/slider bounds, core/input/save/
 ## audio gates, 60 leak trials and Windows export. Human review: Korean, hierarchy,
 ## palette and listening. Main layout risk: large text uses vertical scrolling.
+## Feedback handoff: selection/rotation rim on stamp + AFTER; manual Next rim on
+## all three new boards, each 0.20s. Board-owned clocks only draw; no action replay,
+## transforms, SFX or delayed state work. Refresh/modal/settings/exit cancel them;
+## reduced motion also cancels immediately, keeping selection/orientation text.
+## Guidance derives zero-history/printed/preview-match/solved from each refresh.
+## Exact buttons/tooltips, manual progression, audio and save contracts retained.
+## Coordinator: rapidly select/rotate/print/undo/next, open/close every modal and
+## exit mid-cue; compare state/history/hints/save before/after waiting. Toggle
+## reduced motion mid-cue and repeat actions; inspect static feedback and final
+## completion then undo/reset/load. Human review still required for these cues,
+## guidance/learning, six viewport/font combinations, visual taste and listening.
 const State = preload("res://scripts/slice_state.gd")
 const Board = preload("res://scripts/slice_board.gd")
 const SAVE_PATH := "user://c01_progress_v1.json"
@@ -77,7 +88,19 @@ func _clear_impression() -> void:
 	before_view.clear_impression()
 	before_view.clear_success()
 
+func _clear_added_feedback() -> void:
+	for view in [stamp_mask_view, before_view, after_view, target_view]:
+		if view != null:
+			view.clear_feedback()
+
+func _selection_feedback(message: String) -> void:
+	reaction_label.text = message
+	if not bool(settings["reduce_motion"]):
+		stamp_mask_view.animate_feedback()
+		after_view.animate_feedback()
+
 func _exit_tree() -> void:
+	_clear_added_feedback()
 	_finish_reaction()
 	_clear_impression()
 	# Disconnect deferred layout work before child controls leave the tree.
@@ -406,6 +429,7 @@ func _update_reaction_pose() -> void:
 		stamp_view.modulate = Color.WHITE.lerp(Color("#d8c7ad"), pressure)
 
 func _refresh() -> void:
+	_clear_added_feedback()
 	_finish_reaction()
 	_clear_impression()
 	var data: Dictionary = state.snapshot()
@@ -424,7 +448,8 @@ func _refresh() -> void:
 		progress_captions[i].add_theme_color_override("font_color", PAPER if current else INK)
 	var affected: Array = [] if data["solved"] else state.get_mask()
 	before_view.show_cells(state.get_board(), affected)
-	after_view.show_cells(state.preview(), affected)
+	var preview_cells: Array = state.preview()
+	after_view.show_cells(preview_cells, affected)
 	target_view.show_cells(state.get_target())
 	detail.text = "선택: 도장 %s  ·  회전 %d°" % ["A" if data["selected_mask"] == 0 else "B", data["rotation"] * 90]
 	stamp_mask_view.show_cells(state.get_mask())
@@ -455,33 +480,46 @@ func _refresh() -> void:
 		next_button.tooltip_text = "현재 퍼즐을 먼저 완성해야 다음 퍼즐로 진행할 수 있습니다."
 	hint_label.text = "힌트 %d / 3단계 사용" % hint_levels[idx] if hint_levels[idx] > 0 else "힌트 사용 전"
 	feedback.add_theme_color_override("font_color", GREEN if data["solved"] else INK)
-	if data["solved"]:
-		feedback.text = "✓ 목표 일치! N 또는 '다음 퍼즐'로 진행하세요. U / Z로 완료를 되돌릴 수 있습니다." if state.can_advance() else "✓ 8개 퍼즐을 모두 해결했습니다! 메뉴에서 다시 시작할 수 있습니다."
-	elif idx == 0 and data["moves"] == 0:
-		feedback.text = "도장 선택(1/2) → 회전(Q/E) → AFTER(예상) 확인 → PRINT(인쇄·SPACE)."
-	elif idx == 0:
-		feedback.text = "도장의 1인 칸은 0 ↔ 1로 반전됩니다. 회전(Q/E)·되돌리기(U/Z) 후 AFTER를 확인하고 다시 인쇄하세요."
-	else:
-		feedback.text = "현재와 목표를 비교해 도장을 고르세요. 색과 숫자 0/1을 함께 확인할 수 있습니다."
+	feedback.text = _guidance(data, preview_cells)
 	# Derive guidance from the same snapshot as the boards, including undo/load/reset.
 	if idx == 0:
-		subheading.text = "목표 완성! NEXT(다음 퍼즐) 버튼 또는 N을 눌러 직접 진행하세요." if data["solved"] else "첫 퍼즐 · CURRENT(현재)와 TARGET(목표)을 비교하세요."
+		subheading.text = "목표 완성! NEXT(다음 퍼즐) 버튼 또는 N을 눌러 직접 진행하세요." if data["solved"] else "첫 퍼즐 · 표시된 칸은 인쇄할 때 0↔1로 반전됩니다. AFTER는 무료 미리보기입니다."
 	else:
 		subheading.text = "종이 위에 도장을 찍어 목표 무늬를 완성하세요."
 	if not last_save_message.is_empty():
 		feedback.text += "   |   " + last_save_message
+
+func _guidance(data: Dictionary, preview_cells: Array) -> String:
+	# Read-only, with no learned/mastery flags or remembered completion messages.
+	if data["solved"]:
+		if int(data["puzzle"]) + 1 < state.puzzle_count():
+			return "✓ 목표 일치! N 또는 '다음 퍼즐'로 진행하세요. U / Z로 완료를 되돌릴 수 있습니다."
+		return "✓ 8개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 메뉴에서 다시 시작할 수 있습니다(시작 화면 → 처음부터). U / Z로 완료를 되돌릴 수 있습니다."
+	var selection := "도장 %s · %d°" % ["A" if data["selected_mask"] == 0 else "B", int(data["rotation"]) * 90]
+	var message := "인쇄 기록 없음 · " if data["history_size"] == 0 and data["moves"] == 0 else "인쇄 %d회 · " % data["moves"]
+	if preview_cells == data["target"]:
+		message += "%s의 AFTER가 TARGET과 일치합니다. SPACE로 인쇄하면 완성됩니다." % selection
+	else:
+		message += "%s의 AFTER와 TARGET을 비교하세요. 1/2 선택 · Q/E 회전 · SPACE 인쇄." % selection
+	if data["puzzle"] == 0:
+		message += " 같은 도장·방향으로 다시 인쇄하면 그 칸은 원래대로 돌아갑니다. U/Z 되돌리기 · 도움말/힌트."
+	elif data["history_size"] > 0:
+		message += " U/Z로 마지막 인쇄를 되돌릴 수 있습니다."
+	return message
 
 func _select(index: int) -> void:
 	if not game_active or overlay.visible:
 		return
 	if state.select_mask(index):
 		_refresh()
+		_selection_feedback("도장 %s 선택" % ("A" if index == 0 else "B"))
 
 func _rotate(direction: int) -> void:
 	if not game_active or overlay.visible:
 		return
 	state.rotate(direction)
 	_refresh()
+	_selection_feedback("%s %d° 회전" % ["↶" if direction < 0 else "↷", int(state.snapshot()["rotation"]) * 90])
 
 func _print() -> void:
 	if not game_active or overlay.visible:
@@ -530,6 +568,10 @@ func _next() -> void:
 	if state.next_puzzle():
 		_autosave()
 		_refresh()
+		reaction_label.text = "퍼즐 %d 준비" % (int(state.snapshot()["puzzle"]) + 1)
+		if not bool(settings["reduce_motion"]):
+			for view in [before_view, after_view, target_view]:
+				view.animate_feedback(true)
 
 func _noop() -> void:
 	pass
@@ -585,6 +627,7 @@ func _clear_dialog() -> void:
 		child.queue_free()
 
 func _show_dialog(title: String, message: String, options: Array) -> void:
+	_clear_added_feedback()
 	_clear_dialog()
 	overlay.show()
 	dialog_back = Callable()
@@ -657,7 +700,7 @@ func _open_pause() -> void:
 	])
 
 func _open_help() -> void:
-	_show_dialog("플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 찍을 때 0↔1로 바뀝니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\n미리보기·도장 선택·회전은 인쇄 횟수에 포함되지 않습니다.\n3·4번 퍼즐은 B 도장만 허용됩니다. 완료 후 다음 퍼즐로 직접 진행하세요.", [
+	_show_dialog("플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 찍을 때 0↔1로 바뀝니다. 같은 도장·방향으로 다시 찍으면 그 칸은 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\nAFTER는 무료 미리보기입니다. 미리보기·도장 선택·회전은 인쇄 횟수에 포함되지 않습니다. 막히면 힌트 버튼에서 단계별 도움을 확인하세요.\n3·4번 퍼즐은 B 도장만 허용됩니다. 완료 후 다음 퍼즐로 직접 진행하세요.", [
 		{"label": "돌아가기", "call": Callable(self, "_return_from_help")},
 	])
 
@@ -666,6 +709,7 @@ func _return_from_help() -> void:
 		_open_start()
 
 func _open_settings() -> void:
+	_clear_added_feedback()
 	_clear_dialog()
 	overlay.show()
 	dialog_back = Callable(self, "_settings_close")
@@ -695,7 +739,7 @@ func _open_settings() -> void:
 	dialog.add_child(mute)
 	_register_setting_text(mute)
 	var reduce := CheckBox.new()
-	reduce.text = "모션 축소 (도장 애니메이션 끄기)"
+	reduce.text = "모션 축소 (도장·전환 효과 끄기)"
 	reduce.button_pressed = bool(settings["reduce_motion"])
 	reduce.toggled.connect(_setting_value_changed.bind("reduce_motion"))
 	dialog.add_child(reduce)
@@ -723,6 +767,7 @@ func _settings_close() -> void:
 func _setting_value_changed(value: Variant, key: String) -> void:
 	settings[key] = value
 	if key == "reduce_motion" and bool(value):
+		_clear_added_feedback()
 		_clear_impression()
 		_finish_reaction()
 		stamp_view.scale = Vector2.ONE
