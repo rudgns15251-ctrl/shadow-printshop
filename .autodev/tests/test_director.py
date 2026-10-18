@@ -75,6 +75,69 @@ class ProductionTests(unittest.TestCase):
             with self.assertRaisesRegex(a.ERROR,'review missing or stale'):
                 a.integrate(self.home,{'validated_snapshot':{'a':'new'},'production_review_snapshot':{'a':'old'}},{},{},{})
 
+    def test_review_mode_requires_nonempty_snapshot_and_writer_completion(self):
+        with patch.object(a,'TASK_REVIEWER',object()):
+            with self.assertRaisesRegex(a.ERROR,'review missing or stale'):
+                a.integrate(self.home,{'validated_snapshot':{},'production_review_snapshot':{}},{},{},{})
+            data={'attempts':1,'validated_snapshot':{'x':'sha'},'production_review_snapshot':{'x':'sha'}}
+            with self.assertRaisesRegex(a.ERROR,'writer completion evidence missing'):
+                a.integrate(self.home,data,{},{},{})
+
+    def test_start_refuses_live_final_qa_child_without_autonomous_lock(self):
+        run=self.here/'runs'/'final';run.mkdir(parents=True)
+        a.write(run/'autonomous.json',{'child_pid':os.getpid()})
+        a.write(a.PLAN,{'tasks':[{'run':'final'}]})
+        self.assertFalse(a.LOCK.exists())
+        with patch.object(d.subprocess,'Popen') as popen:
+            with self.assertRaisesRegex(a.ERROR,'Previous child is still alive'):
+                d.start()
+        popen.assert_not_called()
+
+    def test_report_exposes_live_attempts_qa_and_verified_partial_commit(self):
+        run=self.here/'runs'/'partial';run.mkdir(parents=True)
+        a.write(a.PLAN,{'tasks':[{'id':'one','run':'partial','status':'RUNNING','attempts':0}]})
+        a.write(run/'autonomous.json',{'phase':'QA','attempts':2,'child_pid':os.getpid(),
+            'qa':[{'pass':True},{'pass':False}], 'backup':{'status':'VERIFIED'},'commit':'checked'})
+        result=d.report();row=result['current_tasks'][0]
+        self.assertEqual((row['phase'],row['attempts'],row['qa_passed'],row['qa_failed']),('QA',2,1,1))
+        self.assertEqual(result['last_verified_commit'],'checked')
+
+    def test_final_product_certification_records_all_120_attempts(self):
+        import hashlib
+        import zipfile
+        run=self.here/'runs'/'final-product';(run/'release').mkdir(parents=True)
+        exe=run/'release/game.exe';exe.write_bytes(b'release-fixture')
+        archive=self.root/'fixture.zip'
+        with zipfile.ZipFile(archive,'x') as zipped:zipped.write(exe,exe.name)
+        a.write(a.PLAN,{'tasks':[{'run':run.name}]})
+        a.write(run/'autonomous.json',{'commit':'verified','qa':[{'name':'ACCEPTANCE:release_candidate','pass':True}],
+            'build':{exe.name:{'sha256':a.auto.sha(exe)}}})
+        config={'exe_name':exe.name,'engine_profile':{'debug':{'sha256':hashlib.sha256(b'debug-fixture').hexdigest()}}}
+        calls=[]
+        def recorded_process(command,where,data,name,timeout,env):
+            calls.append(name)
+            if '--export-debug' in command:
+                Path(command[-1]).write_bytes(b'debug-fixture');output='debug exported'
+            else:
+                driver=command[command.index('--audio-driver')+1]
+                output='OpenGL\nCAMPAIGN_AUDIO_DRIVER '+driver
+            log=where/'logs'/(name+'.log');log.parent.mkdir(exist_ok=True);log.write_text(output)
+            data.setdefault('processes',[]).append({'log':log.relative_to(where).as_posix()})
+            return 0,output
+        state={'latest_build':archive.name,'latest_build_sha256':a.auto.sha(archive)}
+        with patch.object(d,'environment',return_value={}),patch.object(a.auto,'resolve_godot',return_value=Path(sys.executable)),patch.object(a,'process',side_effect=recorded_process),patch.object(a,'git',return_value='verified refs/heads/codex/fixture'):
+            d.certify_release(state,config)
+        evidence=a.read(self.home/'release-evidence.json')
+        self.assertTrue(evidence['passed']);self.assertEqual(len(evidence['attempts']),120)
+        self.assertEqual(len(calls),122);self.assertEqual(len(set(calls)),122)
+        self.assertTrue(all((self.root/row['log']).is_file() for row in evidence['attempts']))
+        for mode in ('debug','release'):
+            for driver in ('WASAPI','Dummy'):
+                self.assertEqual(sum(row['mode']==mode and row['driver']==driver for row in evidence['attempts']),30)
+        # The same evidence must not re-run an already certified exact commit.
+        with patch.object(a,'process') as again:d.certify_release(state,config)
+        again.assert_not_called()
+
     def test_new_metadata_remains_in_actual_integration_diff(self):
         stage=self.root/'game';stage.mkdir();(stage/'new.gd').write_text('extends Node\n')
         baseline=a.snapshot(stage);(stage/'new.gd.uid').write_text('uid://b123\n')

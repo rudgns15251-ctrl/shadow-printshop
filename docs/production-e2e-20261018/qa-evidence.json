@@ -1,0 +1,80 @@
+{
+  "stage": "S02 production E2E complete; S03 automatically planned, not release ready",
+  "tasks": [
+    {
+      "run": "20261018-120336-bb7b8",
+      "task": "s02_orders",
+      "commit": "3a824897773e8d0fc647f492e4deb3ca0825e19c",
+      "attempts": 1,
+      "qa_passed": 73,
+      "qa_failed": 0,
+      "audio_processes": 60,
+      "audio_leaked_objects": 0,
+      "preserved_failed_attempts": 0,
+      "independent_reviews": [
+        {
+          "decision": "accept",
+          "blocking_issues": []
+        }
+      ],
+      "backup": {
+        "status": "VERIFIED",
+        "commit": "3a824897773e8d0fc647f492e4deb3ca0825e19c"
+      }
+    },
+    {
+      "run": "20261018-120851-30f54",
+      "task": "s02_archive",
+      "commit": "50b3cebc77f34710b32f8e659515882ad19ee138",
+      "attempts": 2,
+      "qa_passed": 74,
+      "qa_failed": 0,
+      "audio_processes": 60,
+      "audio_leaked_objects": 0,
+      "preserved_failed_attempts": 1,
+      "independent_reviews": [
+        {
+          "decision": "accept",
+          "blocking_issues": []
+        }
+      ],
+      "backup": {
+        "status": "VERIFIED",
+        "commit": "50b3cebc77f34710b32f8e659515882ad19ee138"
+      }
+    }
+  ],
+  "native_infrastructure_tests": {
+    "total": 74,
+    "passed": 73,
+    "skipped": 1,
+    "failed": 0
+  },
+  "unchanged_linux_fixture_tests": {
+    "total": 3,
+    "passed": 3
+  },
+  "process_control": {
+    "initial_detached_pid": 32588,
+    "duplicate_start_reused_pid": true,
+    "pause_stopped_worker": true,
+    "resume_pid": 17860,
+    "planning_run_reused": "20261018-120140-cbf3d"
+  },
+  "next_stage": {
+    "s02_done": true,
+    "s03_automatically_started": true,
+    "cooperative_pause": true,
+    "last_verified_commit": "50b3cebc77f34710b32f8e659515882ad19ee138"
+  },
+  "extended_archive_baseline": {
+    "exit_code": 2,
+    "unicode_diagnostics": 19,
+    "pass_marker": false,
+    "expected_baseline_failure": true
+  },
+  "human_playtesting": "not_performed",
+  "human_listening": "not_performed",
+  "release_candidate_ready": false,
+  "shutdown_executed": false
+}

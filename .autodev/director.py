@@ -134,7 +134,16 @@ def report():
                pause_requested=PAUSE.exists(),workspace=str(ROOT))
     if state.get('status')=='RUNNING' and not state['worker_running']:state['status']='INTERRUPTED'
     plan=read(a.PLAN,{})
-    if plan:state['current_tasks']=[{k:t.get(k) for k in ('id','status','attempts','run','commit')} for t in plan.get('tasks',[])]
+    if plan:
+        state['current_tasks']=[]
+        for task in plan.get('tasks',[]):
+            row={k:task.get(k) for k in ('id','status','attempts','run','commit')}
+            meta=read(a.HERE/'runs'/task['run']/'autonomous.json',{}) if task.get('run') else {}
+            if meta:
+                row.update(phase=meta['phase'],attempts=meta['attempts'],child_pid=meta.get('child_pid'),
+                           qa_passed=sum(q['pass'] for q in meta.get('qa',[])),qa_failed=sum(not q['pass'] for q in meta.get('qa',[])))
+                if meta.get('backup',{}).get('status')=='VERIFIED':state['last_verified_commit']=meta['commit']
+            state['current_tasks'].append(row)
     HOME.mkdir(parents=True,exist_ok=True);a.write(HOME/'report.json',state)
     rows='\n'.join('%s : %s'%(t['id'],t['status']) for t in state.get('milestones',[]))
     (HOME/'현황_KO.txt').write_text('음영 인쇄소 제작 상태\n'+state['status']+'\n실제 관리자 실행: '+str(state['worker_running'])+'\n'+rows+'\n마지막 검증 커밋: '+str(state.get('last_verified_commit'))+'\n최근 빌드: '+str(state.get('latest_build','없음'))+'\n사람의 플레이·청취·출시 승인은 별도입니다.\n',encoding='utf-8')
@@ -177,9 +186,8 @@ def certify_release(state,c):
     a.require(a.auto.sha(exe)==data['build'][exe.name]['sha256'],'Release binary differs from verified build')
     debug=history/'C01_Debug.exe'
     godot=a.auto.resolve_godot(None,c)
-    with (history/'debug-export.log').open('xb') as out:
-        code=subprocess.run([str(godot),'--headless','--path',str(run/'game'),'--export-debug','Windows Desktop',str(debug)],stdout=out,stderr=subprocess.STDOUT,env=environment(),timeout=360).returncode
-    text=(history/'debug-export.log').read_text(encoding='utf-8',errors='replace')
+    code,text=a.process([godot,'--headless','--path',run/'game','--export-debug','Windows Desktop',debug],
+                        run,data,'production-final-debug-export',360,environment())
     a.require(code==0 and not a.auto.ERRORS.search(text) and debug.is_file(),'Final debug export failed')
     a.require(a.auto.sha(debug)==c['engine_profile']['debug']['sha256'],'Final debug template identity mismatch')
     for mode,binary in [('debug',debug),('release',exe)]:
@@ -190,10 +198,9 @@ def certify_release(state,c):
                 user=history/('userdata-%s-%s-%02d'%(mode,driver,index+1));user.mkdir()
                 for key,sub in [('APPDATA','roaming'),('LOCALAPPDATA','local'),('XDG_DATA_HOME','xdg')]:
                     path=user/sub;path.mkdir();env[key]=str(path)
-                with log.open('xb') as out:
-                    try:code=subprocess.run([str(binary),'--headless','--audio-driver',driver,'--verbose','--quit-after','90'],env=env,stdout=out,stderr=subprocess.STDOUT,timeout=45).returncode
-                    except subprocess.TimeoutExpired:code=-1
-                text=log.read_text(encoding='utf-8',errors='replace')
+                code,text=a.process([binary,'--headless','--audio-driver',driver,'--verbose','--quit-after','90'],
+                                    run,data,'production-final-%s-%s-%02d'%(mode,driver,index+1),45,env)
+                log=run/data['processes'][-1]['log']
                 diagnostic=bool(a.auto.ERRORS.search(text) or re.search(r'Leaked instance:|Resource still in use:',text))
                 actual=('CAMPAIGN_AUDIO_DRIVER '+driver) in text
                 row={'mode':mode,'driver':driver,'attempt':index+1,'exit_code':code,'passed':code==0 and not diagnostic and actual,'log':str(log.relative_to(ROOT)),'sha256':a.auto.sha(log)}
@@ -210,9 +217,9 @@ def certify_release(state,c):
     fresh_env=environment()
     for key,sub in [('APPDATA','roaming'),('LOCALAPPDATA','local'),('XDG_DATA_HOME','xdg')]:
         folder=history/'fresh-userdata'/sub;folder.mkdir(parents=True,exist_ok=True);fresh_env[key]=str(folder)
-    with log.open('xb') as out:
-        code=subprocess.run([str(fresh/exe.name),'--audio-driver','WASAPI','--verbose','--rendering-method','gl_compatibility','--quit-after','120'],env=fresh_env,stdout=out,stderr=subprocess.STDOUT,timeout=90).returncode
-    text=log.read_text(encoding='utf-8',errors='replace')
+    code,text=a.process([fresh/exe.name,'--audio-driver','WASAPI','--verbose','--rendering-method','gl_compatibility','--quit-after','120'],
+                        run,data,'production-final-fresh-graphical',90,fresh_env)
+    log=run/data['processes'][-1]['log']
     a.require(code==0 and not a.auto.ERRORS.search(text) and 'OpenGL' in text and 'CAMPAIGN_AUDIO_DRIVER WASAPI' in text,'Fresh extracted graphical release failed')
     a.require(a.git('ls-remote','--heads','origin','refs/heads/'+manifest()['branch']).split()[0]==data['commit'],'Final release backup mismatch')
     result.update(passed=True,archive=state['latest_build'],archive_sha256=state['latest_build_sha256'],fresh_graphical_log=str(log.relative_to(ROOT)))
@@ -324,6 +331,11 @@ def start():
     HOME.mkdir(parents=True,exist_ok=True)
     if held():return report()
     # Never clear a running child's checkpoint merely because its coordinator died.
+    prior_plan=read(a.PLAN,{})
+    for task in prior_plan.get('tasks',[]):
+        if task.get('run'):
+            meta=read(a.HERE/'runs'/task['run']/'autonomous.json',{})
+            a.require(not a.alive(meta.get('child_pid')),'Previous child is still alive, including final release QA')
     if a.LOCK.exists():
         previous=a.read(a.LOCK)
         a.require(not a.alive(previous.get('pid')),'Existing autonomous coordinator is live')

@@ -37,6 +37,7 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'audio_immediate': ('../audio_lab/original_immediate.gd', 'RAPID_SFX_IMMEDIATE_EXIT'),
                      'story_orders': ('story_orders.gd', 'STORY_ORDERS_PASS'),
                      'story_archive': ('story_archive.gd', 'STORY_ARCHIVE_PASS'),
+                     'story_archive_extended': ('story_archive_extended.gd', 'ARCHIVE_EXTENDED_PASS'),
                      'campaign_shell': ('campaign_shell.gd', 'CAMPAIGN_SHELL_PASS'),
                      'campaign_full': ('campaign_full.gd', 'CAMPAIGN_FULL_PASS'),
                      'sound_content': ('sound_content.gd', 'SOUND_CONTENT_PASS'),
@@ -520,6 +521,8 @@ def qa(stage, run, data, c, p, task):
         rc, text = process([godot, '--headless', *driver_flags, '--path', stage, '--script', str(HERE / 'checks' / filename)],
                            run, data, 'attempt-%d-ACCEPTANCE-%s' % (data['attempts'], probe), 180, env)
         ok = rc == 0 and marker in text and not auto.ERRORS.search(text)
+        if probe == 'story_archive_extended':
+            ok = ok and 'Unicode parsing error' not in text
         data['qa'].append({'name': 'ACCEPTANCE:' + probe, 'pass': ok, 'marker': marker})
         checkpoint(run, data)
         require(ok, 'ACCEPTANCE: ' + text[-14000:])
@@ -601,11 +604,13 @@ def remote_backup(p, commit, branch):
 def integrate(run, data, task, c, p):
     """Journal before copying; resume either finishes the exact copy or recognizes its commit."""
     if TASK_REVIEWER is not None:
-        require(data.get('production_review_snapshot') == data.get('validated_snapshot'),
+        require(data.get('validated_snapshot') and data.get('production_review_snapshot') == data.get('validated_snapshot'),
                 'Independent production review missing or stale')
     require(not data.get('acceptance_blockers'), 'Unresolved independent acceptance failures; integration refused')
     response = run / ('coder-%d-last.txt' % data['attempts'])
     outcome = read(response) if response.exists() else (data.get('model_outcomes') or [None])[-1]
+    if TASK_REVIEWER is not None:
+        require(outcome is not None, 'Production writer completion evidence missing')
     if outcome:
         require(outcome['status'] in {'implemented', 'code_ready'} and not outcome['unverified_acceptance'],
                 'Unresolved model acceptance blocker; integration refused')
