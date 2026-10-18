@@ -28,10 +28,19 @@ LOCK = STATE / 'worker.lock'
 PAUSE = STATE / 'pause.json'
 ERROR = auto.StopRun
 require = auto.require
+# A trusted production coordinator can require an independent review before integration.
+# Ordinary CLI tasks retain their existing behavior when no reviewer is installed.
+TASK_REVIEWER = None
 FULL_GATES = ('STATIC', 'IMPORT', 'SMOKE', 'REGRESSION', 'SLICE', 'OFFLINE', 'QUALITY', 'EXPORT', 'BUILD_RUN')
 ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPTANCE_PASS'),
                      'save_settings': ('save_settings.gd', 'SAVE_SETTINGS_PASS'),
-                     'audio_immediate': ('../audio_lab/original_immediate.gd', 'RAPID_SFX_IMMEDIATE_EXIT')}
+                     'audio_immediate': ('../audio_lab/original_immediate.gd', 'RAPID_SFX_IMMEDIATE_EXIT'),
+                     'story_orders': ('story_orders.gd', 'STORY_ORDERS_PASS'),
+                     'story_archive': ('story_archive.gd', 'STORY_ARCHIVE_PASS'),
+                     'campaign_shell': ('campaign_shell.gd', 'CAMPAIGN_SHELL_PASS'),
+                     'campaign_full': ('campaign_full.gd', 'CAMPAIGN_FULL_PASS'),
+                     'sound_content': ('sound_content.gd', 'SOUND_CONTENT_PASS'),
+                     'release_candidate': ('release_candidate.gd', 'RELEASE_CANDIDATE_PASS')}
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
 def now():
@@ -48,7 +57,17 @@ def write(path, value):
         json.dump(value, stream, ensure_ascii=False, indent=2)
         stream.flush()
         os.fsync(stream.fileno())
-    os.replace(temporary, path)
+    # Windows readers/antivirus may briefly hold the destination without delete sharing.
+    # Retry only the atomic replacement, never regenerate content or weaken a QA verdict.
+    deadline = time.monotonic() + 2.0
+    while True:
+        try:
+            os.replace(temporary, path)
+            break
+        except PermissionError as exc:
+            if getattr(exc, 'winerror', None) not in {5, 32, 33} or time.monotonic() >= deadline:
+                raise  # Preserve the unique temporary file as failure evidence.
+            time.sleep(0.025)
 
 def git(*args, cwd=None, env=None):
     p = subprocess.run(['git', '-C', str(cwd or ROOT), *args], capture_output=True,
@@ -107,21 +126,28 @@ def checked_changes(before, after, task, policy):
 def run_changes(data, current, task, p):
     baseline = dict(data['baseline'])
     for rel, digest in data.get('trusted_import_metadata', {}).items():
-        require(rel.endswith('.import') and rel in baseline and current.get(rel) == digest,
+        generated_new = rel in data.get('trusted_new_import_metadata', [])
+        require((rel.endswith('.import') or (generated_new and rel.endswith('.uid'))) and
+                (rel in baseline or generated_new) and current.get(rel) == digest,
                 'SCOPE: trusted import metadata changed: ' + rel)
-        baseline[rel] = digest
+        if not generated_new:
+            baseline[rel] = digest
     return checked_changes(baseline, current, task, p)
 
-def record_import_metadata(stage, before, data, process_record):
+def record_import_metadata(stage, before, data, process_record, approved_new=()):
     current = snapshot(stage)
     changes = auto.diff(before, current)
-    require(all(rel.endswith('.import') and rel in before and rel in current for rel in changes),
+    allowed_new=set(approved_new)
+    new=[rel for rel in changes if rel not in before]
+    require(all(rel in current and ((rel.endswith('.import') and rel in before) or
+                (rel not in before and rel in allowed_new and rel.endswith(('.import','.uid')))) for rel in changes),
             'SCOPE: trusted importer changed substantive content')
     if changes:
+        data.setdefault('trusted_new_import_metadata', []).extend(rel for rel in new if rel not in data.get('trusted_new_import_metadata', []))
         data.setdefault('trusted_import_metadata', {}).update({rel: current[rel] for rel in changes})
         data.setdefault('import_metadata_history', []).append({
             'time': now(), 'process_log': process_record.get('log'), 'log_sha256': process_record.get('sha256'),
-            'before': {rel: before[rel] for rel in changes}, 'after': {rel: current[rel] for rel in changes}})
+            'before': {rel: before.get(rel) for rel in changes}, 'after': {rel: current[rel] for rel in changes}})
 
 def probes(task, c):
     names = list(dict.fromkeys(task.get('acceptance_probes', []) + c.get('trusted_handoff_probes', [])))
@@ -152,6 +178,8 @@ def clean():
 def branch_ok(p):
     branch = git('branch', '--show-current')
     require(branch.startswith(p['development_branch_prefix']) and branch not in {'main', 'master'}, 'Protected development branch')
+    if p.get('approved_development_branches'):
+        require(branch in p['approved_development_branches'], 'Unapproved development branch')
     return branch
 
 def alive(pid):
@@ -445,7 +473,8 @@ def qa(stage, run, data, c, p, task):
         rc, text = process([godot, '--headless', '--path', stage, *extra], run, data,
                            'attempt-%d-%s' % (data['attempts'], name), auto.TIMEOUT.get(name, 240), env)
         if name == 'IMPORT':
-            record_import_metadata(stage, before_import, data, (data.get('processes') or [{}])[-1])
+            record_import_metadata(stage, before_import, data, (data.get('processes') or [{}])[-1],
+                                   set(task['allowed']) & set(p['approved_game_files']))
         ok = rc == 0 and not auto.ERRORS.search(text) and (marker is None or marker in text)
         data['qa'].append({'name': name, 'pass': ok, 'exit_code': rc, 'marker': marker})
         checkpoint(run, data)
@@ -487,7 +516,8 @@ def qa(stage, run, data, c, p, task):
             data['qa'].append({'name': 'ACCEPTANCE:audio_immediate', 'pass': True, 'independent_processes': 60})
             checkpoint(run, data)
             continue
-        rc, text = process([godot, '--headless', '--path', stage, '--script', str(HERE / 'checks' / filename)],
+        driver_flags = ['--audio-driver', 'WASAPI', '--verbose'] if probe in {'sound_content','release_candidate'} else []
+        rc, text = process([godot, '--headless', *driver_flags, '--path', stage, '--script', str(HERE / 'checks' / filename)],
                            run, data, 'attempt-%d-ACCEPTANCE-%s' % (data['attempts'], probe), 180, env)
         ok = rc == 0 and marker in text and not auto.ERRORS.search(text)
         data['qa'].append({'name': 'ACCEPTANCE:' + probe, 'pass': ok, 'marker': marker})
@@ -517,7 +547,7 @@ def qa(stage, run, data, c, p, task):
     require(ok, 'EXPORT: ' + text[-14000:])
     require(os.name == 'nt', 'Windows executable launch must be validated on Windows')
     # Launch the exported pack's real default scene and request a normal engine exit.
-    rc, text = process([exe, '--headless', '--verbose', '--quit-after', '90'], run, data,
+    rc, text = process([exe, '--headless', '--audio-driver', 'WASAPI', '--verbose', '--quit-after', '90'], run, data,
                        'attempt-%d-BUILD_RUN' % data['attempts'], 90, env)
     ok = rc == 0 and not auto.ERRORS.search(text) and 'Godot Engine' in text
     data['qa'].append({'name': 'BUILD_RUN', 'pass': ok, 'exit_code': rc})
@@ -537,7 +567,10 @@ def qa(stage, run, data, c, p, task):
 def task_prompt(task, failure=None, c=None):
     text = auto.build_prompt(task, failure)
     text += ('\nTrusted harness probe autodev_quality_probe.gd is protected. Do not edit it. '
-             'Do not edit presets, .git, .import, .uid, saves or other files. Do not invoke other agents. '
+             'Do not edit presets, .git, saves or files outside the exact allowlist. '
+             'Existing import metadata belongs to the trusted importer. New .uid sidecars may be authored '
+             'only when individually listed in the task and trusted policy; supply valid unique IDs for new scripts. '
+             'Do not invoke other agents. '
              'No permission bypasses. Report status=blocked and list unverified_acceptance if any required criterion fails or is unverified; never claim implemented in that case. '
              'List only tests actually executed. End with the required structured response.\n'
              'ACCEPTANCE: ' + json.dumps(task['acceptance']) + '\nDELIVERABLES: ' + json.dumps(task['deliverables']))
@@ -567,6 +600,9 @@ def remote_backup(p, commit, branch):
 
 def integrate(run, data, task, c, p):
     """Journal before copying; resume either finishes the exact copy or recognizes its commit."""
+    if TASK_REVIEWER is not None:
+        require(data.get('production_review_snapshot') == data.get('validated_snapshot'),
+                'Independent production review missing or stale')
     require(not data.get('acceptance_blockers'), 'Unresolved independent acceptance failures; integration refused')
     response = run / ('coder-%d-last.txt' % data['attempts'])
     outcome = read(response) if response.exists() else (data.get('model_outcomes') or [None])[-1]
@@ -691,6 +727,8 @@ def execute(task, plan, c, p, recover=False, push=False):
                     changes = run_changes(data, snapshot(stage), task, p)
                     require(changes, 'Codex made no real allowed changes')
                     qa(stage, run, data, c, p, task)
+                    if TASK_REVIEWER is not None:
+                        TASK_REVIEWER(run, data, task, c, p)
                     break
                 except (ERROR, OSError, subprocess.SubprocessError) as exc:
                     failure = str(exc)
@@ -706,6 +744,8 @@ def execute(task, plan, c, p, recover=False, push=False):
                     if category in {'ENVIRONMENT', 'ENGINE_IMPORT'}:
                         # Revalidate known code once, without asking the model to regenerate it.
                         qa(stage, run, data, c, p, task)
+                        if TASK_REVIEWER is not None:
+                            TASK_REVIEWER(run, data, task, c, p)
                         break
             require(data['phase'] == 'VERIFIED', 'Repair budget exhausted')
         if PAUSE.exists():

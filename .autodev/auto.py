@@ -238,6 +238,16 @@ def make_export_preset(game, config=None):
         require(any(folder.is_relative_to(root.resolve()) for root in (ROOT / '.data', HERE / 'runs')),
                 'Custom export presets may only be configured in isolated workspace copies')
         text = p.read_text(encoding='utf-8') if p.exists() else PRESET
+        if config.get('production_text_resources'):
+            matches = [row for row in text.splitlines() if row.startswith('include_filter=')]
+            require(len(matches)==1 and matches[0] in ('include_filter=""','include_filter="*.json,*.md"'),
+                    'Refusing unrelated production export include filter')
+            text = text.replace(matches[0],'include_filter="*.json,*.md"')
+            excluded='tests/*,autodev_quality_probe.gd,autodev_quality_probe.gd.uid'
+            matches=[row for row in text.splitlines() if row.startswith('exclude_filter=')]
+            require(len(matches)==1 and matches[0] in ('exclude_filter=""','exclude_filter="'+excluded+'"'),
+                    'Refusing unrelated production export exclude filter')
+            text=text.replace(matches[0],'exclude_filter="'+excluded+'"')
         for mode, path in templates.items():
             line = 'custom_template/' + mode + '='
             replacement = line + '"' + path.as_posix() + '"'

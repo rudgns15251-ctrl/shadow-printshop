@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "branch": "codex/production-20261018",
+  "stable_branch": "c01-stable-slice-20261013",
+  "stable_commit": "83294f2eb49d261bce020e45985eb40983ace229",
+  "max_release_repairs": 2,
+  "milestones": [
+    {
+      "id": "s02_story",
+      "depends_on": [],
+      "tasks": 2,
+      "goal": "Sprint02 actual story content, exactly TWO tasks. Task1 s02_orders: add data/story_orders.gd and exact new .uid sidecar; modify scripts/slice_main.gd to add an actual 의뢰서 button and _open_order(). story_orders.gd exposes const ORDERS with exactly8 Dictionary rows. Fields id and puzzle_id are C01-01..C01-08, date starts1998-11-, speaker exactly 백인호/윤해린/0번 의뢰인, text 20..400 Korean characters. Preserve original8 puzzle data/answers and all inherited state/save functions. Use NARRATIVE_BIBLE chapter1 beats and CHARACTER_BIBLE; distinguish Haerin's written correction notes from present speech. Have the last clue suggest a post-departure work date, without disclosing final identity. Order UI derives row from current puzzle, uses existing themed scrollable modal, Escape/back works. Reading blocks gameplay without changing state/history/moves/hints. Keep exact legacy start-dialog identity and tested labels/tooltips. Revise surrounding start copy to introduce the night printing job while preserving core functionality. No placeholder prose. Both tasks select story_orders, context_tooltips; task1 must not select story_archive before that feature exists.\nTask2 s02_archive depends on task1: implement scripts/story_journal.gd (+new.uid) with separate SAVE_PATH=user://c01_story_archive_v1.json, RefCounted API mark_read(id)->bool, read_ids()->Array duplicate stable ordered C01 IDs, reload()->bool. New instances restore ids. mark_read valid/duplicate returns true, invalidC01-99 returnsfalse without mutation. Schema_version1 JSON/read_ids storage, quiet JSON parsing; corrupt reload returnsfalse preserves current in-memory ids and does not overwrite corrupt disk merely by reading. A later explicit mark_read may repair storage while preserving invalid previous bytes in a separate backup. No interference with existing core progress/settings files. Actual view has story_journal instance. _open_order marks just that order read, _open_journal button 기록함 displays read IDs/text only, allows replay without spoilers or game-state mutation. Journal text must contain C01 IDs for testability. Add title-menu access where useful without changing tested first-button/Escape semantics. Task2 selects story_orders, story_archive and context_tooltips. Use exactly allowed files listed here, no new gameplay or audio changes. Godot .uid metadata is explicitly allowed for new scripts. Parent story_orders/story_archive executable probes cover these contracts. All existing generic QA+60 audio trials are delegated to the qualified parent; the writer must not launch Godot. Independent editor reviews actual changed text before integration. Human naturalness/learning/taste/listening remain pending, never invented.",
+      "probes": [
+        "story_orders",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s03_campaign",
+      "depends_on": [
+        "s02_story"
+      ],
+      "tasks": 2,
+      "goal": "Build actual three-chapter campaign foundation, exactly2 sequential small tasks. Add scripts/campaign_state.gd (+uid), scripts/campaign_save.gd (+uid), scripts/campaign_main.gd (+uid), campaign_main.tscn; change ONLY project.godot application/run/main_scene to res://campaign_main.tscn, preserving all other project settings and original integrated_main.tscn. Keep legacy8 game scene, data, answers, tests and v1 save intact. Campaign can initially use original8 in chapter1 with three-chapter framing; further chapters arrive next milestone. Separate campaign save namespace user://c01_campaign_v1.json with robust validated import, backup fallback, quiet errors; never write legacy progress. Reuse current paper/ink/wood UI and controls. Either subclass SliceMain carefully or compose it: expand hint_levels for current count, override hardcoded eight completion/tooltip strings for campaign, retain legacy surface unchanged. Public trusted test contract: campaign main Control exposes session (campaign state), puzzle_view (Control whose state IS session), methods start_new(), save_campaign()->bool, load_campaign()->bool, advance(), dismiss_story(), is_finished()->bool. start_new activates first puzzle without requiring hidden callbacks. dismiss_story closes story modals and releases focus, not mutate progress. session exposes existing SliceState APIs puzzle_data/count, export_progress, select/rotate/print/undo and original first8 dictionaries' id/start/target/allowed_masks/solution unchanged. Add chapter intro/outro/ending scaffolding with actual short narrative; no TODO placeholders. campaign_shell registered executable probe covers scene, original8 mapping, saves, actual main scene. Both tasks select campaign_shell and context_tooltips; make first task a complete playable minimum shell including entry scene/properties rather than data-only that cannot pass shell. second refines chapter presentation/save corruption/replay behavior with real code. Root frame/text wraps at2sizes3fonts; no forced animation waits. Independent narrative/editor review and legacy coreQA mandatory.",
+      "probes": [
+        "campaign_shell",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s04_puzzles",
+      "depends_on": [
+        "s03_campaign"
+      ],
+      "tasks": 2,
+      "goal": "Complete three chapters and ending, exactly2 sequential implementation tasks using campaign state/main/save, data/campaign_puzzles.json, data/campaign_story.json and associated already-approved scripts. Preserve original8 source dictionaries/answers; campaign first8 may add chapter=1 metadata but tested keys unchanged. Add exactly10 diverse original puzzles to reach18 total, distributed 8/5/5. Campaign puzzle_data dictionaries all include chapter in1..3, stableunique id/start/target/allowed_masks/solution. New puzzle data must have valid9bit arrays, a nonempty solution of existing action codes (stamp*4+rotation) and no duplicate start/target/allowed_masks triples. Exhaustively calculate reachability and shortest distances offline using Python stdlib, record actual results; do not equate shortest moves with human difficulty. Tie each new order to chronology and closure in bibles. API retained: main.session, main.puzzle_view, start_new/save_campaign/load_campaign/advance/dismiss_story/is_finished. main.ending_panel is a visible Control on final completion, main.show_credits() reachable. No auto advancing intermediate puzzles. Save/load every solved boundary preserves board/history; final save restores completion. Credits do not erase state. Keep gameplay simple and no fake human playtime. First task must implement full18 data+state+ending contract to pass campaign_full; second improves concrete hints/order variety and coherent narrative closure, not documentation-only. Both tasks select campaign_shell,campaign_full and context_tooltips. Original scene remains8 with unchanged coretests.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s05_presentation",
+      "depends_on": [
+        "s04_puzzles"
+      ],
+      "tasks": 2,
+      "goal": "Finish original unified art and sound, exactly2 tasks, only approved scripts/assets/CREDITS_KO.md/ASSET_LICENSES.json. Task1 makes actually used original SVG printing-shop background and consistent limited-line portraits for Baek, Haerin (recorded portrait before restoration), unnamed client mark. Preserve board contrast and readable focus; no copyrighted downloads or unlicensed fonts. Worker has Python stdlib/Godot and can author SVG/WAV; image generation tool is not exposed to this independent CLI, never claim it was used. Task2 makes original synthesized shop_ambience.wav (gentle seam-safe loop) and optional paper/chapter cues with recipes/provenance recorded in ASSET_LICENSES.json, integrates actual ambience with BGM slider. Preserve existing3 SFX and base audio lifecycle. Public API campaign_main.get_environment_audio()->AudioStreamPlayer with AudioStreamWAV, actually playing during active game, master*bgm gain; mute or bgm0 stops; restorebgm.3 restarts. Main _setting_value_changed and _update_audio must handle ambient safely during initialization/exit. No clipping; derive sample peak and loop discontinuity offline; actual WASAPI sound_content probe checks output and settings. First task selects campaign_shell,campaign_full; second also sound_content. Asset register ARRAY rows with path repository-game-relative, license (original creator grant/compatible actual license), origin (actual tool/recipe). Cover all used assets, including legacy originals, font/engine attribution. CREDITS_KO.md contains substantive credits including Godot. Trusted production export includes *.md and *.json; do not edit presets. Keep narrative bibles and no dramatic jump-scare/forced wait. Final main should print CAMPAIGN_AUDIO_DRIVER plus actual driver at startup for final executable driver audit (console only, no debug UI).",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s06_review",
+      "depends_on": [
+        "s05_presentation"
+      ],
+      "tasks": 2,
+      "goal": "Product review and targeted game polish, exactly2 small actual code tasks. Inspect actual campaign narrative/UI/input/hints and fix concrete found weaknesses. Preserve original8, verified18 total and APIs. First task improves initial learning and clear order/character context without repetition, checks modal/back/focus after actual callbacks and font changes. Second task removes provisional product wording/TODO and improves actual ending/credits navigation and replay confirmations, never just a doc-only edit. Use only approved game paths. Every task selects campaign_shell,campaign_full,sound_content,context_tooltips. Required actual screenshot review at2resolutions3fonts remains parent responsibility; model static review must not claim rendered inspection. Scene wrappers need coherent Korean typesetting. Do not add unnecessary systems, puzzles or new rules. Carry human playtime/taste/listening as pending. Independent editor must distinguish narrative/visual/flow/technical evidence.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s07_release",
+      "depends_on": [
+        "s06_review"
+      ],
+      "tasks": 2,
+      "goal": "Finish release-candidate game content, exactly2 concrete small code/art polishing tasks based on actual independent review and missing release criteria, no documentation-only tasks. All tested campaign18/chapter3/ending/save interfaces preserved. All tasks select campaign_shell,campaign_full,sound_content,release_candidate,context_tooltips. Product startup usescampaign_main; CREDITS_KO.md and ASSET_LICENSES.json are actual resources exported in pack; ensure no missing assets, placeholders, TODO/FIXME or prototype-only wording in product text. Make first task a narrow actual presentation or audio edge-case correction discovered in review; second a different actual navigation/ending/readability improvement. Never manufacture claims of human playtesting/60-90minutes/listening. Final driver marker CAMPAIGN_AUDIO_DRIVER <AudioServer.get_driver_name()> in console enables trusted Windows executable audit. Parent will package and launch exactrelease pack in fresh user storage, validate campaign complete, author license register and report SHA. Do not Steam upload or publicly publish. Independent editor and all coreQA/audiozero gates required. Native child may statically inspect source only; runtime pending belongs in verification_pending.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
+    }
+  ]
+}
