@@ -1,5 +1,11 @@
 extends Control
 ## C01 eight-puzzle playable slice. Legacy scenes/tests remain unchanged.
+## Presentation handoff: slice_acceptance's heading/final text, contextual tooltips,
+## focused activation/modal guards, quiet JSON, saves and audio timing are retained.
+## Indicators derive only position/current solved status; they store no completion history.
+## Coordinator QA: 2 resolutions x 3 font scales, label/slider bounds, core/input/save/
+## audio gates, 60 leak trials and Windows export. Human review: Korean, hierarchy,
+## palette and listening. Main layout risk: large text uses vertical scrolling.
 const State = preload("res://scripts/slice_state.gd")
 const Board = preload("res://scripts/slice_board.gd")
 const SAVE_PATH := "user://c01_progress_v1.json"
@@ -24,6 +30,8 @@ var feedback: Label
 var detail: Label
 var hint_label: Label
 var progress_label: Label
+var progress_indicators: Array[PanelContainer] = []
+var progress_captions: Array[Label] = []
 var print_button: Button
 var undo_button: Button
 var next_button: Button
@@ -82,6 +90,8 @@ func _exit_tree() -> void:
 	audio.clear()
 	text_controls.clear()
 	stamp_buttons.clear()
+	progress_indicators.clear()
+	progress_captions.clear()
 	state = null
 
 func _panel_style(color: Color, radius: int = 10) -> StyleBoxFlat:
@@ -112,17 +122,7 @@ func _button(parent: Node, caption: String, action: Callable, min_width: float =
 	item.text = caption
 	item.custom_minimum_size = Vector2(min_width, 46)
 	item.focus_mode = Control.FOCUS_ALL
-	item.add_theme_color_override("font_color", INK)
-	item.add_theme_color_override("font_focus_color", INK)
-	item.add_theme_color_override("font_hover_color", INK)
-	item.add_theme_color_override("font_pressed_color", PAPER)
-	item.add_theme_color_override("font_disabled_color", Color("#62584c"))
-	item.add_theme_color_override("font_hover_pressed_color", PAPER)
-	item.add_theme_stylebox_override("normal", _panel_style(PAPER, 6))
-	item.add_theme_stylebox_override("hover", _panel_style(Color("#efe1cf"), 6))
-	item.add_theme_stylebox_override("pressed", _panel_style(ACCENT, 6))
-	item.add_theme_stylebox_override("disabled", _panel_style(Color("#ddd4c6"), 6))
-	item.add_theme_stylebox_override("focus", _focus_style())
+	_style_button(item)
 	item.add_theme_font_size_override("font_size", int(round(16 * float(settings["font_scale"]))))
 	item.set_meta("font_base", 16)
 	text_controls.append(item)
@@ -139,11 +139,21 @@ func _focus_style() -> StyleBoxFlat:
 	return style
 
 func _primary_button(item: Button) -> void:
-	item.add_theme_stylebox_override("normal", _panel_style(ACCENT, 6))
-	item.add_theme_stylebox_override("hover", _panel_style(Color("#6f301c"), 6))
-	item.add_theme_color_override("font_color", PAPER)
-	item.add_theme_color_override("font_focus_color", PAPER)
-	item.add_theme_color_override("font_hover_color", PAPER)
+	_style_button(item, true)
+
+func _style_button(item: Button, primary: bool = false) -> void:
+	# Reapply both palettes so Next loses its emphasis on undo/reset/final boundary.
+	for color_name in ["font_color", "font_focus_color", "font_hover_color"]:
+		item.add_theme_color_override(color_name, PAPER if primary else INK)
+	item.add_theme_color_override("font_pressed_color", PAPER)
+	item.add_theme_color_override("font_hover_pressed_color", PAPER)
+	item.add_theme_color_override("font_disabled_color", Color("#62584c"))
+	item.add_theme_stylebox_override("normal", _panel_style(ACCENT if primary else PAPER, 6))
+	item.add_theme_stylebox_override("hover", _panel_style(Color("#6f301c") if primary else Color("#efe1cf"), 6))
+	item.add_theme_stylebox_override("pressed", _panel_style(INK if primary else ACCENT, 6))
+	item.add_theme_stylebox_override("hover_pressed", _panel_style(INK if primary else ACCENT, 6))
+	item.add_theme_stylebox_override("disabled", _panel_style(Color("#ddd4c6"), 6))
+	item.add_theme_stylebox_override("focus", _focus_style())
 
 func _flow(parent: Node) -> HFlowContainer:
 	var flow := HFlowContainer.new()
@@ -183,14 +193,15 @@ func _build_interface() -> void:
 		margins.add_theme_constant_override("margin_" + edge, 16)
 	add_child(margins)
 	var layout := _column(margins, 6)
-	var top := _row(layout, 18)
+	var top := _column(layout, 4)
 	var title_area := _column(top, 1)
 	title_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_label(title_area, "C01  /  음영 인쇄소", 28)
+	_label(title_area, "C01  /  음영 인쇄소", 30)
 	subheading = _label(title_area, "종이 위에 도장을 찍어 목표 무늬를 완성하세요.", 15)
-	_button(top, "도움말", _open_help, 98)
-	_button(top, "설정", _open_settings, 80)
-	_button(top, "메뉴", _open_pause, 80)
+	var navigation := _flow(top)
+	_button(navigation, "도움말", _open_help, 98)
+	_button(navigation, "설정", _open_settings, 80)
+	_button(navigation, "메뉴", _open_pause, 80)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -202,6 +213,17 @@ func _build_interface() -> void:
 	heading = _label(header, "", 21)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	progress_label = _label(header, "", 18, GREEN)
+	var progression := _flow(header)
+	for i in range(state.puzzle_count()):
+		var indicator := PanelContainer.new()
+		indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		indicator.focus_mode = Control.FOCUS_NONE
+		progression.add_child(indicator)
+		progress_indicators.append(indicator)
+		var caption := _label(indicator, str(i + 1), 15)
+		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
+		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		progress_captions.append(caption)
 
 	boards_grid = GridContainer.new()
 	boards_grid.columns = 3
@@ -210,8 +232,8 @@ func _build_interface() -> void:
 	boards_grid.add_theme_constant_override("v_separation", 12)
 	content.add_child(boards_grid)
 	var boards: Node = boards_grid
-	before_view = _board_card(boards, "BEFORE · 현재", "인쇄 전 종이", 0)
-	after_view = _board_card(boards, "AFTER · 예상", "선택한 도장을 찍으면", 1)
+	before_view = _board_card(boards, "CURRENT · 현재", "지금 인쇄된 종이", 0)
+	after_view = _board_card(boards, "AFTER · 무료 미리보기", "인쇄 횟수에 포함되지 않아요", 1)
 	target_view = _board_card(boards, "TARGET · 목표", "이 모양과 일치시키세요", 2)
 	var note := _label(content, "0 = 밝은 종이   ·   1 = 검은 잉크   ·   테두리와 삼각형 = 이번에 바뀔 칸", 15)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -241,7 +263,10 @@ func _build_interface() -> void:
 	reaction_label = _label(art_column, "인쇄 준비", 16, ACCENT)
 	var buttons := _column(controls, 4)
 	buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail = _label(buttons, "", 18)
+	var selection := PanelContainer.new()
+	selection.add_theme_stylebox_override("panel", _panel_style(INK, 6))
+	buttons.add_child(selection)
+	detail = _label(selection, "", 19, PAPER)
 	_label(buttons, "1  도장 선택 · 회전", 16, ACCENT)
 	var select_row := _flow(buttons)
 	stamp_buttons.append(_button(select_row, "1 · A (꺾임)", _select.bind(0), 135))
@@ -302,7 +327,10 @@ func _board_card(parent: Node, title: String, description: String, index: int) -
 	outer.add_theme_stylebox_override("panel", _panel_style(Color("#f9f3e9"), 8))
 	parent.add_child(outer)
 	var col := _column(outer, 6)
-	var title_label := _label(col, "%d  /  %s" % [index + 1, title], 18, GREEN if index == 2 else INK)
+	var ribbon := PanelContainer.new()
+	ribbon.add_theme_stylebox_override("panel", _panel_style([INK, ACCENT, GREEN][index], 4))
+	col.add_child(ribbon)
+	var title_label := _label(ribbon, title, 18, PAPER)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var view := Board.new()
 	view.custom_minimum_size = Vector2(156, 156)
@@ -310,7 +338,7 @@ func _board_card(parent: Node, title: String, description: String, index: int) -
 	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(view)
-	var description_label := _label(col, description, 16, ACCENT)
+	var description_label := _label(col, description, 16, INK)
 	description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return view
 
@@ -384,6 +412,16 @@ func _refresh() -> void:
 	var idx: int = data["puzzle"]
 	heading.text = "퍼즐 %d / %d     ·     %s" % [idx + 1, state.puzzle_count(), data["title"]]
 	progress_label.text = "인쇄 %d회  |  다른 칸 %d개" % [data["moves"], state.mismatch_count()]
+	for i in range(progress_indicators.size()):
+		var current: bool = i == idx
+		var solved: bool = current and bool(data["solved"])
+		var fill: Color = GREEN if solved else (INK if current else (PANEL if i < idx else PAPER))
+		var style := _panel_style(fill, 4)
+		style.set_content_margin_all(8)
+		progress_indicators[i].add_theme_stylebox_override("panel", style)
+		# '지남' describes position, never a claim about saved completion history.
+		progress_captions[i].text = str(i + 1) + (" · 완료" if solved else (" · 현재" if current else (" · 지남" if i < idx else "")))
+		progress_captions[i].add_theme_color_override("font_color", PAPER if current else INK)
 	var affected: Array = [] if data["solved"] else state.get_mask()
 	before_view.show_cells(state.get_board(), affected)
 	after_view.show_cells(state.preview(), affected)
@@ -396,11 +434,17 @@ func _refresh() -> void:
 	var allowed: Array = state.puzzle_data()[idx]["allowed_masks"]
 	for i in range(stamp_buttons.size()):
 		stamp_buttons[i].disabled = not i in allowed
-		stamp_buttons[i].add_theme_stylebox_override("normal", _panel_style(Color("#d8e8de") if i == data["selected_mask"] else PAPER, 6))
-		stamp_buttons[i].text = ("1 · A (꺾임)" if i == 0 else "2 · B (막대)") + (" ✓ 선택" if i == data["selected_mask"] else "")
+		var selected: bool = i == data["selected_mask"]
+		var stamp_style := _panel_style(Color("#d8e8de") if selected else PAPER, 6)
+		if selected:
+			stamp_style.border_color = GREEN
+			stamp_style.set_border_width_all(3)
+		stamp_buttons[i].add_theme_stylebox_override("normal", stamp_style)
+		stamp_buttons[i].text = ("1 · A (꺾임)" if i == 0 else "2 · B (막대)") + (" · 사용 불가" if stamp_buttons[i].disabled else (" ✓ 선택" if selected else ""))
 	print_button.disabled = data["solved"]
 	undo_button.disabled = data["history_size"] == 0
 	next_button.disabled = not state.can_advance()
+	_style_button(next_button, not next_button.disabled)
 	print_button.tooltip_text = "이미 목표 무늬를 완성했습니다." if data["solved"] else "선택한 도장의 표시된 칸을 반전해 인쇄합니다. (Space/Enter)"
 	undo_button.tooltip_text = "되돌릴 인쇄 기록이 없습니다." if data["history_size"] == 0 else "마지막 인쇄를 되돌립니다. (U/Z)"
 	if not next_button.disabled:
@@ -421,7 +465,7 @@ func _refresh() -> void:
 		feedback.text = "현재와 목표를 비교해 도장을 고르세요. 색과 숫자 0/1을 함께 확인할 수 있습니다."
 	# Derive guidance from the same snapshot as the boards, including undo/load/reset.
 	if idx == 0:
-		subheading.text = "목표 완성! NEXT(다음 퍼즐) 버튼 또는 N을 눌러 직접 진행하세요." if data["solved"] else "첫 퍼즐 · CURRENT(현재·BEFORE)와 TARGET(목표)을 비교하세요."
+		subheading.text = "목표 완성! NEXT(다음 퍼즐) 버튼 또는 N을 눌러 직접 진행하세요." if data["solved"] else "첫 퍼즐 · CURRENT(현재)와 TARGET(목표)을 비교하세요."
 	else:
 		subheading.text = "종이 위에 도장을 찍어 목표 무늬를 완성하세요."
 	if not last_save_message.is_empty():
@@ -628,10 +672,16 @@ func _open_settings() -> void:
 	_label(dialog, "환경 설정", 27)
 	_label(dialog, "설정은 로컬에 저장됩니다. BGM은 이번 시범에 포함되지 않았습니다.", 15)
 	for key in ["master", "sfx"]:
-		var row := _row(dialog, 12)
-		_label(row, "전체 음량" if key == "master" else "효과음", 17)
+		# Separate vertical slots guarantee readable, single-line names at 150%.
+		# An unwrapped label contributes its full natural width to the dialog.
+		var row := _column(dialog, 8)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var name_label := _label(row, "전체 음량" if key == "master" else "효과음", 17)
+		name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		var slider := HSlider.new()
-		slider.custom_minimum_size.x = 285
+		slider.custom_minimum_size = Vector2(285, 32)
+		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slider.focus_mode = Control.FOCUS_ALL
 		slider.min_value = 0.0
 		slider.max_value = 1.0
 		slider.step = 0.05
@@ -645,7 +695,7 @@ func _open_settings() -> void:
 	dialog.add_child(mute)
 	_register_setting_text(mute)
 	var reduce := CheckBox.new()
-	reduce.text = "모션 축소 (도장 반응 애니메이션 끄기)"
+	reduce.text = "모션 축소 (도장 애니메이션 끄기)"
 	reduce.button_pressed = bool(settings["reduce_motion"])
 	reduce.toggled.connect(_setting_value_changed.bind("reduce_motion"))
 	dialog.add_child(reduce)
