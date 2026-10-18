@@ -7593,7 +7593,7 @@
       "task": "sprint01_ui",
       "category": "UNKNOWN",
       "attempt": 1,
-      "detail": "[WinError 5] 액세스가 거부되었습니다: 'C:\\\\Users\\\\newsj\\\\Downloads\\\\game-harness-starter-v0.1\\\\.data\\\\sprint01-worktree-20261018\\\\.autodev\\\\runs\\\\20261018-104330-c44e6\\\\autonomous.json.3394a092596f42f1ac229508cb9f2ad1.tmp' -> 'C:\\\\Users\\\\newsj\\\\Downloads\\\\game-harness-starter-v0.1\\\\.data\\\\sprint01-worktree-20261018\\\\.autodev\\\\runs\\\\20261018-104330-c44e6\\\\autonomous.json'"
+      "detail": "[WinError 5] 액세스가 거부되었습니다: '<sprint-worktree>\\\\.autodev\\\\runs\\\\20261018-104330-c44e6\\\\autonomous.json.3394a092596f42f1ac229508cb9f2ad1.tmp' -> '<sprint-worktree>\\\\.autodev\\\\runs\\\\20261018-104330-c44e6\\\\autonomous.json'"
     },
     {
       "task": "sprint01_feedback",
