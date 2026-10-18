@@ -19,6 +19,7 @@ extends Control
 ## guidance/learning, six viewport/font combinations, visual taste and listening.
 const State = preload("res://scripts/slice_state.gd")
 const Board = preload("res://scripts/slice_board.gd")
+const StoryOrders = preload("res://data/story_orders.gd")
 const SAVE_PATH := "user://c01_progress_v1.json"
 const SAVE_BACKUP := "user://c01_progress_v1.bak"
 const SETTINGS_PATH := "user://c01_settings_v1.json"
@@ -231,6 +232,7 @@ func _build_interface() -> void:
 	subheading = _label(title_area, "종이 위에 도장을 찍어 목표 무늬를 완성하세요.", 15)
 	navigation = _row(title_navigation, 8)
 	navigation.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_button(navigation, "의뢰서", _open_order, 98)
 	_button(navigation, "도움말", _open_help, 98)
 	_button(navigation, "설정", _open_settings, 80)
 	_button(navigation, "메뉴", _open_pause, 80)
@@ -683,7 +685,7 @@ func _dialog_action(command: Callable) -> void:
 func _open_start() -> void:
 	game_active = false
 	var found: bool = _has_valid_save()
-	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요.\n8개 퍼즐과 간단한 사운드·저장 기능을 시험할 수 있습니다.", [
+	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "1998년 11월 17일 밤, 임시 인쇄공으로 음영 인쇄소의 야간 작업을 맡았습니다. 의뢰서에서 이번 작업의 기록을 읽으세요.\n도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요. 8개 퍼즐의 목표 무늬를 완성한 뒤 다음 퍼즐로 직접 진행하세요.", [
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
 		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start")},
 		{"label": "도움말", "call": Callable(self, "_open_help")},
@@ -725,6 +727,25 @@ func _open_pause() -> void:
 		{"label": "진행 저장", "call": Callable(self, "_save_manually")},
 		{"label": "시작 화면", "call": Callable(self, "_open_start")},
 	])
+
+func _open_order() -> void:
+	if not game_active or overlay.visible:
+		return
+	var puzzle_id: String = state.puzzle_data()[int(state.snapshot()["puzzle"])]["id"]
+	for row in StoryOrders.ORDERS:
+		if row["puzzle_id"] != puzzle_id:
+			continue
+		# This path only reads data: no refresh, hint consumption or save writes.
+		_show_dialog("의뢰서 · %s" % row["id"], "날짜: %s\n기록 명의: %s\n\n%s" % [row["date"], row["speaker"], row["text"]], [
+			{"label": "닫기", "call": Callable(self, "_noop")},
+		])
+		# Keep keyboard navigation inside this one-action modal, including Tab.
+		var close_button: Control = get_viewport().gui_get_focus_owner()
+		close_button.focus_next = close_button.get_path()
+		close_button.focus_previous = close_button.get_path()
+		for edge in ["left", "top", "right", "bottom"]:
+			close_button.set("focus_neighbor_" + edge, close_button.get_path())
+		return
 
 func _open_help() -> void:
 	_show_dialog("플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 찍을 때 0↔1로 바뀝니다. 같은 도장·방향으로 다시 찍으면 그 칸은 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\nAFTER는 무료 미리보기입니다. 미리보기·도장 선택·회전은 인쇄 횟수에 포함되지 않습니다. 막히면 힌트 버튼에서 단계별 도움을 확인하세요.\n3·4번 퍼즐은 B 도장만 허용됩니다. 완료 후 다음 퍼즐로 직접 진행하세요.", [
