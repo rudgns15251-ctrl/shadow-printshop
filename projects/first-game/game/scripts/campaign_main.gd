@@ -90,9 +90,33 @@ func show_credits() -> void:
 	if not is_finished() or not game_active:
 		return
 	var credits: Dictionary = CampaignState.story_data()["credits"]
-	_show_dialog(credits["title"], credits["text"], [
+	# The export preset already includes *.md; keep the original ending credits.
+	var attribution := FileAccess.get_file_as_string("res://CREDITS_KO.md")
+	_show_dialog(credits["title"], credits["text"] + "\n\n" + attribution + "\n\n" + _engine_credits(), [
 		{"label": "결말로 돌아가기", "call": Callable(self, "_noop")},
 	])
+
+func _engine_credits() -> String:
+	# Read notices from the running engine, including its actual bundled fonts.
+	var sections: Array[String] = [
+		"실행 시 기본 글꼴: " + heading.get_theme_font("font").get_font_name(),
+		"ThemeDB 대체 글꼴: " + ThemeDB.fallback_font.get_font_name(),
+		"실행 엔진 · Godot Engine\n" + Engine.get_license_text(),
+	]
+	var notices: Array = Engine.get_copyright_info()
+	var licenses: Dictionary = Engine.get_license_info()
+	var shown: Array[String] = []
+	for dependency in notices:
+		if not str(dependency["name"]).to_lower().contains("font"):
+			continue
+		sections.append(str(dependency["name"]))
+		for part in dependency["parts"]:
+			sections.append("\n".join(part["copyright"]) + "\n" + "\n".join(part["files"]) + "\n" + str(part["license"]))
+			var license_id := str(part["license"])
+			if licenses.has(license_id) and not shown.has(license_id):
+				shown.append(license_id)
+				sections.append(str(licenses[license_id]))
+	return "\n\n".join(sections)
 
 func dismiss_story() -> void:
 	if not is_inside_tree() or overlay == null:
@@ -275,7 +299,44 @@ func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
 		chronology, kind, "발화" if row["delivery"] == "live_speech" else "문서", row["document_date"], row["speaker"], row["text"]], [
 		{"label": caption, "call": back},
 	])
+	_add_order_portrait(row)
 	_confine_journal_focus()
+
+func _add_order_portrait(row: Dictionary) -> void:
+	# Current orders and archive replay share this presentation-only mapping.
+	var texture: Texture2D
+	var caption: String
+	match str(row["speaker"]):
+		"백인호":
+			texture = preload("res://assets/art/portrait_baek.svg")
+			caption = "백인호 · 현장 인물"
+		"윤해린":
+			texture = preload("res://assets/art/portrait_yoon.svg")
+			caption = "윤해린 · 기록 이미지\n보관된 문서 · 현재의 모습이나 발화가 아님"
+		"0번 의뢰인":
+			texture = preload("res://assets/art/portrait_client.svg")
+			caption = "무서명 의뢰서 · 익명의 문서 표식"
+		_:
+			return
+	var row_view := _row(dialog, 12)
+	row_view.name = "OrderPortrait"
+	row_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row_view.focus_mode = Control.FOCUS_NONE
+	dialog.move_child(row_view, 1)
+	var portrait := TextureRect.new()
+	portrait.texture = texture
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.custom_minimum_size = Vector2(96, 112)
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.focus_mode = Control.FOCUS_NONE
+	row_view.add_child(portrait)
+	var description := _label(row_view, caption, 15)
+	description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	description.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	description.focus_mode = Control.FOCUS_NONE
+	_fit_dialog.call_deferred()
 
 func _journal_read_ids() -> Array:
 	if game_active:

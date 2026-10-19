@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <title>Night shift printshop, paper and ink line study</title>
+  <desc>Original vector geometry: fluorescent light, cabinet of paper, ink rollers and wooden workbench around a quiet central wall.</desc>
+  <rect width="1280" height="720" fill="#d8c7ad"/>
+  <path d="M128 0H1152V552H128Z" fill="#e4d5be"/>
+  <g fill="none" stroke="#24211d" stroke-width="2" opacity=".14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M128 0V552M1152 0V552M0 552H1280M0 571H1280"/>
+    <path d="M443 0V18M837 0V18M424 19H856L868 37H412ZM436 28H844"/>
+    <path d="M12 105H114V527H12ZM12 228H114M12 365H114M12 494H114"/>
+    <path d="M23 198H101V217H23ZM29 190H96V198M25 183H99V190M32 174H93V183"/>
+    <path d="M24 335H101V354H24ZM30 328H97V335M23 319H101V328M28 310H96V319"/>
+    <path d="M26 398V478H47V398ZM53 405V478H75V405ZM82 395V478H102V395M31 413H42M58 420H70M86 410H97"/>
+    <path d="M1167 105H1268V527H1167ZM1167 228H1268M1167 365H1268M1167 494H1268"/>
+    <path d="M1180 158H1256V216H1180ZM1180 168H1256M1208 183H1228M1184 306H1250V352H1184ZM1184 316H1250M1207 330H1229"/>
+    <path d="M1184 424H1251V478H1184ZM1194 424V410H1240V424M1208 410V400H1227V410"/>
+  </g>
+  <path d="M0 573H1280V720H0Z" fill="#d8c7ad"/>
+  <g fill="none" stroke="#24211d" stroke-width="2" opacity=".12" stroke-linecap="round">
+    <path d="M0 591Q180 582 340 594T680 591T1020 594T1280 589M0 674Q210 665 420 677T840 672T1280 678M0 705Q270 697 540 707T1080 703T1280 706"/>
+    <path d="M41 604H181V655H41ZM47 610H175M47 648H175M191 620H254M201 610V630M239 610V630"/>
+    <path d="M1091 603L1238 609L1235 661L1088 655ZM1101 617L1224 622M1100 630L1211 634M1099 644L1178 647"/>
+  </g>
+  <g fill="none" stroke="#315d49" stroke-width="3" opacity=".23">
+    <path d="M1215 124V147M1204 135H1226M58 244V267M47 255H69"/>
+  </g>
+  <path d="M1141 632H1169V650H1141Z" fill="none" stroke="#8a3f24" stroke-width="3" opacity=".25"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="224" viewBox="0 0 192 224">
+  <title>Unsigned commission, anonymous document mark</title>
+  <desc>Original paper and envelope geometry with a blank signature field. No face, initials or identifying portrait.</desc>
+  <rect x="3" y="3" width="186" height="218" rx="4" fill="#f4ebdd" stroke="#24211d" stroke-width="2"/>
+  <path d="M14 14H178V210H14Z" fill="#d8c7ad"/>
+  <path d="M29 106L96 65L163 106V192H29Z" fill="#f4ebdd" stroke="#24211d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M49 33H123L144 54V147H49Z" fill="#f4ebdd" stroke="#24211d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M123 33V54H144M63 71H126M63 84H115M63 97H123" fill="none" stroke="#24211d" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M65 115H125V137H65Z" fill="none" stroke="#315d49" stroke-width="2"/>
+  <path d="M29 106L96 150L163 106V192H29Z" fill="#f4ebdd" stroke="#24211d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M29 192L76 138M163 192L116 138" fill="none" stroke="#24211d" stroke-width="2"/>
+  <path d="M83 166H109V180H83Z" fill="none" stroke="#8a3f24" stroke-width="2"/>
+  <path d="M18 18H33M18 18V33M174 191V206H159" fill="none" stroke="#8a3f24" stroke-width="2"/>
+</svg>

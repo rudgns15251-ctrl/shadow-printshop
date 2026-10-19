@@ -1,0 +1,119 @@
+[
+  {
+    "path": "assets/art/shop_background.svg",
+    "license": "NOASSERTION",
+    "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation, downloaded images, fonts or external resources.",
+    "geometry_recipe": "1280x720 paper/wood field; rectangles and polylines for shelves, fluorescent light and paper stacks; quadratic curves for workbench grain; low-opacity ink outlines with green and rust tool marks.",
+    "usage": ["scripts/slice_main.gd::_build_interface", "campaign_main.tscn", "integrated_main.tscn"],
+    "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
+  },
+  {
+    "path": "assets/art/portrait_baek.svg",
+    "license": "NOASSERTION",
+    "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation or external resources.",
+    "geometry_recipe": "192x224 paper frame, curved broad face and side hair silhouette, short facial strokes, polygonal shirt and green apron; paper/ink/wood/rust palette.",
+    "usage": ["scripts/campaign_main.gd::_add_order_portrait", "scripts/campaign_main.gd::_show_order (current and archive)"],
+    "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
+  },
+  {
+    "path": "assets/art/portrait_yoon.svg",
+    "license": "NOASSERTION",
+    "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation or external resources.",
+    "geometry_recipe": "192x224 folded paper mount, curved hair and face, short facial strokes, collared shirt and abstract archive lines. Shared paper/ink palette, small green clip and rust archive mark.",
+    "usage": ["scripts/campaign_main.gd::_add_order_portrait", "scripts/campaign_main.gd::_show_order (current and archive)"],
+    "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
+  },
+  {
+    "path": "assets/art/portrait_client.svg",
+    "license": "NOASSERTION",
+    "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation or external resources.",
+    "geometry_recipe": "192x224 paper frame, polygonal envelope and folded sheet, abstract document rules and empty green signature rectangle; no face, initials, names or identifying human silhouette.",
+    "usage": ["scripts/campaign_main.gd::_add_order_portrait", "scripts/campaign_main.gd::_show_order (current and archive)"],
+    "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
+  },
+  {
+    "path": "assets/art/press_wood.svg",
+    "license": "NOASSERTION",
+    "origin": "Retained SVG. docs/ART-001_NOTES.md records original procedural wood geometry: 24 curves and border, no external images/fonts. File title corroborates procedural wood grain. Historical personal author and separate license grant are not recorded.",
+    "evidence": ["docs/ART-001_NOTES.md", "assets/art/press_wood.svg"],
+    "usage": ["scripts/slice_main.gd", "scripts/slice_board.gd"]
+  },
+  {
+    "path": "assets/art/stamp_preview.svg",
+    "license": "NOASSERTION",
+    "origin": "Retained SVG. docs/MEDIA_PROOF.md records directly authored paper/fold/stamp geometry without external images, fonts or links. Historical authoring editor and separate license grant are not recorded.",
+    "evidence": ["docs/MEDIA_PROOF.md", "assets/art/stamp_preview.svg"],
+    "usage": ["scripts/media_preview.gd"]
+  },
+  {
+    "path": "assets/audio/print.wav",
+    "license": "NOASSERTION",
+    "origin": "Retained 44100 Hz mono PCM. tools/generate_sfx.py and docs/MEDIA_PROOF.md document Python standard-library seeded noise plus decaying 145 Hz sine and fades. No external samples documented; no separate license grant recorded.",
+    "evidence": ["tools/generate_sfx.py", "docs/MEDIA_PROOF.md"],
+    "usage": ["scripts/media_preview.gd"]
+  },
+  {
+    "path": "assets/audio/undo.wav",
+    "license": "NOASSERTION",
+    "origin": "Retained 44100 Hz mono PCM. tools/generate_sfx.py and docs/MEDIA_PROOF.md document a descending sine, decay and fades synthesized with Python standard library. No external samples documented; no separate license grant recorded.",
+    "evidence": ["tools/generate_sfx.py", "docs/MEDIA_PROOF.md"],
+    "usage": ["scripts/media_preview.gd"]
+  },
+  {
+    "path": "assets/audio/complete.wav",
+    "license": "NOASSERTION",
+    "origin": "Retained 44100 Hz mono PCM. tools/generate_sfx.py and docs/MEDIA_PROOF.md document decaying 660/880 Hz sine tones with delayed second onset and fades, Python standard library. No external samples documented; no separate license grant recorded.",
+    "evidence": ["tools/generate_sfx.py", "docs/MEDIA_PROOF.md"],
+    "usage": ["scripts/media_preview.gd"]
+  },
+  {
+    "path": "assets/audio/slice_print.wav",
+    "license": "NOASSERTION",
+    "origin": "Retained 48000 Hz mono derivative of assets/audio/print.wav. tools/convert_slice_sfx.py documents linear interpolation with Python standard library, preserving source files. Source rights status unchanged; no separate license grant recorded.",
+    "evidence": ["tools/convert_slice_sfx.py", "tools/generate_sfx.py", "docs/SLICE_QA.md"],
+    "usage": ["scripts/slice_main.gd::_build_audio"]
+  },
+  {
+    "path": "assets/audio/slice_undo.wav",
+    "license": "NOASSERTION",
+    "origin": "Retained 48000 Hz mono derivative of assets/audio/undo.wav. tools/convert_slice_sfx.py documents linear interpolation with Python standard library, preserving source files. Source rights status unchanged; no separate license grant recorded.",
+    "evidence": ["tools/convert_slice_sfx.py", "tools/generate_sfx.py", "docs/SLICE_QA.md"],
+    "usage": ["scripts/slice_main.gd::_build_audio"]
+  },
+  {
+    "path": "assets/audio/slice_complete.wav",
+    "license": "NOASSERTION",
+    "origin": "Retained 48000 Hz mono derivative of assets/audio/complete.wav. tools/convert_slice_sfx.py documents linear interpolation with Python standard library, preserving source files. Source rights status unchanged; no separate license grant recorded.",
+    "evidence": ["tools/convert_slice_sfx.py", "tools/generate_sfx.py", "docs/SLICE_QA.md"],
+    "usage": ["scripts/slice_main.gd::_build_audio"]
+  },
+  {
+    "path": "project.godot",
+    "dependency": "Godot Engine 4 runtime (external executable, not a repository asset)",
+    "license": "MIT",
+    "origin": "Godot Engine contributors (2014-present); Juan Linietsky and Ariel Manzur (2007-2014). Copyright notices and MIT text observed in the existing qualified Windows release template without executing it. Ending credits obtain the running engine's exact MIT text via Engine.get_license_text().",
+    "usage": ["project.godot", "campaign_main.tscn", "scripts/campaign_main.gd::_engine_credits"]
+  },
+  {
+    "path": "scripts/slice_main.gd",
+    "dependency": "Godot default theme / ThemeDB fallback font: Noto Sans",
+    "license": "OFL-1.1",
+    "origin": "Google Inc., 2012. Existing qualified Windows release template contains the Noto Sans font notice and thirdparty/fonts/NotoSans*.woff2 attribution. No repository font file or custom font override. Runtime credits display actual UI and ThemeDB font family names, embedded copyright and license text via Engine APIs.",
+    "usage": ["scripts/slice_main.gd::_build_interface", "scripts/campaign_main.gd", "scripts/slice_board.gd", "scripts/board_view.gd"]
+  },
+  {
+    "path": "scripts/campaign_main.gd",
+    "dependency": "Godot bundled font notices: DroidSans family (engine-internal thirdparty/fonts/DroidSans*.woff2)",
+    "license": "Apache-2.0",
+    "origin": "The Android Open Source Project, 2008. Attribution path and copyright observed in existing qualified Windows release template. Runtime font inclusion depends on the engine build; Engine.get_copyright_info()/get_license_info() supply the running build's embedded font notices and full license texts.",
+    "usage": ["scripts/campaign_main.gd::_engine_credits", "scripts/slice_main.gd", "scripts/slice_board.gd"]
+  },
+  {
+    "path": "scripts/slice_main.gd",
+    "dependency": "Operating-system font fallback for Korean and missing glyphs; Windows Malgun Gothic when selected",
+    "license": "LicenseRef-Operating-System-Font (Malgun Gothic: Microsoft proprietary OS font terms)",
+    "origin": "Godot uses platform font fallback; exact family selection depends on the host. Malgun Gothic is a Microsoft Corporation Windows font, not bundled or redistributed by this repository. No system font redistribution grant claimed.",
+    "usage": ["scripts/slice_main.gd", "scripts/campaign_main.gd", "scripts/slice_board.gd", "scripts/board_view.gd"],
+    "verification": "Coordinator Windows export glyph/fallback verification and human attribution review pending."
+  }
+]

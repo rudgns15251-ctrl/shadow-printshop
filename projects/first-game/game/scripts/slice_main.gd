@@ -213,10 +213,14 @@ func _build_interface() -> void:
 			ui_theme.set_color(color_name, control_type, INK)
 		ui_theme.set_stylebox("focus", control_type, _focus_style())
 	theme = ui_theme
-	var background := ColorRect.new()
-	background.color = Color("#d8c7ad")
+	var background := TextureRect.new()
+	background.name = "ShopBackground"
+	background.texture = preload("res://assets/art/shop_background.svg")
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	background.focus_mode = Control.FOCUS_NONE
 	add_child(background)
 	var margins := MarginContainer.new()
 	margins.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

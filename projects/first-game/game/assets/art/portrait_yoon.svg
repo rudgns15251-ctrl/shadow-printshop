@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="224" viewBox="0 0 192 224">
+  <title>Yoon Haerin, recorded portrait</title>
+  <desc>Original limited-line archival portrait on a paper mount. A recorded image, not a present-day appearance.</desc>
+  <path d="M3 3H169L189 23V221H3Z" fill="#f4ebdd" stroke="#24211d" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M169 3V23H189" fill="none" stroke="#24211d" stroke-width="2"/>
+  <path d="M14 14H158L178 34V192H14Z" fill="#d8c7ad"/>
+  <path d="M43 132L45 69Q45 29 92 26Q140 26 147 72L153 137L127 150H64Z" fill="#24211d"/>
+  <path d="M26 192L34 167Q45 153 76 149H114Q146 153 158 167L167 192" fill="#f4ebdd" stroke="#24211d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M78 130V155L95 166L113 155V130" fill="#d8c7ad" stroke="#24211d" stroke-width="3"/>
+  <path d="M57 72Q58 50 83 47Q102 68 132 68L130 109Q124 133 109 141H82Q64 131 60 110Z" fill="#f4ebdd" stroke="#24211d" stroke-width="3"/>
+  <g fill="none" stroke="#24211d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M69 81L82 79M108 79L121 81M72 89H80M110 89H118M96 89L92 106H99M84 120Q95 123 107 119"/>
+    <path d="M76 150L63 159L80 176L95 166L111 176L126 159L114 150M94 177V192"/>
+  </g>
+  <path d="M49 64L60 60M50 71L62 67" fill="none" stroke="#315d49" stroke-width="3" stroke-linecap="round"/>
+  <path d="M19 204H68M19 211H54M128 204H171M128 211H160" fill="none" stroke="#24211d" stroke-width="2" opacity=".45"/>
+  <path d="M81 201H112V214H81Z" fill="none" stroke="#8a3f24" stroke-width="2"/>
+</svg>
