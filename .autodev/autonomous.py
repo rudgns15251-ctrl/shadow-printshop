@@ -326,12 +326,12 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
         checkpoint(run, data)
         require((outcome['status'] == 'implemented' or
                  (outcome['status'] == 'code_ready' and handoff_enabled(c))) and not outcome['unverified_acceptance'],
-                'ACCEPTANCE_UNVERIFIED: model reported a blocker; preserve source and inspect final JSON')
+                'ACCEPTANCE_UNVERIFIED: ' + json.dumps(outcome['unverified_acceptance'], ensure_ascii=False))
     return last
 
 def classify(step, text):
     low = text.lower()
-    for category in ('AUTH_OR_USAGE', 'PERMISSION', 'GIT_CONFLICT', 'BACKUP', 'SCOPE', 'UNKNOWN', 'CODEX'):
+    for category in ('AUTH_OR_USAGE', 'PERMISSION', 'GIT_CONFLICT', 'BACKUP', 'SCOPE', 'UNKNOWN', 'CODEX', 'REVIEW_REPAIR'):
         if text.startswith(category + ': bounded stop;'): return category
     if MODEL_ERRORS.search(text): return 'AUTH_OR_USAGE'
     if re.search(r'permissionerror|permission denied|access is denied|access denied|winerror 5\b', low): return 'PERMISSION'
@@ -343,15 +343,36 @@ def classify(step, text):
     if 'leak' in low or 'resources still in use' in low or 'audiostreamplayback' in low: return 'RESOURCE_LEAK'
     if 'timeout' in low or 'network' in low or '3221225477' in low: return 'ENVIRONMENT'
     if 'parse error' in low or 'script error' in low: return 'GAME_CODE'
+    if low.startswith('campaign_data:'): return 'GAME_CODE'
     if 'assert' in low or ' fail' in low: return 'EXPECTATION_MISMATCH'
     if step == 'IMPORT' or low.startswith('import:'): return 'ENGINE_IMPORT'
     if step == 'CODEX': return 'CODEX'
     return 'UNKNOWN'
 
-REPAIRABLE = {'GAME_CODE', 'EXPECTATION_MISMATCH', 'RESOURCE_LEAK', 'ENVIRONMENT', 'ENGINE_IMPORT'}
+REPAIRABLE = {'GAME_CODE', 'EXPECTATION_MISMATCH', 'RESOURCE_LEAK', 'ENVIRONMENT', 'ENGINE_IMPORT', 'REVIEW_REPAIR'}
 FATAL = {'AUTH_OR_USAGE', 'PERMISSION', 'GIT_CONFLICT', 'BACKUP', 'SCOPE'}
 
-def recovery_decision(data, p):
+def review_repair(data, task):
+    """A concrete file-scoped independent finding permits a repair, never approval."""
+    if not task or data.get('failure_category') in FATAL: return None
+    outcome = (data.get('model_outcomes') or [{}])[-1]
+    raw = data.get('last_failure', '')
+    if not raw.startswith('ACCEPTANCE_UNVERIFIED:') or outcome.get('status') != 'blocked': return None
+    blockers = outcome.get('unverified_acceptance', [])
+    text = '\n'.join(blockers) + '\n' + outcome.get('summary', '')
+    if not blockers or classify('IMPLEMENT', text) in FATAL: return None
+    if re.search(r'(?i)\b(?:credentials?|authentication|policy violation|expand.*allowlist|human approval|human sign.?off|permission denied|protected file.*(?:edit|change))\b', text): return None
+    failures = data.get('failures', [])
+    same = [f for f in failures if f.get('detail') == raw]
+    if len(same) >= 2: return None
+    review = (data.get('production_reviews') or [{}])[-1]
+    issues = review.get('blocking_issues', [])
+    if review.get('decision') != 'revise' or not issues: return None
+    if not all(any(rel in issue for rel in task['allowed']) and classify('REVIEW', issue) not in FATAL for issue in issues): return None
+    return {'kind': 'INDEPENDENT_REVIEW_REPAIR', 'review_source_sha256': review.get('source_sha256'),
+            'issues': issues, 'model_blockers': blockers, 'human_approval': 'not_granted'}
+
+def recovery_decision(data, p, task=None):
     # The actual terminal error wins over a stale category from an earlier retry.
     category = classify(data.get('phase'), data.get('error') or data.get('last_failure', ''))
     if data.get('failure_category') in FATAL:
@@ -360,17 +381,26 @@ def recovery_decision(data, p):
         return False, 'Integration/backup requires explicit integrity reconciliation'
     if data.get('verification_recovery') and data.get('attempts', 0) <= p['max_fixes']:
         return True, 'Fresh writer handoff required after trusted objective verification'
+    failures = data.get('failures', [])
+    if failures and sum(f.get('fingerprint') == failures[-1].get('fingerprint') for f in failures) >= 2:
+        return False, 'Repeated unresolved failure; inspect retained evidence'
+    if category == 'UNKNOWN' and data.get('attempts', 0) <= p['max_fixes'] and review_repair(data, task):
+        return True, 'Concrete independent review defect; bounded repair only'
     if category not in REPAIRABLE:
         return False, category
     if data.get('attempts', 0) > p['max_fixes']:
         return False, 'Repair budget exhausted'
     return True, category
 
-def record_failure(run, data, exc):
+def record_failure(run, data, exc, task=None):
     detail = str(exc)
     phase = data['phase']
     category = 'PERMISSION' if isinstance(exc, PermissionError) else classify(phase, detail)
     data.update(last_failure=detail, error=detail, failure_category=category)
+    action = review_repair(data, task)
+    if category == 'UNKNOWN' and action:
+        category = data['failure_category'] = 'REVIEW_REPAIR'
+        data.setdefault('repair_actions', []).append({'time': now(), 'attempt': data['attempts'], **action})
     fingerprint = hashlib.sha256(detail.encode()).hexdigest()
     data['failures'].append({'attempt': data['attempts'], 'phase': phase, 'category': category,
                              'fingerprint': fingerprint, 'detail': detail, 'time': now()})
@@ -495,6 +525,38 @@ def static_check(stage, data, p, task):
     require(ok, message)
     return message
 
+def prepare_campaign_data(stage, run, data, p, task):
+    if 'campaign_full' not in task.get('acceptance_probes', []): return None
+    import campaign_data
+    relative = 'data/campaign_puzzles.json'
+    path = inside(stage, relative)
+    if not path.is_file(): return None  # A first writer may not have created it yet.
+    before = auto.sha(path); raw = path.read_bytes().decode('utf-8')
+    try:
+        results = campaign_data.calculate(json.loads(raw), read(stage/'data/mech_puzzles.json'))
+        completed = campaign_data.completed_text(raw, results)
+        if completed != raw:
+            require(relative in task['allowed'] and relative in p['approved_game_files'], 'SCOPE: campaign metadata write not allowed')
+            run_changes(data, snapshot(stage), task, p)
+            saved = run/('campaign-before-metadata-'+str(data['attempts'])+'-'+uuid.uuid4().hex+'.json')
+            saved.write_bytes(path.read_bytes())
+            path.write_bytes(completed.encode('utf-8'))
+        rows = read(path)
+        require(all(type(row.get(key)) is int and row[key] == expected[key]
+                    for row, expected in zip(rows, results) for key in ('minimum_prints','reachable_states')),
+                'CAMPAIGN_DATA: exact calculated metadata missing')
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ERROR('CAMPAIGN_DATA: '+str(exc)) from exc
+    report = {'methods': ['existing integer-mask exhaustive BFS', 'independent coordinate-rotation subset enumeration'],
+              'before_sha256': before, 'after_sha256': auto.sha(path), 'rows': results,
+              'original_eight_unchanged': True, 'human_difficulty': 'not_verified'}
+    evidence = run/('campaign-bfs-'+str(data['attempts'])+'-'+uuid.uuid4().hex+'.json')
+    write(evidence, report)
+    data.setdefault('campaign_bfs_history', []).append({'time': now(), 'report': evidence.name,
+        'sha256': auto.sha(evidence), 'data_sha256': report['after_sha256']})
+    checkpoint(run, data)
+    return report
+
 def qa(stage, run, data, c, p, task):
     checkpoint(run, data, 'QA')
     if data.get('qa'):
@@ -502,6 +564,11 @@ def qa(stage, run, data, c, p, task):
     data['qa'] = []
     static_check(stage, data, p, task)
     data['qa'].append({'name': 'STATIC', 'pass': True})
+    campaign = prepare_campaign_data(stage, run, data, p, task)
+    require(campaign or 'campaign_full' not in task.get('acceptance_probes', []), 'CAMPAIGN_DATA: campaign JSON missing')
+    if campaign:
+        static_check(stage, data, p, task)
+        data['qa'].append({'name': 'CAMPAIGN_BFS', 'pass': True, 'puzzles': len(campaign['rows']), 'independent_full_maps_equal': True})
     godot = auto.resolve_godot(None, c)
     session = run / 'qa_sessions' / uuid.uuid4().hex
     data.setdefault('qa_sessions', []).append({'time': now(), 'path': session.relative_to(run).as_posix()})
@@ -659,6 +726,13 @@ def integrate(run, data, task, c, p):
     require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES), 'Full QA missing')
     require(all(any(q['name'] == 'ACCEPTANCE:' + probe and q['pass'] for q in data['qa'])
                 for probe in probes(task, c)), 'Task acceptance probe missing')
+    if 'campaign_full' in task.get('acceptance_probes', []):
+        require(any(q['name'] == 'CAMPAIGN_BFS' and q['pass'] for q in data['qa']), 'Campaign arithmetic verification missing')
+        record = (data.get('campaign_bfs_history') or [{}])[-1]
+        evidence = inside(run, record.get('report', 'missing-campaign-bfs.json'))
+        require(evidence.is_file() and auto.sha(evidence) == record.get('sha256') and
+                record.get('data_sha256') == data['validated_snapshot'].get('data/campaign_puzzles.json'),
+                'Campaign arithmetic evidence missing or changed')
     stage = run / 'game'
     require(snapshot(stage) == data['validated_snapshot'], 'Validated stage tampered')
     require(all((run / 'release' / name).is_file() and auto.sha(run / 'release' / name) == info['sha256']
@@ -749,7 +823,7 @@ def execute(task, plan, c, p, recover=False, push=False):
         require(data['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed since run')
         require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')
         if task['status'] == 'BLOCKED':
-            allowed, reason = recovery_decision(data, p)
+            allowed, reason = recovery_decision(data, p, task)
             # Existing explicit standalone integration recovery retains its checks.
             require(allowed or data['phase'] in {'INTEGRATE', 'COMMITTED', 'BACKUP'}, 'Recovery refused: ' + reason)
     else:
@@ -773,7 +847,11 @@ def execute(task, plan, c, p, recover=False, push=False):
             if verification_resume:
                 failure += '\nTrusted coordinator actually executed all objective gates on this exact source: ' + json.dumps(verification_resume)
                 failure += '\nProvide a fresh implementation handoff; do not recreate completed content. Objective runtime coverage is established. Human narrative quality, visual taste and listening remain human_review_pending; never claim human approval.'
-            revalidate = recover and data['phase'] in {'QA', 'REPAIR'} and not verification_resume
+            repair_action = review_repair(data, task)
+            if repair_action:
+                data.setdefault('repair_actions', []).append({'time': now(), 'attempt': data['attempts'], **repair_action})
+                failure += '\nCONCRETE INDEPENDENT REVIEW REPAIR: ' + json.dumps(repair_action, ensure_ascii=False)
+            revalidate = recover and data['phase'] in {'QA', 'REPAIR'} and not verification_resume and not repair_action
             validation_retry = False
             attempt_limit = min(p['max_fixes'] + 1, c.get('task_attempt_limits', {}).get(task['id'], p['max_fixes'] + 1))
             while revalidate or data['attempts'] < attempt_limit:
@@ -788,6 +866,9 @@ def execute(task, plan, c, p, recover=False, push=False):
                         data['attempts'] += 1
                         task['attempts'] = data['attempts']
                         checkpoint(run, data, 'IMPLEMENT')
+                        campaign = prepare_campaign_data(stage, run, data, p, task)
+                        if campaign:
+                            failure = (failure or '') + '\nTRUSTED ACTUAL CAMPAIGN CALCULATION: ' + json.dumps(campaign, ensure_ascii=False)
                         prompt = task_prompt(task, failure, c)
                         before_handoff = snapshot(stage) if verification_resume else None
                         if verification_resume:
@@ -815,7 +896,7 @@ def execute(task, plan, c, p, recover=False, push=False):
                     break
                 except (ERROR, OSError, subprocess.SubprocessError) as exc:
                     failure = str(exc)
-                    category, repeated = record_failure(run, data, exc)
+                    category, repeated = record_failure(run, data, exc, task)
                     if category not in REPAIRABLE or repeated >= 2:
                         raise ERROR(category + ': bounded stop; inspect preserved failure evidence')
                     if category in {'ENVIRONMENT', 'ENGINE_IMPORT'}:
@@ -868,7 +949,7 @@ def run_plan(c, p, recover=False, push=False, limit=None):
                 if task['status'] in {'RUNNING', 'PAUSED', 'BLOCKED'} and task.get('run'):
                     if task['status'] == 'BLOCKED':
                         meta = read(HERE / 'runs' / task['run'] / 'autonomous.json')
-                        if meta['phase'] not in {'INTEGRATE', 'COMMITTED', 'BACKUP'} and not recovery_decision(meta, p)[0]:
+                        if meta['phase'] not in {'INTEGRATE', 'COMMITTED', 'BACKUP'} and not recovery_decision(meta, p, task)[0]:
                             continue
                     execute(task, plan, c, p, True, push)
                     count += 1
@@ -920,7 +1001,8 @@ def reconcile_infrastructure(run_id, c, p):
         files = git('diff', '--name-only', previous, current).splitlines()
         allowed = {'.autodev/autonomous.py', '.autodev/checks/save_settings.gd', '.gitattributes',
                    '.autodev/tests/test_resume_metadata.py', '.autodev/director.py',
-                   '.autodev/tests/test_blocked_recovery.py', '.autodev/checks/campaign_recovery.gd'}
+                   '.autodev/tests/test_blocked_recovery.py', '.autodev/checks/campaign_recovery.gd',
+                   '.autodev/campaign_data.py', '.autodev/tests/test_campaign_data.py'}
         require(set(files) <= allowed, 'Unreviewed infrastructure changes')
         if '.gitattributes' in files:
             require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [

@@ -94,7 +94,7 @@ def recoverable_item(item,state,p):
     plan=read(a.PLAN,{})
     blocked=[t for t in plan.get('tasks',[]) if t['status']=='BLOCKED']
     return bool(blocked) and all(t.get('run') and a.recovery_decision(
-        a.read(a.HERE/'runs'/t['run']/'autonomous.json'),p)[0] for t in blocked)
+        a.read(a.HERE/'runs'/t['run']/'autonomous.json'),p,t)[0] for t in blocked)
 
 def choose(state,m,recover=False,attempted=()):
     done={x['id'] for x in state['milestones'] if x['status']=='DONE'}
