@@ -308,6 +308,30 @@ func _replay_order(id: String) -> void:
 			_show_order(row, Callable(self, "_open_journal"), "기록함으로")
 			return
 
+func _open_hint() -> void:
+	if not game_active or overlay.visible:
+		return
+	var puzzle: int = session.snapshot()["puzzle"]
+	var puzzle_id: String = session.puzzle_data()[puzzle]["id"]
+	var contextual: Dictionary = CampaignState.story_data().get("hints", {}).get(puzzle_id, {})
+	# Original eight: inherited presentation. Level three: inherited BFS from
+	# the live board, including allowed masks and the solved-board response.
+	if contextual.is_empty() or int(hint_levels[puzzle]) >= 2:
+		super._open_hint()
+		return
+	hint_levels[puzzle] = mini(3, int(hint_levels[puzzle]) + 1)
+	var level: int = hint_levels[puzzle]
+	var message: String = str(contextual["observation"] if level == 1 else contextual["comparison"])
+	if session.is_solved():
+		message = "이미 목표와 일치합니다."
+	# Persist only the existing hint slot; never select, rotate or print here.
+	_autosave()
+	_refresh()
+	_show_dialog("힌트 %d / 3" % level, message + "\n힌트는 보드나 인쇄 횟수를 변경하지 않습니다.", [
+		{"label": "닫기", "call": Callable(self, "_noop")},
+		{"label": "다음 힌트", "call": Callable(self, "_hint_again")},
+	])
+
 func _guidance(data: Dictionary, preview_cells: Array) -> String:
 	if is_finished():
 		return "✓ %d개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 아침의 서명과 크레딧을 확인하세요. U/Z 되돌리기 · R 초기화 · 메뉴에서 처음부터." % session.puzzle_count()
