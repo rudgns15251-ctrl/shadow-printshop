@@ -40,6 +40,7 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'story_archive_extended': ('story_archive_extended.gd', 'ARCHIVE_EXTENDED_PASS'),
                      'campaign_shell': ('campaign_shell.gd', 'CAMPAIGN_SHELL_PASS'),
                      'campaign_recovery': ('campaign_recovery.gd', 'CAMPAIGN_RECOVERY_PASS'),
+                     'campaign_hints': ('campaign_hints.gd', 'CAMPAIGN_HINT_PASS'),
                      'campaign_full': ('campaign_full.gd', 'CAMPAIGN_FULL_PASS'),
                      'sound_content': ('sound_content.gd', 'SOUND_CONTENT_PASS'),
                      'release_candidate': ('release_candidate.gd', 'RELEASE_CANDIDATE_PASS')}
@@ -352,10 +353,22 @@ def classify(step, text):
 REPAIRABLE = {'GAME_CODE', 'EXPECTATION_MISMATCH', 'RESOURCE_LEAK', 'ENVIRONMENT', 'ENGINE_IMPORT', 'REVIEW_REPAIR'}
 FATAL = {'AUTH_OR_USAGE', 'PERMISSION', 'GIT_CONFLICT', 'BACKUP', 'SCOPE'}
 
+def human_review_only(outcome):
+    """Recognize only explicit quality-review deferrals, never an unknown defect."""
+    if outcome.get('status') != 'blocked' or not outcome.get('unverified_acceptance'): return False
+    if classify('IMPLEMENT', outcome.get('summary', '')) in FATAL: return False
+    patterns = (
+        r'canonical coherence(?: against all (?:nine|9) bibles)? (?:requires|needs) human review\.?',
+        r'(?:qualitative )?puzzle variety and human difficulty remain unverified\.?',
+    )
+    return all(any(re.fullmatch(pattern, item.strip(), re.I) for pattern in patterns)
+               for item in outcome['unverified_acceptance'])
+
 def review_repair(data, task):
     """A concrete file-scoped independent finding permits a repair, never approval."""
     if not task or data.get('failure_category') in FATAL: return None
     outcome = (data.get('model_outcomes') or [{}])[-1]
+    if human_review_only(outcome): return None
     raw = data.get('last_failure', '')
     if not raw.startswith('ACCEPTANCE_UNVERIFIED:') or outcome.get('status') != 'blocked': return None
     blockers = outcome.get('unverified_acceptance', [])
@@ -375,6 +388,7 @@ def review_repair(data, task):
 def recovery_decision(data, p, task=None):
     # The actual terminal error wins over a stale category from an earlier retry.
     category = classify(data.get('phase'), data.get('error') or data.get('last_failure', ''))
+    if category in FATAL: return False, category
     if data.get('failure_category') in FATAL:
         return False, data['failure_category']
     if data.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}:
@@ -384,6 +398,9 @@ def recovery_decision(data, p, task=None):
     failures = data.get('failures', [])
     if failures and sum(f.get('fingerprint') == failures[-1].get('fingerprint') for f in failures) >= 2:
         return False, 'Repeated unresolved failure; inspect retained evidence'
+    if human_review_only((data.get('model_outcomes') or [{}])[-1]) and data.get('attempts', 0) <= p['max_fixes'] + 1:
+        if data.get('human_handoff_attempted'): return False, 'Independent implementation disposition already attempted'
+        return True, 'Quality review remains pending; verify exact source without another correction attempt'
     if category == 'UNKNOWN' and data.get('attempts', 0) <= p['max_fixes'] and review_repair(data, task):
         return True, 'Concrete independent review defect; bounded repair only'
     if category not in REPAIRABLE:
@@ -397,6 +414,8 @@ def record_failure(run, data, exc, task=None):
     phase = data['phase']
     category = 'PERMISSION' if isinstance(exc, PermissionError) else classify(phase, detail)
     data.update(last_failure=detail, error=detail, failure_category=category)
+    if detail.startswith('ACCEPTANCE_UNVERIFIED:') and human_review_only((data.get('model_outcomes') or [{}])[-1]):
+        category = data['failure_category'] = 'HUMAN_REVIEW_ONLY'
     action = review_repair(data, task)
     if category == 'UNKNOWN' and action:
         category = data['failure_category'] = 'REVIEW_REPAIR'
@@ -696,6 +715,10 @@ def task_prompt(task, failure=None, c=None):
                  'bytes. The coordinator never copies that metadata into the source project. '
                  'Reuse already completed edits present in this stage; do not recreate them.')
         text += '\nRegistered mandatory trusted runtime probes: ' + ', '.join(probes(task, c))
+        text += ('\ncode_ready describes implementation readiness, never human quality approval. Put human prose quality, '
+                 'qualitative puzzle variety, human difficulty, visual taste and listening judgments in human_review_pending. '
+                 'Keep concrete narrative contradictions, missing implementation/data and uncovered objective behavior in '
+                 'unverified_acceptance. Never claim those are passed merely because a human review is pending.')
     return text
 
 def remote_backup(p, commit, branch):
@@ -720,9 +743,25 @@ def integrate(run, data, task, c, p):
     if TASK_REVIEWER is not None:
         require(outcome is not None, 'Production writer completion evidence missing')
     if outcome:
-        require(outcome['status'] in {'implemented', 'code_ready'} and not outcome['unverified_acceptance'],
-                'Unresolved model acceptance blocker; integration refused')
-        if outcome['status'] == 'code_ready': require(handoff_enabled(c), 'Qualified QA handoff is missing')
+        if human_review_only(outcome):
+            # A writer's blocked response is immutable. Only a separate, explicit
+            # exact-source implementation handoff can establish code readiness.
+            handoff = data.get('production_handoff', {})
+            require(TASK_REVIEWER is not None and handoff_enabled(c) and handoff.get('attempt') == data['attempts'] and
+                    handoff.get('source_sha256') == data.get('qa_source_sha256') and
+                    handoff.get('snapshot') == data['validated_snapshot'] and all(q['pass'] for q in data['qa']),
+                    'Unresolved model acceptance blocker: independent implementation handoff missing/stale')
+            record = inside(run, handoff['response'])
+            require(record.is_file() and auto.sha(record) == handoff['sha256'], 'Independent handoff response changed')
+            decision = read(record)
+            require(decision.get('implementation_status') == 'code_ready' and decision.get('decision') == 'accept' and
+                    not decision.get('blocking_issues'), 'Independent implementation acceptance blocked')
+            data['human_review_pending'] = list(dict.fromkeys(outcome['unverified_acceptance'] +
+                outcome.get('human_review_pending', []) + decision.get('human_review_pending', [])))
+        else:
+            require(outcome['status'] in {'implemented', 'code_ready'} and not outcome['unverified_acceptance'],
+                    'Unresolved model acceptance blocker; integration refused')
+            if outcome['status'] == 'code_ready': require(handoff_enabled(c), 'Qualified QA handoff is missing')
     require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES), 'Full QA missing')
     require(all(any(q['name'] == 'ACCEPTANCE:' + probe and q['pass'] for q in data['qa'])
                 for probe in probes(task, c)), 'Task acceptance probe missing')
@@ -848,6 +887,7 @@ def execute(task, plan, c, p, recover=False, push=False):
                 failure += '\nTrusted coordinator actually executed all objective gates on this exact source: ' + json.dumps(verification_resume)
                 failure += '\nProvide a fresh implementation handoff; do not recreate completed content. Objective runtime coverage is established. Human narrative quality, visual taste and listening remain human_review_pending; never claim human approval.'
             repair_action = review_repair(data, task)
+            human_handoff = human_review_only((data.get('model_outcomes') or [{}])[-1])
             if repair_action:
                 data.setdefault('repair_actions', []).append({'time': now(), 'attempt': data['attempts'], **repair_action})
                 failure += '\nCONCRETE INDEPENDENT REVIEW REPAIR: ' + json.dumps(repair_action, ensure_ascii=False)
@@ -863,6 +903,7 @@ def execute(task, plan, c, p, recover=False, push=False):
                 require(git('rev-parse', 'HEAD') == data['source_commit'] and snapshot(source(c)) == data['source_snapshot'], 'Source changed during implementation')
                 try:
                     if not revalidate:
+                        human_handoff = False
                         data['attempts'] += 1
                         task['attempts'] = data['attempts']
                         checkpoint(run, data, 'IMPLEMENT')
@@ -891,12 +932,23 @@ def execute(task, plan, c, p, recover=False, push=False):
                     changes = run_changes(data, snapshot(stage), task, p)
                     require(changes, 'Codex made no real allowed changes')
                     qa(stage, run, data, c, p, task)
+                    if human_handoff:
+                        require(TASK_REVIEWER is not None and handoff_enabled(c), 'Independent implementation handoff unavailable')
+                        require(not data.get('human_handoff_attempted'), 'Independent implementation disposition already attempted')
+                        data['human_handoff_attempted'] = {'time': now(), 'source_sha256': data['qa_source_sha256'],
+                                                           'correction_attempts_unchanged': data['attempts']}
+                        checkpoint(run, data)
                     if TASK_REVIEWER is not None:
                         TASK_REVIEWER(run, data, task, c, p)
                     break
                 except (ERROR, OSError, subprocess.SubprocessError) as exc:
                     failure = str(exc)
                     category, repeated = record_failure(run, data, exc, task)
+                    if category == 'HUMAN_REVIEW_ONLY':
+                        require(TASK_REVIEWER is not None and handoff_enabled(c) and not data.get('human_handoff_attempted'),
+                                'Independent implementation handoff required; quality review remains pending')
+                        human_handoff = True; revalidate = True
+                        continue
                     if category not in REPAIRABLE or repeated >= 2:
                         raise ERROR(category + ': bounded stop; inspect preserved failure evidence')
                     if category in {'ENVIRONMENT', 'ENGINE_IMPORT'}:
@@ -1003,6 +1055,7 @@ def reconcile_infrastructure(run_id, c, p):
                    '.autodev/tests/test_resume_metadata.py', '.autodev/director.py',
                    '.autodev/tests/test_blocked_recovery.py', '.autodev/checks/campaign_recovery.gd',
                    '.autodev/campaign_data.py', '.autodev/tests/test_campaign_data.py'}
+        allowed.add('.autodev/checks/campaign_hints.gd')
         require(set(files) <= allowed, 'Unreviewed infrastructure changes')
         if '.gitattributes' in files:
             require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [

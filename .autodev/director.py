@@ -108,11 +108,12 @@ def readonly_review(run,data,task,c,p):
     schema=run/'product-review-schema.json'
     a.write(schema,{'type':'object','additionalProperties':False,'properties':{
         'decision':{'type':'string','enum':['accept','revise']},
+        'implementation_status':{'type':'string','enum':['code_ready','blocked']},
         'narrative_editor':{'type':'array','items':{'type':'string'}},
         'design_visual_flow_technical':{'type':'array','items':{'type':'string'}},
         'blocking_issues':{'type':'array','items':{'type':'string'}},
         'human_review_pending':{'type':'array','items':{'type':'string'}}},
-        'required':['decision','narrative_editor','design_visual_flow_technical','blocking_issues','human_review_pending']})
+        'required':['decision','implementation_status','narrative_editor','design_visual_flow_technical','blocking_issues','human_review_pending']})
     bible='\n'.join('\n'+n+'\n'+(ROOT/n).read_text(encoding='utf-8') for n in BIBLES[:4])
     prompt=('Independent product and narrative editor. This is a fresh read-only review, separate from implementation. '
             'Inspect the actual changed game source, task acceptance and existing tests. Do not run Godot, write files, '
@@ -126,6 +127,14 @@ def readonly_review(run,data,task,c,p):
             'Accept only if no known blocking implementation issue remains. Canonical bibles are trusted context:\n'+bible+
             '\nTASK:'+json.dumps(task,ensure_ascii=False)+'\nCHANGED FILES:'+json.dumps(data['changes'])+
             '\nTRUSTED QA:'+json.dumps(data['qa']))
+    prompt += ('\nSeparately report implementation_status=code_ready only when actual code and trusted objective evidence '
+               'have no known implementation blocker; otherwise blocked. Human prose quality, puzzle variety/difficulty, '
+               'visual taste and listening are human_review_pending and never certified as human-approved. '
+               'Do not treat their pending human judgment as proof of a code defect. Cite concrete contradictions '
+               'or missing behavior as blocking_issues. A writer may have conservatively reported blocked solely for '
+               'those quality judgments; preserve that response. Your independent exact-source implementation '
+               'disposition cannot override an objective, permission, authentication, policy or Git blocker.\n'
+               'WRITER OUTCOME:'+json.dumps((data.get('model_outcomes') or [{}])[-1],ensure_ascii=False))
     a.checkpoint(run,data,'REVIEW')
     index=len(data.get('production_reviews',[]))+1
     last=a.codex(stage,run,data,prompt,c,p,'product-review-%d'%index,True,schema)
@@ -133,9 +142,13 @@ def readonly_review(run,data,task,c,p):
     a.require(a.snapshot(stage)==before,'Read-only product reviewer modified source')
     data.setdefault('production_reviews',[]).append({'time':a.now(),'source_sha256':data['qa_source_sha256'],**result})
     a.checkpoint(run,data)
-    a.require(result['decision']=='accept' and not result['blocking_issues'],
+    a.require(result['decision']=='accept' and result['implementation_status']=='code_ready' and not result['blocking_issues'],
               'REVIEW FAIL: '+json.dumps(result['blocking_issues'],ensure_ascii=False))
     data['production_review_snapshot']=dict(data['validated_snapshot'])
+    if a.human_review_only((data.get('model_outcomes') or [{}])[-1]):
+        data['production_handoff']={'attempt':data['attempts'],'source_sha256':data['qa_source_sha256'],
+            'snapshot':dict(data['validated_snapshot']),'response':last.relative_to(run).as_posix(),
+            'sha256':a.auto.sha(last),'human_approval':'not_granted'}
     a.checkpoint(run,data,'VERIFIED')
 
 def report():

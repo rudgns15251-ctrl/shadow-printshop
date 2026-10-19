@@ -122,6 +122,55 @@ class Recovery(unittest.TestCase):
             if kind=='repeated':candidate['failures']*=2
             with self.subTest(kind=kind):self.assertFalse(a.recovery_decision(candidate,self.f.p,task)[0])
 
+    def test_quality_deferral_needs_fresh_independent_readiness_without_new_attempt(self):
+        plan,task,run,data=self.blocked()
+        quality={'status':'blocked','summary':'Implementation ready; human quality judgment pending',
+                 'unverified_acceptance':['Canonical coherence against all nine bibles requires human review.',
+                                          'Qualitative puzzle variety and human difficulty remain unverified.'],
+                 'human_review_pending':['Actual listening']}
+        data.update(model_outcomes=[quality],attempts=3)
+        task['attempts']=3;self.f.c['task_attempt_limits']={'first':3}
+        a.write(run/'coder-3-last.txt',quality);a.checkpoint(run,data);a.write(a.PLAN,plan)
+        def reviewer(where,current,*args):
+            result={'decision':'accept','implementation_status':'code_ready','blocking_issues':[],
+                    'human_review_pending':['Human quality approval not granted']}
+            response=where/'product-review-1-last.txt';a.write(response,result)
+            current['production_review_snapshot']=dict(current['validated_snapshot'])
+            current['production_handoff']={'attempt':current['attempts'],'source_sha256':current['qa_source_sha256'],
+                'snapshot':dict(current['validated_snapshot']),'response':response.name,'sha256':a.auto.sha(response)}
+        def no_writer(*args,**kw):self.fail('No correction attempt remains; only QA/read-only review permitted')
+        with self.f.providers(coder=no_writer),patch.object(a,'handoff_enabled',return_value=True),patch.object(a,'TASK_REVIEWER',reviewer):
+            self.assertEqual(a.run_plan(self.f.c,self.f.p,recover=True,limit=1),2)
+        done=a.read(run/'autonomous.json')
+        self.assertEqual(done['status'],'DONE');self.assertEqual(done['attempts'],3)
+        self.assertEqual(a.read(run/'coder-3-last.txt'),quality)
+        self.assertIn('Actual listening',done['human_review_pending'])
+        self.assertEqual(a.read(a.PLAN)['tasks'][1]['status'],'PENDING')
+
+    def test_quality_deferral_never_covers_missing_math_or_unsafe_errors(self):
+        quality={'status':'blocked','summary':'Awaiting quality review',
+                 'unverified_acceptance':['Canonical coherence against all nine bibles requires human review.']}
+        self.assertTrue(a.human_review_only(quality))
+        for objective in ['minimum_prints remains null','Unknown runtime acceptance','401 unauthorized','Git HEAD changed']:
+            bad=copy.deepcopy(quality);bad['unverified_acceptance'].append(objective)
+            self.assertFalse(a.human_review_only(bad))
+        plan,task,run,data=self.blocked();data['model_outcomes']=[quality]
+        for category in ['PERMISSION','AUTH_OR_USAGE','GIT_CONFLICT','SCOPE']:
+            data['failure_category']=category
+            self.assertFalse(a.recovery_decision(data,self.f.p,task)[0])
+        data['failure_category']='UNKNOWN';data['failures']*=2
+        self.assertFalse(a.recovery_decision(data,self.f.p,task)[0])
+
+    def test_passing_qa_alone_cannot_dispose_of_a_quality_block(self):
+        plan,task,run,data=self.blocked()
+        quality={'status':'blocked','unverified_acceptance':['Qualitative puzzle variety and human difficulty remain unverified.']}
+        data.update(attempts=3,model_outcomes=[quality]);a.write(run/'coder-3-last.txt',quality)
+        with self.f.providers():a.qa(run/'game',run,data,self.f.c,self.f.p,task)
+        with patch.object(a,'handoff_enabled',return_value=True):
+            with self.assertRaisesRegex(a.ERROR,'Unresolved model acceptance blocker'):
+                a.integrate(run,data,task,self.f.c,self.f.p)
+        self.assertEqual(a.git('rev-parse','HEAD'),self.f.base)
+
     def test_campaign_metadata_requires_exact_scope_and_records_actual_results(self):
         rows,original=puzzles();folder=self.f.game/'data';folder.mkdir()
         a.write(folder/'mech_puzzles.json',original);a.write(folder/'campaign_puzzles.json',rows)
