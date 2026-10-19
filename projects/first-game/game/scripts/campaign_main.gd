@@ -7,6 +7,7 @@ const CampaignSave = preload("res://scripts/campaign_save.gd")
 
 var campaign_save = CampaignSave.new()
 var story_button: Button
+var order_cue: Label
 var ending_panel: Control
 var environment_audio: AudioStreamPlayer
 var environment_audio_exiting := false
@@ -79,6 +80,9 @@ func _build_interface() -> void:
 	super._build_interface()
 	title_area.get_child(0).text = "음영 인쇄소 · 야간 의뢰"
 	story_button = _button(next_button.get_parent(), "이야기", _open_story, 100)
+	order_cue = _label(heading.get_parent(), "", 15)
+	order_cue.name = "CurrentOrderCue"
+	heading.get_parent().move_child(order_cue, 1)
 	# A nonmodal ending keeps Undo/Reset available. Use the existing scrolling
 	# content and typography so long text remains reachable at every font size.
 	var panel := PanelContainer.new()
@@ -207,24 +211,35 @@ func _show_dialog(title: String, message: String, options: Array) -> void:
 	_confine_journal_focus()
 
 func _confine_journal_focus() -> void:
-	# Disabled future chapters never receive keyboard focus behind a modal.
-	var buttons: Array[Control] = []
-	for column in dialog.get_children():
-		if column is VBoxContainer:
-			for child in column.get_children():
-				if child is Button and not child.disabled:
-					buttons.append(child)
-	for index in range(buttons.size()):
-		var previous: NodePath = buttons[(index + buttons.size() - 1) % buttons.size()].get_path()
-		var following: NodePath = buttons[(index + 1) % buttons.size()].get_path()
-		buttons[index].focus_previous = previous
-		buttons[index].focus_next = following
-		for edge in ["left", "top"]:
-			buttons[index].set("focus_neighbor_" + edge, previous)
-		for edge in ["right", "bottom"]:
-			buttons[index].set("focus_neighbor_" + edge, following)
-	if not buttons.is_empty():
-		buttons[0].grab_focus()
+	# Include nested sliders, checkboxes and font buttons; skip locked chapters.
+	var controls: Array[Control] = []
+	_collect_dialog_controls(dialog, controls)
+	for index in range(controls.size()):
+		var previous: NodePath = controls[(index + controls.size() - 1) % controls.size()].get_path()
+		var following: NodePath = controls[(index + 1) % controls.size()].get_path()
+		controls[index].focus_previous = previous
+		controls[index].focus_next = following
+		controls[index].focus_neighbor_top = previous
+		controls[index].focus_neighbor_bottom = following
+		# Leave slider Left/Right to its native keyboard value adjustment.
+		if not controls[index] is Slider:
+			controls[index].focus_neighbor_left = previous
+			controls[index].focus_neighbor_right = following
+	var focus: Control = get_viewport().gui_get_focus_owner()
+	if not controls.is_empty() and not controls.has(focus):
+		controls[0].grab_focus()
+
+func _collect_dialog_controls(node: Node, controls: Array[Control]) -> void:
+	for child in node.get_children():
+		if child is Control and child.is_visible_in_tree():
+			if (child is BaseButton and not child.disabled) or (child is Slider and child.editable):
+				child.focus_mode = Control.FOCUS_ALL
+				controls.append(child)
+		_collect_dialog_controls(child, controls)
+
+func _open_settings() -> void:
+	super._open_settings()
+	_confine_journal_focus()
 
 func _settings_close() -> void:
 	dismiss_story()
@@ -340,7 +355,7 @@ func _open_order() -> void:
 			return
 
 func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
-	var kind := "현재 현장에서 하는 말" if row["delivery"] == "live_speech" else "보관된 문서 · 현재의 발화가 아님"
+	var kind := "현재 현장에서 하는 말" if row["delivery"] == "live_speech" else "보관된 문서 · 현재의 모습이나 발화가 아님"
 	var chronology := "제%d장 · 만남 순서 %d · %s" % [int(row["chapter"]), int(row["encounter_sequence"]), row["encounter_date"]]
 	if row.has("encounter_time"):
 		chronology += " " + row["encounter_time"]
@@ -361,7 +376,7 @@ func _add_order_portrait(row: Dictionary) -> void:
 			caption = "백인호 · 현장 인물"
 		"윤해린":
 			texture = preload("res://assets/art/portrait_yoon.svg")
-			caption = "윤해린 · 기록 이미지\n보관된 문서 · 현재의 모습이나 발화가 아님"
+			caption = "윤해린 · 기록 이미지"
 		"0번 의뢰인":
 			texture = preload("res://assets/art/portrait_client.svg")
 			caption = "무서명 의뢰서 · 익명의 문서 표식"
@@ -447,12 +462,30 @@ func _guidance(data: Dictionary, preview_cells: Array) -> String:
 		return "✓ %d개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 아침의 서명과 크레딧을 확인하세요. U/Z 되돌리기 · R 초기화 · 메뉴에서 처음부터." % session.puzzle_count()
 	if bool(data["solved"]) and int(data["puzzle"]) in [7, 12]:
 		return "✓ 장의 목표 완성! 이야기에서 마침 기록을 읽거나 N · 다음 퍼즐로 다음 장에 직접 진행하세요. U/Z로 완료를 되돌릴 수 있습니다."
+	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
+		var selection := "도장 %s · %d°" % ["A" if int(data["selected_mask"]) == 0 else "B", int(data["rotation"]) * 90]
+		if preview_cells == data["target"]:
+			return "%s의 AFTER가 TARGET과 일치합니다. Space로 인쇄하면 완성됩니다." % selection
+		return "%s 선택 중 · 1/2 선택 · Q/E 회전 · Space 인쇄 · 도움말/힌트." % selection
 	return super._guidance(data, preview_cells)
 
 func _refresh() -> void:
 	super._refresh()
-	var chapter: Dictionary = CampaignState.CHAPTERS[int(session.puzzle_data()[int(session.snapshot()["puzzle"])]["chapter"]) - 1]
+	var data: Dictionary = session.snapshot()
+	var puzzle: Dictionary = session.puzzle_data()[int(data["puzzle"])]
+	var chapter: Dictionary = CampaignState.CHAPTERS[int(puzzle["chapter"]) - 1]
 	heading.text = chapter["title"] + " · " + heading.text
+	# Context only: never open an order or mark it read during refresh.
+	if order_cue != null:
+		for row in CampaignState.story_data()["orders"]:
+			if row["puzzle_id"] == puzzle["id"]:
+				order_cue.text = "현재 의뢰 %s · %s · %s" % [row["id"], row["speaker"], "현장 발화" if row["delivery"] == "live_speech" else "보관 문서"]
+				break
+	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
+		if int(data["history_size"]) == 0:
+			subheading.text = "CURRENT를 바꿀 도장을 고르고, 무료 AFTER 미리보기를 TARGET과 비교한 뒤 인쇄하세요."
+		else:
+			subheading.text = "인쇄 후 CURRENT는 TARGET과 %d칸 다릅니다. 다음 인쇄를 미리 보거나 U/Z로 되돌리세요." % session.mismatch_count()
 	if story_button != null:
 		story_button.tooltip_text = "진행에 따라 열린 장의 시작과 마침 기록을 다시 읽습니다. 읽기나 닫기는 퍼즐을 진행하지 않습니다."
 	if ending_panel != null:
