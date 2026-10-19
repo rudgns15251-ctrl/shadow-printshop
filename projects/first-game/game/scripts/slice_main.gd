@@ -688,7 +688,7 @@ func _dialog_action(command: Callable) -> void:
 func _open_start() -> void:
 	game_active = false
 	var found: bool = _has_valid_save()
-	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "1998년 11월 17일 밤, 임시 인쇄공으로 음영 인쇄소의 야간 작업을 맡았습니다. 의뢰서에서 이번 작업의 기록을 읽으세요.\n도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요. 8개 퍼즐의 목표 무늬를 완성한 뒤 다음 퍼즐로 직접 진행하세요.", [
+	_show_dialog("음영 인쇄소  ·  C01 수직 슬라이스", "1998년 11월 17일 밤, 임시 인쇄공으로 음영 인쇄소의 야간 작업을 맡았습니다. 의뢰서에서 이번 작업의 기록을 읽으세요.\n도장 A/B를 고르고 회전해 종이의 명암을 반전시키세요. 퍼즐은 모두 8개입니다. 각 퍼즐의 목표 무늬를 완성할 때마다 다음 버튼 또는 N을 눌러 직접 진행하세요.", [
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
 		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start")},
 		{"label": "기록함", "call": Callable(self, "_open_journal")},

@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 config/name="C01 - Shadow Printshop Slice"
-run/main_scene="res://integrated_main.tscn"
+run/main_scene="res://campaign_main.tscn"
 config/features=PackedStringArray("4.0", "GL Compatibility")
 
 [display]

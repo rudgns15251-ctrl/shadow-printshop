@@ -85,6 +85,8 @@ func _write_bytes(path: String, bytes: PackedByteArray) -> bool:
 	return written != null and written == bytes
 
 func _decode(bytes: PackedByteArray) -> Variant:
+	if not valid_utf8(bytes):
+		return null
 	var parser := JSON.new()
 	if parser.parse(bytes.get_string_from_utf8()) != OK:
 		return null
@@ -103,3 +105,40 @@ func _decode(bytes: PackedByteArray) -> Variant:
 			return null
 		validated.append(id)
 	return validated
+
+static func valid_utf8(bytes: PackedByteArray) -> bool:
+	# Validate before Godot's decoder, which reports malformed input to stderr.
+	var index := 0
+	while index < bytes.size():
+		var lead: int = bytes[index]
+		if lead <= 0x7f:
+			index += 1
+			continue
+		var length: int
+		var second_min := 0x80
+		var second_max := 0xbf
+		if lead >= 0xc2 and lead <= 0xdf:
+			length = 2
+		elif lead >= 0xe0 and lead <= 0xef:
+			length = 3
+			if lead == 0xe0:
+				second_min = 0xa0
+			elif lead == 0xed:
+				second_max = 0x9f
+		elif lead >= 0xf0 and lead <= 0xf4:
+			length = 4
+			if lead == 0xf0:
+				second_min = 0x90
+			elif lead == 0xf4:
+				second_max = 0x8f
+		else:
+			return false
+		if index + length > bytes.size():
+			return false
+		if bytes[index + 1] < second_min or bytes[index + 1] > second_max:
+			return false
+		for offset in range(2, length):
+			if bytes[index + offset] < 0x80 or bytes[index + offset] > 0xbf:
+				return false
+		index += length
+	return true
