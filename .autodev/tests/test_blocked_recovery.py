@@ -137,7 +137,8 @@ class RecoveryFaults(unittest.TestCase):
         with self.assertRaisesRegex(a.ERROR,'Unresolved model acceptance blocker'):
             a.integrate(run,qualified,task,self.f.c,self.f.p)
         def fresh_writer(stage,where,current,*args,**kw):
-            self.f.coder(stage,where,current)
+            self.assertTrue(kw['read_only'])
+            self.assertIn('READ-ONLY VERIFIED IMPLEMENTATION HANDOFF',args[0])
             a.write(where/('coder-%d-last.txt'%current['attempts']),{'status':'implemented','unverified_acceptance':[]})
         with self.f.providers(coder=fresh_writer,process=engine):
             self.assertEqual(a.run_plan(self.f.c,self.f.p,recover=True),0)
@@ -156,6 +157,9 @@ class RecoveryFaults(unittest.TestCase):
         data.update(failure_category='UNKNOWN',model_outcomes=[{'status':'blocked','unverified_acceptance':['coverage']}])
         a.checkpoint(run,data)
         with self.assertRaisesRegex(a.ERROR,'Additional objective coverage'):
+            a.qualify_verification(run.name,self.f.c,self.f.p)
+        self.f.c['task_attempt_limits']={task['id']:1}
+        with self.assertRaisesRegex(a.ERROR,'Repair budget exhausted'):
             a.qualify_verification(run.name,self.f.c,self.f.p)
 
     def test_complete_director_loop_qa_fix_review_integrate_and_next_sprint(self):

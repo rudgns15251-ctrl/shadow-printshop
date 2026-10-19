@@ -775,7 +775,8 @@ def execute(task, plan, c, p, recover=False, push=False):
                 failure += '\nProvide a fresh implementation handoff; do not recreate completed content. Objective runtime coverage is established. Human narrative quality, visual taste and listening remain human_review_pending; never claim human approval.'
             revalidate = recover and data['phase'] in {'QA', 'REPAIR'} and not verification_resume
             validation_retry = False
-            while revalidate or data['attempts'] <= p['max_fixes']:
+            attempt_limit = min(p['max_fixes'] + 1, c.get('task_attempt_limits', {}).get(task['id'], p['max_fixes'] + 1))
+            while revalidate or data['attempts'] < attempt_limit:
                 if PAUSE.exists():
                     data['status'] = 'PAUSED'
                     checkpoint(run, data)
@@ -787,7 +788,23 @@ def execute(task, plan, c, p, recover=False, push=False):
                         data['attempts'] += 1
                         task['attempts'] = data['attempts']
                         checkpoint(run, data, 'IMPLEMENT')
-                        codex(stage, run, data, task_prompt(task, failure, c), c, p, 'coder-%d' % data['attempts'])
+                        prompt = task_prompt(task, failure, c)
+                        before_handoff = snapshot(stage) if verification_resume else None
+                        if verification_resume:
+                            prompt += ('\nREAD-ONLY VERIFIED IMPLEMENTATION HANDOFF: do not edit or recreate game code. '
+                                       'Audit the existing implementation and the actual objective coverage below. '
+                                       'The original task describes the earlier absence of replay/recovery tests; this registered '
+                                       'supplement now supplies those objective assertions without changing their required behavior. '
+                                       'No human approval is claimed. Keep narrative quality/taste/listening pending. '
+                                       'If still blocked, identify the exact remaining assertion and why the supplied executable '
+                                       'does not cover it, rather than repeating an unspecified coverage gap.\n')
+                            for probe in verification_resume['additional_probes']:
+                                probe_file = HERE / 'checks' / ACCEPTANCE_PROBES[probe][0]
+                                if probe_file.is_file():
+                                    prompt += '\nTRUSTED EXECUTED PROBE ' + probe + ':\n' + probe_file.read_text(encoding='utf-8')
+                            prompt += '\nEXACT-SOURCE VERIFICATION RESULT: ' + json.dumps(verification_resume)
+                        codex(stage, run, data, prompt, c, p, 'coder-%d' % data['attempts'], read_only=bool(verification_resume))
+                        require(not verification_resume or snapshot(stage) == before_handoff, 'SCOPE: read-only handoff modified source')
                     revalidate = False
                     require(git('rev-parse', 'HEAD', cwd=stage) == data['stage_commit'], 'Codex committed changes')
                     changes = run_changes(data, snapshot(stage), task, p)
@@ -966,7 +983,7 @@ def qualify_verification(run_id, c, p):
                 data.get('last_failure', '').startswith('ACCEPTANCE_UNVERIFIED:'), 'Not a verification-only writer block')
         outcome = (data.get('model_outcomes') or [{}])[-1]
         require(outcome.get('status') == 'blocked' and outcome.get('unverified_acceptance'), 'Blocked writer evidence missing')
-        require(data['attempts'] <= p['max_fixes'], 'Repair budget exhausted')
+        require(data['attempts'] < min(p['max_fixes'] + 1, c.get('task_attempt_limits', {}).get(task['id'], p['max_fixes'] + 1)), 'Repair budget exhausted')
         require(c.get('recovery_probes', {}).get(task['id']), 'Additional objective coverage must be configured')
         require(not alive(data.get('child_pid')), 'Previous child is alive')
         require(branch_ok(p) == plan['branch'] == data['branch'] and git('rev-parse', 'HEAD') == data['source_commit'] and
