@@ -21,7 +21,11 @@ func validate(data: Variant) -> bool:
 func candidate(data: Variant) -> Dictionary:
 	if not data is Dictionary:
 		return {}
-	for key in ["format", "schema_version", "campaign_version", "chapter_id", "progress", "hints"]:
+	var keys := ["format", "schema_version", "campaign_version", "chapter_id", "progress", "hints"]
+	for key in data:
+		if not key in keys:
+			return {}
+	for key in keys:
 		if not data.has(key):
 			return {}
 	if not data["format"] is String or data["format"] != FORMAT:
@@ -42,10 +46,6 @@ func candidate(data: Variant) -> Dictionary:
 		hints.append(int(value))
 	if not data["progress"] is Dictionary:
 		return {}
-	# Check version types as well as values before invoking the legacy replay.
-	for key in ["schema_version", "puzzle_set_version"]:
-		if not CampaignState._whole(data["progress"].get(key), 1, 1):
-			return {}
 	if not restored.import_progress(data["progress"]):
 		return {}
 	return {"session": restored, "hints": hints}
@@ -67,21 +67,27 @@ func _read_bytes(path: String) -> Variant:
 		return null
 	return bytes
 
-func read_valid(path: String) -> Variant:
+func _read_json(path: String) -> Variant:
 	var bytes: Variant = _read_bytes(path)
 	if bytes == null or not Utf8.valid_utf8(bytes):
 		return null
 	var parser := JSON.new()
-	if parser.parse(bytes.get_string_from_utf8()) != OK or not validate(parser.data):
+	if parser.parse(bytes.get_string_from_utf8()) != OK:
 		return null
 	return parser.data
 
+func read_valid(path: String) -> Variant:
+	var data: Variant = _read_json(path)
+	return data if validate(data) else null
+
 func load_candidate() -> Dictionary:
-	var data: Variant = read_valid(SAVE_PATH)
-	if data == null:
-		data = read_valid(SAVE_BACKUP)
+	# candidate() validates and reconstructs each source once. Do not replay the
+	# undo history again merely to turn an already validated envelope into state.
+	var restored: Dictionary = candidate(_read_json(SAVE_PATH))
+	if restored.is_empty():
+		restored = candidate(_read_json(SAVE_BACKUP))
 	# Recovery is read-only: corrupt originals and backup bytes are preserved.
-	return candidate(data)
+	return restored
 
 func has_save() -> bool:
 	return read_valid(SAVE_PATH) != null or read_valid(SAVE_BACKUP) != null
@@ -106,13 +112,11 @@ func save(session, hints: Array) -> bool:
 	if directory == null:
 		return false
 	# Only a validated primary can replace the last known-good backup.
-	var rotated := false
 	if read_valid(SAVE_PATH) != null:
 		if directory.rename(SAVE_PATH.get_file(), SAVE_BACKUP.get_file()) != OK:
 			return false
-		rotated = true
 	if directory.rename(SAVE_TEMP.get_file(), SAVE_PATH.get_file()) != OK:
-		if rotated:
-			directory.rename(SAVE_BACKUP.get_file(), SAVE_PATH.get_file())
+		# Leave the verified backup in place, including when the primary was corrupt.
+		# Recovery remains read-only; a later explicit save can retry the commit.
 		return false
-	return true
+	return _read_bytes(SAVE_PATH) == bytes and read_valid(SAVE_PATH) != null
