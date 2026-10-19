@@ -897,6 +897,20 @@ def reconcile_infrastructure(run_id, c, p):
         stage = run / 'game'
         actual = snapshot(stage)
         metadata = [rel for rel in auto.diff(data['baseline'], actual) if rel.endswith('.import')]
+        recorded = [rel for rel in metadata if rel in data.get('trusted_import_metadata', {})]
+        for rel in recorded:
+            require(actual[rel] == data['trusted_import_metadata'][rel], 'Recorded import metadata changed')
+            history = [row for row in data.get('import_metadata_history', []) if row['after'].get(rel) == actual[rel]]
+            require(history, 'Import metadata provenance missing')
+            record = history[-1]
+            log = inside(run, record['process_log'])
+            require(log.is_file() and auto.sha(log) == record['log_sha256'] and
+                    any(proc.get('log') == record['process_log'] and proc.get('sha256') == record['log_sha256']
+                        for proc in data.get('processes', []) if proc['name'].endswith('-IMPORT')),
+                    'Recorded import log missing or changed')
+        # Previously authenticated importer bytes remain scoped even if a later
+        # import fails at editor shutdown. This never changes the failed QA gate.
+        metadata = [rel for rel in metadata if rel not in recorded]
         if metadata:
             imports = [item for item in data.get('processes', []) if item['name'].endswith('-IMPORT')]
             require(imports and any(item['name'] == 'STATIC' and item['pass'] for item in data.get('qa', [])),

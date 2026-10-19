@@ -95,6 +95,24 @@ class RecoveryFaults(unittest.TestCase):
         self.assertEqual(task['status'],'BLOCKED'); self.assertEqual(self.f.calls,0)
         self.assertEqual(a.git('rev-parse','HEAD'),self.f.base)
 
+    def test_reconcile_preserves_recorded_import_bytes_after_later_failed_import(self):
+        asset=self.f.game/'example.svg.import';asset.write_text('baseline')
+        a.git('add','--','game/example.svg.import');a.git('commit','-qm','fixture metadata')
+        plan=self.f.plan();run,data=a.new_run(plan['tasks'][0],self.f.c,self.f.p,plan)
+        stage=run/'game';before=a.snapshot(stage);(stage/asset.name).write_text('trusted import')
+        log=run/'import.log';log.write_text('imported then editor shutdown failed')
+        record={'name':'attempt-1-IMPORT','log':log.name,'sha256':a.auto.sha(log),'exit_code':3221225477}
+        data['processes']=[record];a.record_import_metadata(stage,before,data,record)
+        data['qa']=[{'name':'STATIC','pass':True},{'name':'IMPORT','pass':False}]
+        a.checkpoint(run,data,'QA')
+        infra=a.HERE/'director.py';infra.write_text('# reviewed infrastructure')
+        a.git('add','--','.autodev/director.py');a.git('commit','-qm','fixture recovery')
+        a.reconcile_infrastructure(run.name,self.f.c,self.f.p)
+        self.assertFalse(a.read(run/'autonomous.json')['qa'][-1]['pass'])
+        log.write_text('tampered')
+        with self.assertRaisesRegex(a.ERROR,'log missing or changed'):
+            a.reconcile_infrastructure(run.name,self.f.c,self.f.p)
+
     def test_complete_director_loop_qa_fix_review_integrate_and_next_sprint(self):
         # Real worker/run_item/run_plan/execute/qa/integrate/package and temporary
         # Git. Only external planner, model, engine and remote are providers.
