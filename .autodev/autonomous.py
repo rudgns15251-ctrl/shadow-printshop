@@ -39,6 +39,7 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'story_archive': ('story_archive.gd', 'STORY_ARCHIVE_PASS'),
                      'story_archive_extended': ('story_archive_extended.gd', 'ARCHIVE_EXTENDED_PASS'),
                      'campaign_shell': ('campaign_shell.gd', 'CAMPAIGN_SHELL_PASS'),
+                     'campaign_recovery': ('campaign_recovery.gd', 'CAMPAIGN_RECOVERY_PASS'),
                      'campaign_full': ('campaign_full.gd', 'CAMPAIGN_FULL_PASS'),
                      'sound_content': ('sound_content.gd', 'SOUND_CONTENT_PASS'),
                      'release_candidate': ('release_candidate.gd', 'RELEASE_CANDIDATE_PASS')}
@@ -151,7 +152,8 @@ def record_import_metadata(stage, before, data, process_record, approved_new=())
             'before': {rel: before.get(rel) for rel in changes}, 'after': {rel: current[rel] for rel in changes}})
 
 def probes(task, c):
-    names = list(dict.fromkeys(task.get('acceptance_probes', []) + c.get('trusted_handoff_probes', [])))
+    names = list(dict.fromkeys(task.get('acceptance_probes', []) + c.get('trusted_handoff_probes', []) +
+                               c.get('recovery_probes', {}).get(task['id'], [])))
     require(set(names) <= set(ACCEPTANCE_PROBES), 'Unknown trusted acceptance probe')
     return names
 
@@ -356,6 +358,8 @@ def recovery_decision(data, p):
         return False, data['failure_category']
     if data.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}:
         return False, 'Integration/backup requires explicit integrity reconciliation'
+    if data.get('verification_recovery') and data.get('attempts', 0) <= p['max_fixes']:
+        return True, 'Fresh writer handoff required after trusted objective verification'
     if category not in REPAIRABLE:
         return False, category
     if data.get('attempts', 0) > p['max_fixes']:
@@ -624,6 +628,7 @@ def task_prompt(task, failure=None, c=None):
                  'Previously changed .import metadata is owned by the recorded trusted importer; preserve its '
                  'bytes. The coordinator never copies that metadata into the source project. '
                  'Reuse already completed edits present in this stage; do not recreate them.')
+        text += '\nRegistered mandatory trusted runtime probes: ' + ', '.join(probes(task, c))
     return text
 
 def remote_backup(p, commit, branch):
@@ -750,14 +755,25 @@ def execute(task, plan, c, p, recover=False, push=False):
     else:
         run, data = new_run(task, c, p, plan)
         task['run'] = run.name
+    stage = run / 'game'
+    verification_resume = data.get('verification_recovery')
+    if verification_resume:
+        require(snapshot(stage) == data.get('validated_snapshot') and
+                verification_resume['source_sha256'] == data.get('qa_source_sha256'), 'Verification evidence source changed')
+        require(all(any(q['name'] == name and q['pass'] for q in data['qa']) for name in FULL_GATES) and
+                all(any(q['name'] == 'ACCEPTANCE:' + probe and q['pass'] for q in data['qa']) for probe in probes(task, c)),
+                'Verification recovery requires every mandatory gate')
+        data.setdefault('verification_recovery_history', []).append(data.pop('verification_recovery'))
     data['status'] = 'RUNNING'
     task['status'] = 'RUNNING'
     write(PLAN, plan)
-    stage = run / 'game'
     try:
         if data['phase'] not in {'VERIFIED', 'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}:
             failure = data.get('error') or data.get('last_failure')
-            revalidate = recover and data['phase'] in {'QA', 'REPAIR'}
+            if verification_resume:
+                failure += '\nTrusted coordinator actually executed all objective gates on this exact source: ' + json.dumps(verification_resume)
+                failure += '\nProvide a fresh implementation handoff; do not recreate completed content. Objective runtime coverage is established. Human narrative quality, visual taste and listening remain human_review_pending; never claim human approval.'
+            revalidate = recover and data['phase'] in {'QA', 'REPAIR'} and not verification_resume
             validation_retry = False
             while revalidate or data['attempts'] <= p['max_fixes']:
                 if PAUSE.exists():
@@ -887,7 +903,7 @@ def reconcile_infrastructure(run_id, c, p):
         files = git('diff', '--name-only', previous, current).splitlines()
         allowed = {'.autodev/autonomous.py', '.autodev/checks/save_settings.gd', '.gitattributes',
                    '.autodev/tests/test_resume_metadata.py', '.autodev/director.py',
-                   '.autodev/tests/test_blocked_recovery.py'}
+                   '.autodev/tests/test_blocked_recovery.py', '.autodev/checks/campaign_recovery.gd'}
         require(set(files) <= allowed, 'Unreviewed infrastructure changes')
         if '.gitattributes' in files:
             require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [
@@ -931,6 +947,50 @@ def reconcile_infrastructure(run_id, c, p):
         checkpoint(run, data)
     print('INFRASTRUCTURE_RECONCILED')
 
+def qualify_verification(run_id, c, p):
+    """Evidence-only recovery of a blocked writer, never an acceptance override.
+
+    Full gates plus explicitly configured additional coverage must pass. Resume
+    still spends a remaining attempt on a fresh writer handoff, reruns all gates,
+    requires independent production review, and performs unchanged integration.
+    """
+    with locked():
+        owner = STATE / 'production/owner.json'
+        require(not owner.exists() or not alive(read(owner).get('pid')), 'Production owner is live; qualify only at a safe stop')
+        clean()
+        plan = read(PLAN)
+        task = next(t for t in plan['tasks'] if t.get('run') == run_id)
+        run = inside(HERE / 'runs', run_id)
+        data = read(run / 'autonomous.json')
+        require(task['status'] == data['status'] == 'BLOCKED' and data['failure_category'] == 'UNKNOWN' and
+                data.get('last_failure', '').startswith('ACCEPTANCE_UNVERIFIED:'), 'Not a verification-only writer block')
+        outcome = (data.get('model_outcomes') or [{}])[-1]
+        require(outcome.get('status') == 'blocked' and outcome.get('unverified_acceptance'), 'Blocked writer evidence missing')
+        require(data['attempts'] <= p['max_fixes'], 'Repair budget exhausted')
+        require(c.get('recovery_probes', {}).get(task['id']), 'Additional objective coverage must be configured')
+        require(not alive(data.get('child_pid')), 'Previous child is alive')
+        require(branch_ok(p) == plan['branch'] == data['branch'] and git('rev-parse', 'HEAD') == data['source_commit'] and
+                snapshot(source(c)) == data['source_snapshot'], 'Verification source changed')
+        require(data['policy_sha256'] == plan['policy_sha256'] == auto.sha(HERE / 'policy.json') and
+                spec(read(run / 'task.json')) == spec(task), 'Verification policy/task changed')
+        require(git('rev-parse', 'HEAD', cwd=run / 'game') == data['stage_commit'], 'Verification stage Git changed')
+        try:
+            for retry in range(2):
+                try:
+                    qa(run / 'game', run, data, c, p, task)
+                    break
+                except (ERROR, OSError, subprocess.SubprocessError) as exc:
+                    category, repeated = record_failure(run, data, exc)
+                    if retry or category not in {'ENVIRONMENT', 'ENGINE_IMPORT'} or repeated >= 2: raise
+            data['verification_recovery'] = {'time': now(), 'source_sha256': data['qa_source_sha256'],
+                'passed_gates': [q['name'] for q in data['qa']], 'human_review': 'not_performed',
+                'additional_probes': c['recovery_probes'][task['id']], 'fresh_writer_required': True}
+            checkpoint(run, data, 'REPAIR')
+        except (ERROR, OSError, subprocess.SubprocessError) as exc:
+            data.update(status='BLOCKED', error=str(exc)); checkpoint(run, data)
+            raise
+    print('OBJECTIVE_VERIFICATION_RECORDED_FRESH_WRITER_REQUIRED')
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Durable C01 autonomous development, using existing AutoDev QA')
     sub = parser.add_subparsers(dest='command', required=True)
@@ -947,6 +1007,7 @@ def main(argv=None):
     sub.add_parser('report')
     q = sub.add_parser('qa'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('reconcile-infrastructure'); q.add_argument('--run-id', required=True)
+    q = sub.add_parser('qualify-verification'); q.add_argument('--run-id', required=True)
     sub.add_parser('backup')
     args = parser.parse_args(argv)
     try:
@@ -963,6 +1024,7 @@ def main(argv=None):
                               'plan': read(PLAN) if PLAN.exists() else None, 'paused': PAUSE.exists()}, ensure_ascii=True, indent=2))
         elif args.command == 'report': report()
         elif args.command == 'reconcile-infrastructure': reconcile_infrastructure(args.run_id, c, p)
+        elif args.command == 'qualify-verification': qualify_verification(args.run_id, c, p)
         elif args.command == 'backup':
             with locked():
                 clean()

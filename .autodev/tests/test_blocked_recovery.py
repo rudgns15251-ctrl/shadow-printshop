@@ -113,6 +113,51 @@ class RecoveryFaults(unittest.TestCase):
         with self.assertRaisesRegex(a.ERROR,'log missing or changed'):
             a.reconcile_infrastructure(run.name,self.f.c,self.f.p)
 
+    def test_objective_qualification_never_overrides_blocked_writer(self):
+        plan=self.f.plan();task=plan['tasks'][0]
+        run,data=a.new_run(task,self.f.c,self.f.p,plan)
+        self.f.coder(run/'game',run,data)
+        blocked={'status':'blocked','unverified_acceptance':['uncovered replay check']}
+        data.update(status='BLOCKED',attempts=1,failure_category='UNKNOWN',
+                    error='UNKNOWN: bounded stop; inspect preserved failure evidence',
+                    last_failure='ACCEPTANCE_UNVERIFIED: model reported a blocker',model_outcomes=[blocked])
+        task.update(status='BLOCKED',run=run.name,attempts=1)
+        a.write(run/'coder-1-last.txt',blocked);a.checkpoint(run,data,'REPAIR');a.write(a.PLAN,plan)
+        self.f.c['recovery_probes']={task['id']:['context_tooltips']}
+        calls=[]
+        def engine(*args,**kw):
+            calls.append(args[3])
+            if 'ACCEPTANCE-context_tooltips' in args[3]:return 0,'TOOLTIP_ACCEPTANCE_PASS'
+            return self.f.provider(*args,**kw)
+        with self.f.providers(process=engine):
+            a.qualify_verification(run.name,self.f.c,self.f.p)
+        qualified=a.read(run/'autonomous.json')
+        self.assertEqual(qualified['status'],'BLOCKED');self.assertEqual(qualified['attempts'],1)
+        self.assertEqual(a.git('rev-parse','HEAD'),self.f.base)
+        with self.assertRaisesRegex(a.ERROR,'Unresolved model acceptance blocker'):
+            a.integrate(run,qualified,task,self.f.c,self.f.p)
+        def fresh_writer(stage,where,current,*args,**kw):
+            self.f.coder(stage,where,current)
+            a.write(where/('coder-%d-last.txt'%current['attempts']),{'status':'implemented','unverified_acceptance':[]})
+        with self.f.providers(coder=fresh_writer,process=engine):
+            self.assertEqual(a.run_plan(self.f.c,self.f.p,recover=True),0)
+        done=a.read(run/'autonomous.json')
+        self.assertEqual(done['attempts'],2);self.assertEqual(done['status'],'DONE')
+        self.assertEqual(sum(x.endswith('SMOKE') for x in calls),2)
+        self.assertEqual(a.read(run/'coder-1-last.txt'),blocked)
+
+    def test_qualification_rejects_fatal_or_absent_extra_coverage(self):
+        plan=self.f.plan();task=plan['tasks'][0];run,data=a.new_run(task,self.f.c,self.f.p,plan)
+        task.update(status='BLOCKED',run=run.name);a.write(a.PLAN,plan)
+        data.update(status='BLOCKED',attempts=1,failure_category='PERMISSION',last_failure='ACCEPTANCE_UNVERIFIED: x')
+        a.checkpoint(run,data,'REPAIR')
+        with self.assertRaisesRegex(a.ERROR,'verification-only'):
+            a.qualify_verification(run.name,self.f.c,self.f.p)
+        data.update(failure_category='UNKNOWN',model_outcomes=[{'status':'blocked','unverified_acceptance':['coverage']}])
+        a.checkpoint(run,data)
+        with self.assertRaisesRegex(a.ERROR,'Additional objective coverage'):
+            a.qualify_verification(run.name,self.f.c,self.f.p)
+
     def test_complete_director_loop_qa_fix_review_integrate_and_next_sprint(self):
         # Real worker/run_item/run_plan/execute/qa/integrate/package and temporary
         # Git. Only external planner, model, engine and remote are providers.
