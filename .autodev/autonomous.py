@@ -329,7 +329,13 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
 
 def classify(step, text):
     low = text.lower()
+    for category in ('AUTH_OR_USAGE', 'PERMISSION', 'GIT_CONFLICT', 'BACKUP', 'SCOPE', 'UNKNOWN', 'CODEX'):
+        if text.startswith(category + ': bounded stop;'): return category
     if MODEL_ERRORS.search(text): return 'AUTH_OR_USAGE'
+    if re.search(r'permissionerror|permission denied|access is denied|access denied|winerror 5\b', low): return 'PERMISSION'
+    if any(message in low for message in ('source changed', 'source head changed', 'source files changed',
+                                         'validated stage tampered', 'validated build tampered', 'committed content mismatch')):
+        return 'GIT_CONFLICT'
     if 'scope:' in low or 'symlink' in low or 'junction' in low: return 'SCOPE'
     if 'git' in low or step in {'INTEGRATE', 'BACKUP'}: return 'GIT_CONFLICT' if step != 'BACKUP' else 'BACKUP'
     if 'leak' in low or 'resources still in use' in low or 'audiostreamplayback' in low: return 'RESOURCE_LEAK'
@@ -339,6 +345,33 @@ def classify(step, text):
     if step == 'IMPORT' or low.startswith('import:'): return 'ENGINE_IMPORT'
     if step == 'CODEX': return 'CODEX'
     return 'UNKNOWN'
+
+REPAIRABLE = {'GAME_CODE', 'EXPECTATION_MISMATCH', 'RESOURCE_LEAK', 'ENVIRONMENT', 'ENGINE_IMPORT'}
+FATAL = {'AUTH_OR_USAGE', 'PERMISSION', 'GIT_CONFLICT', 'BACKUP', 'SCOPE'}
+
+def recovery_decision(data, p):
+    # The actual terminal error wins over a stale category from an earlier retry.
+    category = classify(data.get('phase'), data.get('error') or data.get('last_failure', ''))
+    if data.get('failure_category') in FATAL:
+        return False, data['failure_category']
+    if data.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}:
+        return False, 'Integration/backup requires explicit integrity reconciliation'
+    if category not in REPAIRABLE:
+        return False, category
+    if data.get('attempts', 0) > p['max_fixes']:
+        return False, 'Repair budget exhausted'
+    return True, category
+
+def record_failure(run, data, exc):
+    detail = str(exc)
+    phase = data['phase']
+    category = 'PERMISSION' if isinstance(exc, PermissionError) else classify(phase, detail)
+    data.update(last_failure=detail, error=detail, failure_category=category)
+    fingerprint = hashlib.sha256(detail.encode()).hexdigest()
+    data['failures'].append({'attempt': data['attempts'], 'phase': phase, 'category': category,
+                             'fingerprint': fingerprint, 'detail': detail, 'time': now()})
+    checkpoint(run, data, 'REPAIR')
+    return category, sum(x['fingerprint'] == fingerprint for x in data['failures'])
 
 def validate_tasks(tasks, p):
     require(isinstance(tasks, list) and 1 <= len(tasks) <= p['max_tasks'], 'Invalid task count')
@@ -466,7 +499,9 @@ def qa(stage, run, data, c, p, task):
     static_check(stage, data, p, task)
     data['qa'].append({'name': 'STATIC', 'pass': True})
     godot = auto.resolve_godot(None, c)
-    env = auto.isolated_env(run, True)
+    session = run / 'qa_sessions' / uuid.uuid4().hex
+    data.setdefault('qa_sessions', []).append({'time': now(), 'path': session.relative_to(run).as_posix()})
+    env = auto.isolated_env(session, True)
     entries = auto.qa_steps(c)
     require({name for name, _, _ in entries} >= {'IMPORT', 'SMOKE', 'REGRESSION', 'SLICE'}, 'Core QA gates cannot be omitted')
     for name, extra, marker in entries:
@@ -495,6 +530,7 @@ def qa(stage, run, data, c, p, task):
     checkpoint(run, data)
     require(ok, 'QUALITY: ' + text[-14000:])
     for probe in probes(task, c):
+        probe_env = auto.isolated_env(session / probe, True)
         filename, marker = ACCEPTANCE_PROBES[probe]
         if probe == 'audio_immediate':
             from audio_lab.runner import parse_log
@@ -508,7 +544,7 @@ def qa(stage, run, data, c, p, task):
                                '--script', script]
                     if driver == 'Dummy': command += ['--', 'case=H_free']
                     rc, text = process(command, run, data, 'attempt-%d-AUDIO-%s-%02d' %
-                                       (data['attempts'], driver, index + 1), 30, env)
+                                       (data['attempts'], driver, index + 1), 30, probe_env)
                     verdict = parse_log(text, driver, rc, original=driver == 'WASAPI')
                     data['qa'].append({'name': 'AUDIO:%s:%02d' % (driver, index + 1),
                                        'pass': verdict['passed'], 'leaked_objects': verdict['leaked_object_count']})
@@ -519,7 +555,7 @@ def qa(stage, run, data, c, p, task):
             continue
         driver_flags = ['--audio-driver', 'WASAPI', '--verbose'] if probe in {'sound_content','release_candidate'} else []
         rc, text = process([godot, '--headless', *driver_flags, '--path', stage, '--script', str(HERE / 'checks' / filename)],
-                           run, data, 'attempt-%d-ACCEPTANCE-%s' % (data['attempts'], probe), 180, env)
+                           run, data, 'attempt-%d-ACCEPTANCE-%s' % (data['attempts'], probe), 180, probe_env)
         ok = rc == 0 and marker in text and not auto.ERRORS.search(text)
         if probe == 'story_archive_extended':
             ok = ok and 'Unicode parsing error' not in text
@@ -707,27 +743,36 @@ def execute(task, plan, c, p, recover=False, push=False):
         require(not alive(data.get('child_pid')), 'Previous child still running')
         require(data['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed since run')
         require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')
+        if task['status'] == 'BLOCKED':
+            allowed, reason = recovery_decision(data, p)
+            # Existing explicit standalone integration recovery retains its checks.
+            require(allowed or data['phase'] in {'INTEGRATE', 'COMMITTED', 'BACKUP'}, 'Recovery refused: ' + reason)
     else:
         run, data = new_run(task, c, p, plan)
         task['run'] = run.name
+    data['status'] = 'RUNNING'
     task['status'] = 'RUNNING'
     write(PLAN, plan)
     stage = run / 'game'
     try:
         if data['phase'] not in {'VERIFIED', 'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}:
-            failure = data.get('last_failure')
-            while data['attempts'] <= p['max_fixes']:
+            failure = data.get('error') or data.get('last_failure')
+            revalidate = recover and data['phase'] in {'QA', 'REPAIR'}
+            validation_retry = False
+            while revalidate or data['attempts'] <= p['max_fixes']:
                 if PAUSE.exists():
                     data['status'] = 'PAUSED'
                     checkpoint(run, data)
                     task['status'] = 'PAUSED'
                     return
                 require(git('rev-parse', 'HEAD') == data['source_commit'] and snapshot(source(c)) == data['source_snapshot'], 'Source changed during implementation')
-                data['attempts'] += 1
-                task['attempts'] = data['attempts']
-                checkpoint(run, data, 'IMPLEMENT')
                 try:
-                    codex(stage, run, data, task_prompt(task, failure, c), c, p, 'coder-%d' % data['attempts'])
+                    if not revalidate:
+                        data['attempts'] += 1
+                        task['attempts'] = data['attempts']
+                        checkpoint(run, data, 'IMPLEMENT')
+                        codex(stage, run, data, task_prompt(task, failure, c), c, p, 'coder-%d' % data['attempts'])
+                    revalidate = False
                     require(git('rev-parse', 'HEAD', cwd=stage) == data['stage_commit'], 'Codex committed changes')
                     changes = run_changes(data, snapshot(stage), task, p)
                     require(changes, 'Codex made no real allowed changes')
@@ -737,21 +782,15 @@ def execute(task, plan, c, p, recover=False, push=False):
                     break
                 except (ERROR, OSError, subprocess.SubprocessError) as exc:
                     failure = str(exc)
-                    category = classify(data['phase'], failure)
-                    data['last_failure'] = failure
-                    data['failure_category'] = category
-                    fingerprint = hashlib.sha256(failure.encode()).hexdigest()
-                    data['failures'].append({'attempt': data['attempts'], 'category': category, 'fingerprint': fingerprint, 'detail': failure, 'time': now()})
-                    checkpoint(run, data, 'REPAIR')
-                    repeated = sum(x['fingerprint'] == fingerprint for x in data['failures'])
-                    if category in {'SCOPE', 'AUTH_OR_USAGE', 'GIT_CONFLICT', 'CODEX', 'UNKNOWN'} or repeated >= 2:
+                    category, repeated = record_failure(run, data, exc)
+                    if category not in REPAIRABLE or repeated >= 2:
                         raise ERROR(category + ': bounded stop; inspect preserved failure evidence')
                     if category in {'ENVIRONMENT', 'ENGINE_IMPORT'}:
-                        # Revalidate known code once, without asking the model to regenerate it.
-                        qa(stage, run, data, c, p, task)
-                        if TASK_REVIEWER is not None:
-                            TASK_REVIEWER(run, data, task, c, p)
-                        break
+                        # Re-enter the SAME exception boundary: a different failure
+                        # during revalidation must be recorded and repaired normally.
+                        require(not validation_retry, 'Environment revalidation budget exhausted')
+                        validation_retry = True
+                        revalidate = True
             require(data['phase'] == 'VERIFIED', 'Repair budget exhausted')
         if PAUSE.exists():
             task['status'] = 'PAUSED'
@@ -770,6 +809,8 @@ def execute(task, plan, c, p, recover=False, push=False):
         task.update(status='DONE', commit=data['commit'], backup=data['backup'])
     except (ERROR, OSError, subprocess.SubprocessError) as exc:
         data.update(status='BLOCKED', error=str(exc))
+        if data['phase'] != 'REPAIR':
+            data['failure_category'] = 'PERMISSION' if isinstance(exc, PermissionError) else classify(data['phase'], str(exc))
         checkpoint(run, data)
         task.update(status='BLOCKED', last_failure=str(exc), phase=data['phase'])
         print('BLOCKED ' + task['id'] + ': ' + str(exc)[:500], flush=True)
@@ -792,11 +833,19 @@ def run_plan(c, p, recover=False, push=False, limit=None):
         if recover:
             for task in plan['tasks']:
                 if task['status'] in {'RUNNING', 'PAUSED', 'BLOCKED'} and task.get('run'):
+                    if task['status'] == 'BLOCKED':
+                        meta = read(HERE / 'runs' / task['run'] / 'autonomous.json')
+                        if meta['phase'] not in {'INTEGRATE', 'COMMITTED', 'BACKUP'} and not recovery_decision(meta, p)[0]:
+                            continue
                     execute(task, plan, c, p, True, push)
                     count += 1
                     if task['status'] != 'DONE':
                         break
-        unsafe_pending = any(t['status'] != 'DONE' and t.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP'} for t in plan['tasks'])
+        def unsafe(task):
+            if task['status'] != 'BLOCKED': return False
+            meta = read(HERE / 'runs' / task['run'] / 'autonomous.json') if task.get('run') else {}
+            return task.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP'} or meta.get('failure_category') in FATAL
+        unsafe_pending = any(unsafe(t) for t in plan['tasks'])
         while not unsafe_pending and not PAUSE.exists() and (limit is None or count < limit):
             task = next_task(plan)
             if task is None:
@@ -804,7 +853,7 @@ def run_plan(c, p, recover=False, push=False, limit=None):
             execute(task, plan, c, p, False, push)
             count += 1
             # After partial integration or backup failure, do not advance HEAD.
-            if task['status'] == 'BLOCKED' and task.get('phase') in {'INTEGRATE', 'COMMITTED', 'BACKUP'}:
+            if unsafe(task):
                 break
         plan['status'] = 'DONE' if all(t['status'] == 'DONE' for t in plan['tasks']) else ('PAUSED' if PAUSE.exists() else 'INCOMPLETE')
         write(PLAN, plan)
@@ -837,7 +886,8 @@ def reconcile_infrastructure(run_id, c, p):
         git('merge-base', '--is-ancestor', previous, current)
         files = git('diff', '--name-only', previous, current).splitlines()
         allowed = {'.autodev/autonomous.py', '.autodev/checks/save_settings.gd', '.gitattributes',
-                   '.autodev/tests/test_resume_metadata.py'}
+                   '.autodev/tests/test_resume_metadata.py', '.autodev/director.py',
+                   '.autodev/tests/test_blocked_recovery.py'}
         require(set(files) <= allowed, 'Unreviewed infrastructure changes')
         if '.gitattributes' in files:
             require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [

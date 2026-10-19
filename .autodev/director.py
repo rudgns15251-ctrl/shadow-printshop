@@ -87,10 +87,21 @@ def initial(m):
             'milestones':[{'id':x['id'],'status':'PENDING'} for x in m['milestones']],
             'events':[],'last_verified_commit':None,'release_candidate_ready':False,'shutdown_executed':False}
 
-def choose(state,m):
+def recoverable_item(item,state,p):
+    # Only the current retained plan may repair a blocked milestone. Never
+    # supersede it with a freshly generated plan or reset its attempt counter.
+    if state.get('current') != item['id']:return False
+    plan=read(a.PLAN,{})
+    blocked=[t for t in plan.get('tasks',[]) if t['status']=='BLOCKED']
+    return bool(blocked) and all(t.get('run') and a.recovery_decision(
+        a.read(a.HERE/'runs'/t['run']/'autonomous.json'),p)[0] for t in blocked)
+
+def choose(state,m,recover=False,attempted=()):
     done={x['id'] for x in state['milestones'] if x['status']=='DONE'}
     statuses={x['id']:x['status'] for x in state['milestones']}
-    return next((x for x in m['milestones'] if statuses[x['id']] in {'PENDING','RUNNING','PAUSED'} and set(x['depends_on'])<=done),None)
+    return next((x for x in m['milestones'] if set(x['depends_on'])<=done and
+                 (statuses[x['id']] in {'PENDING','RUNNING','PAUSED'} or
+                  (recover and x['id'] not in attempted and statuses[x['id']]=='BLOCKED' and recoverable_item(x,state,a.policy())))),None)
 
 def readonly_review(run,data,task,c,p):
     stage=run/'game';before=a.snapshot(stage)
@@ -235,6 +246,8 @@ def run_item(item,state,c,p):
     goal+='Only new metadata sidecars explicitly in the exact policy/task allowlist may be created. New GDScripts need valid unique .uid files. No agents, installs, commits, network or Godot from restricted model. '
     goal+='\nBIBLE SUMMARY:\n'+(ROOT/'NARRATIVE_BIBLE.md').read_text(encoding='utf-8')+'\n'+(ROOT/'CHARACTER_BIBLE.md').read_text(encoding='utf-8')
     existing=read(a.PLAN,{})
+    if any(t['status']=='BLOCKED' for t in existing.get('tasks',[])):
+        a.require(existing.get('goal')==goal,'Blocked plan goal differs; explicit reconciliation required')
     if existing.get('goal')!=goal:
         checkpoint(state,'PLAN');a.goal(goal,replace_incomplete=True)
         existing=read(a.PLAN,{})
@@ -264,15 +277,15 @@ def run_item(item,state,c,p):
     if plan['status']!='DONE':
         blocked=[t for t in plan['tasks'] if t['status']=='BLOCKED']
         details=[a.read(a.HERE/'runs'/t['run']/'autonomous.json') for t in blocked if t.get('run')]
-        if any(d.get('failure_category')=='AUTH_OR_USAGE' or 'AUTH_OR_USAGE' in d.get('error','') for d in details):
-            raise a.ERROR('AUTH_OR_USAGE: checkpoint preserved; no credential/limit workaround attempted')
+        if any(d.get('failure_category') in a.FATAL for d in details):
+            raise a.ERROR('Unsafe failure: '+json.dumps([d.get('failure_category') for d in details])+'; checkpoint preserved')
         if any(d['phase'] in {'INTEGRATE','COMMITTED','BACKUP'} for d in details):raise a.ERROR('Uncertain integration/backup; no next job')
         return 'BLOCKED'
     a.require(all(t.get('backup',{}).get('status')=='VERIFIED' for t in plan['tasks']),'Missing verified development backup')
     state['last_verified_commit']=a.git('rev-parse','HEAD');package(item,state)
     return 'DONE'
 
-def worker(max_milestones=None):
+def worker(max_milestones=None,recover_blocked=False):
     with lease():
         a.write(OWNER,{'pid':os.getpid(),'token':uuid.uuid4().hex,'started':a.now()})
         m=manifest();state=read(STATE,initial(m))
@@ -284,10 +297,10 @@ def worker(max_milestones=None):
         if PAUSE.exists():PAUSE.rename(HOME/('pause-handled-'+uuid.uuid4().hex+'.json'))
         if a.PAUSE.exists():a.PAUSE.rename(a.STATE/('pause-production-handled-'+uuid.uuid4().hex+'.json'))
         state.update(status='RUNNING',owner_pid=os.getpid());checkpoint(state,'DIRECTOR')
-        completed=0
+        completed=0;attempted=set()
         try:
             while not PAUSE.exists():
-                item=choose(state,m)
+                item=choose(state,m,recover_blocked,attempted)
                 if item is None:
                     all_done=all(x['status']=='DONE' for x in state['milestones'])
                     latest=read(a.PLAN,{})
@@ -305,13 +318,14 @@ def worker(max_milestones=None):
                     state['status']='RELEASE_CANDIDATE_READY' if release_verified else ('RELEASE_REVIEW_REQUIRED' if all_done else 'BLOCKED_DEPENDENCIES')
                     break
                 current=next(x for x in state['milestones'] if x['id']==item['id'])
+                attempted.add(item['id'])
                 current['status']='RUNNING';state['current']=item['id'];checkpoint(state,'DESIGN')
                 log=HOME/(item['id']+'-'+uuid.uuid4().hex[:10]+'.log')
                 with log.open('x',encoding='utf-8',buffering=1) as output,contextlib.redirect_stdout(output),contextlib.redirect_stderr(output):
                     try:result=run_item(item,state,c,p)
                     except Exception as exc:
                         current['error']=str(exc);result='BLOCKED'
-                        if 'AUTH_OR_USAGE' in str(exc) or 'integration/backup' in str(exc):raise
+                        if isinstance(exc,PermissionError) or 'AUTH_OR_USAGE' in str(exc) or 'Unsafe failure:' in str(exc) or 'integration/backup' in str(exc):raise
                 current.update(status=result,log=log.relative_to(ROOT).as_posix(),updated=a.now())
                 state['events'].append({'milestone':item['id'],'status':result,'time':a.now()})
                 checkpoint(state,'NEXT_TASK');report()
@@ -327,7 +341,7 @@ def worker(max_milestones=None):
     report()
     return 0 if state['status'] not in {'BLOCKED','BLOCKED_DEPENDENCIES'} else 2
 
-def start():
+def start(recover=False):
     HOME.mkdir(parents=True,exist_ok=True)
     if held():return report()
     # Never clear a running child's checkpoint merely because its coordinator died.
@@ -345,6 +359,7 @@ def start():
         a.LOCK.rename(a.STATE/('worker-stale-director-'+uuid.uuid4().hex+'.json'))
     log=HOME/('worker-'+uuid.uuid4().hex+'.log')
     cmd=[sys.executable,'-X','utf8',str(Path(__file__).resolve()),'_worker']
+    if recover:cmd.append('--recover-blocked')
     with log.open('xb') as output:
         kw={'creationflags':subprocess.DETACHED_PROCESS|subprocess.CREATE_NEW_PROCESS_GROUP} if os.name=='nt' else {'start_new_session':True}
         child=subprocess.Popen(cmd,cwd=ROOT,env=environment(),stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,**kw)
@@ -371,10 +386,11 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description='음영 인쇄소 지속 제작 관리자')
     parser.add_argument('command',choices=['start','resume','recover','status','report','pause','_worker'])
     parser.add_argument('--max-milestones',type=int)
+    parser.add_argument('--recover-blocked',action='store_true')
     args=parser.parse_args(argv)
     try:
-        if args.command=='_worker':return worker(args.max_milestones)
-        if args.command in {'start','resume','recover'}:result=start()
+        if args.command=='_worker':return worker(args.max_milestones,args.recover_blocked)
+        if args.command in {'start','resume','recover'}:result=start(recover=args.command=='recover')
         elif args.command=='pause':
             a.write(PAUSE,{'time':a.now(),'mode':'cooperative; no kill or unverified integration'})
             a.write(a.PAUSE,{'requested':a.now(),'mode':'production cooperative boundary'})
