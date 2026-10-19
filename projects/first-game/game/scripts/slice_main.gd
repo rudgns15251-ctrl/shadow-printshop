@@ -822,13 +822,13 @@ func _open_settings() -> void:
 	overlay.show()
 	dialog_back = Callable(self, "_settings_close")
 	_label(dialog, "환경 설정", 27)
-	_label(dialog, "설정은 로컬에 저장됩니다. BGM은 이번 시범에 포함되지 않았습니다.", 15)
-	for key in ["master", "sfx"]:
+	_label(dialog, "설정은 로컬에 저장됩니다.", 15)
+	for key in ["master", "sfx", "bgm"]:
 		# Separate vertical slots guarantee readable, single-line names at 150%.
 		# An unwrapped label contributes its full natural width to the dialog.
 		var row := _column(dialog, 8)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var name_label := _label(row, "전체 음량" if key == "master" else "효과음", 17)
+		var name_label := _label(row, {"master": "전체 음량", "sfx": "효과음", "bgm": "BGM · 인쇄소 배경음"}[key], 17)
 		name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		var slider := HSlider.new()
 		slider.custom_minimum_size = Vector2(285, 32)

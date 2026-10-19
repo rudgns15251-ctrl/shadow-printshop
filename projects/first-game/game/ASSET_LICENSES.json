@@ -115,5 +115,73 @@
     "origin": "Godot uses platform font fallback; exact family selection depends on the host. Malgun Gothic is a Microsoft Corporation Windows font, not bundled or redistributed by this repository. No system font redistribution grant claimed.",
     "usage": ["scripts/slice_main.gd", "scripts/campaign_main.gd", "scripts/slice_board.gd", "scripts/board_view.gd"],
     "verification": "Coordinator Windows export glyph/fallback verification and human attribution review pending."
+  },
+  {
+    "path": "assets/audio/shop_ambience.wav",
+    "license": "LicenseRef-Shop-Ambience-Permissive",
+    "creator": "OpenAI Codex, original procedural synthesis authored for this project on 2026-10-19 (AI-assisted output; no historical human author asserted).",
+    "origin": "Generated offline in this task with Python standard-library math, struct, io and wave only. No recordings, external samples, downloads, network access or image generation.",
+    "license_text": "Permission is hereby granted, free of charge, to any person obtaining this original shop_ambience.wav and its synthesis recipe, to use, copy, modify, publish, distribute, sublicense, and sell them, for any purpose, provided this permission notice is retained. This original-creator grant applies only to this newly authored asset and recipe, to the extent any rights exist and can be granted. THE ASSET AND RECIPE ARE PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND. No rights in retained project assets are asserted or changed.",
+    "synthesis": {
+      "format": "WAV RIFF, uncompressed PCM16 signed little-endian, mono",
+      "sample_rate_hz": 48000,
+      "frame_count": 576000,
+      "duration_seconds": 12,
+      "frequencies_hz": [
+        110,
+        165,
+        220,
+        330,
+        440
+      ],
+      "relative_weights": [
+        0.42,
+        0.27,
+        0.16,
+        0.1,
+        0.05
+      ],
+      "carrier_phase": "All sine carriers start at phase zero; every frequency completes an integer number of periods in 12 seconds.",
+      "envelopes": "For t=i/48000 and T=12: edge=min(t,T-t); fade=0.5-0.5*cos(pi*min(edge,1.0)); breath=0.84+0.16*cos(2*pi*t/T). The first and last one-second raised-cosine fades have zero value/slope at the periodic seam; breath period is 12 seconds. No transients, random noise or optional cues.",
+      "seed": null,
+      "randomness": "None; deterministic.",
+      "normalization": "raw=fade*breath*sum(weight*sin(2*pi*frequency*t)); scale=0.06/max(abs(raw)); signed PCM16 sample=round(raw*scale*32767); no dither or subsequent normalization.",
+      "normalization_scale": 0.07885556737545324,
+      "loop_mode": "AudioStreamWAV.LOOP_FORWARD; configured on a per-scene resource duplicate by campaign_main.gd",
+      "loop_begin_frame": 0,
+      "loop_end_frame_exclusive": 576000,
+      "reproduce_python_stdlib": "import io, math, struct, wave\nrate = 48000\nframes = 576000\nseconds = frames / rate\nfrequencies_hz = (110, 165, 220, 330, 440)\nweights = (0.42, 0.27, 0.16, 0.10, 0.05)\nraw = []\nfor i in range(frames):\n    t = i / rate\n    edge_seconds = min(t, seconds - t)\n    fade = 0.5 - 0.5 * math.cos(math.pi * min(edge_seconds, 1.0))\n    breath = 0.84 + 0.16 * math.cos(2 * math.pi * t / seconds)\n    tone = sum(w * math.sin(2 * math.pi * f * t) for f, w in zip(frequencies_hz, weights))\n    raw.append(fade * breath * tone)\nscale = 0.06 / max(map(abs, raw))\nsamples = [round(x * scale * 32767) for x in raw]\nencoded = io.BytesIO()\nwith wave.open(encoded, 'wb') as out:\n    out.setparams((1, 2, rate, 0, 'NONE', 'not compressed'))\n    out.writeframes(struct.pack('<%dh' % frames, *samples))\nwav_bytes = encoded.getvalue()\n# Write wav_bytes to assets/audio/shop_ambience.wav; no third-party dependencies.\n"
+    },
+    "final_encoded_measurements": {
+      "sha256": "119402912ad533d40b2ad36f9ab4f1564695e897981da8ed622f7f833e4719f0",
+      "absolute_peak_pcm16": 1966,
+      "normalized_absolute_peak": 0.05999755859375,
+      "first_sample_pcm16": 0,
+      "last_sample_pcm16": 0,
+      "last_to_first_discontinuity_pcm16": 0,
+      "normalized_last_to_first_discontinuity": 0.0,
+      "nonzero_sample_count": 573938,
+      "calculation_instructions": "Using Python standard library: with wave.open(path,'rb') as w, assert (w.getnchannels(),w.getsampwidth(),w.getframerate(),w.getnframes())==(1,2,48000,576000); data=w.readframes(w.getnframes()). Decode s=struct.unpack('<%dh'%(len(data)//2),data). Compute max(map(abs,s))/32768 and abs(s[-1]-s[0])/32768. Hash the complete WAV bytes with hashlib.sha256. These measurements concern the final encoded samples, not pre-quantized floats."
+    },
+    "offline_mix_evidence": {
+      "settings": "master=1, sfx=1, bgm=1, mute=false; unit linear gains; raw mono sum before any engine processing",
+      "existing_sfx_absolute_peaks": {
+        "slice_print.wav": 0.513092041015625,
+        "slice_undo.wav": 0.28662109375,
+        "slice_complete.wav": 0.333282470703125
+      },
+      "any_two_sfx_plus_any_ambience_phase_peak_bound": 0.9063720703125,
+      "all_three_sfx_simultaneous_onset_peak": 0.792694091796875,
+      "all_three_sfx_simultaneous_onset_plus_any_ambience_phase_peak_bound": 0.852691650390625,
+      "calculation_instructions": "Decode the three retained 48 kHz PCM16 SFX with wave/struct as above. Any two bound = sum of the largest two absolute peaks + final ambience peak. For simultaneous three-player onset, zero-pad each SFX to the longest length, sum matching sample indices, take max(abs(sum))/32768, then add final ambience peak. Both bounds were asserted below 1.0 offline.",
+      "scope": "Conservative sample-domain evidence for these stated overlap cases only. Arbitrarily offset three-SFX overlaps, importer encoding, engine resampling/mixing, actual WASAPI output, settings, lifecycle and executable clipping coverage remain with the coordinator sound_content/audio probes; this is not a runtime or listening claim."
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_build_audio",
+      "scripts/campaign_main.gd::get_environment_audio",
+      "scripts/campaign_main.gd::_update_audio",
+      "scripts/slice_main.gd::_open_settings"
+    ],
+    "review_pending": "Qualified coordinator runtime/import/export and WASAPI probes; human listening for seam, tone, fatigue and startling effects; human verification of provenance, grant and credits. Existing importer-owned metadata is untouched."
   }
 ]

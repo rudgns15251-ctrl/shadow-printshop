@@ -8,6 +8,52 @@ const CampaignSave = preload("res://scripts/campaign_save.gd")
 var campaign_save = CampaignSave.new()
 var story_button: Button
 var ending_panel: Control
+var environment_audio: AudioStreamPlayer
+var environment_audio_exiting := false
+
+func _ready() -> void:
+	print("CAMPAIGN_AUDIO_DRIVER ", AudioServer.get_driver_name())
+	super._ready()
+
+func get_environment_audio() -> AudioStreamPlayer:
+	return environment_audio
+
+func _build_audio() -> void:
+	# Retain the inherited three-player SFX dictionary and its lifecycle.
+	super._build_audio()
+	var ambience: AudioStreamWAV = load("res://assets/audio/shop_ambience.wav").duplicate()
+	ambience.loop_begin = 0
+	ambience.loop_end = int(round(ambience.get_length() * ambience.mix_rate))
+	ambience.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	environment_audio = AudioStreamPlayer.new()
+	environment_audio.name = "ShopAmbience"
+	environment_audio.stream = ambience
+	add_child(environment_audio)
+	_update_audio()
+
+func _update_audio() -> void:
+	super._update_audio()
+	# The inherited builder updates SFX before this separate player exists.
+	if environment_audio_exiting or not is_instance_valid(environment_audio):
+		return
+	if environment_audio.stream == null or not is_inside_tree():
+		return
+	var gain: float = 0.0 if bool(settings["mute"]) or not game_active else float(settings["master"]) * float(settings["bgm"])
+	if gain <= 0.0:
+		environment_audio.stop()
+		environment_audio.volume_db = -80.0
+	else:
+		environment_audio.volume_db = linear_to_db(gain)
+		if not environment_audio.playing:
+			environment_audio.play()
+
+func _exit_tree() -> void:
+	environment_audio_exiting = true
+	if is_instance_valid(environment_audio):
+		environment_audio.stop()
+		environment_audio.stream = null
+	environment_audio = null
+	super._exit_tree()
 
 # The displayed puzzle is this inherited Control, with one authoritative state.
 # Getters also keep the contract true after inherited callbacks replace state.
@@ -54,6 +100,7 @@ func start_new() -> void:
 	state = CampaignState.new()
 	_reset_campaign_hints()
 	game_active = true
+	_update_audio()
 	last_save_message = ""
 	_autosave()
 	if heading != null:
@@ -73,6 +120,7 @@ func load_campaign() -> bool:
 		return false
 	hint_levels = restored["hints"].duplicate()
 	game_active = true
+	_update_audio()
 	last_save_message = "진행 복원 완료"
 	dismiss_story()
 	if heading != null:
@@ -214,6 +262,7 @@ func _has_valid_save() -> bool:
 
 func _open_start() -> void:
 	game_active = false
+	_update_audio()
 	var found: bool = _has_valid_save()
 	_show_dialog("음영 인쇄소 · 캠페인", "1998년 11월 17일 밤, 음영 인쇄소의 야간 작업을 맡았습니다.\n3장, 모두 %d개 퍼즐과 하나의 결말입니다. 각 목표를 완성할 때마다 다음 버튼 또는 N으로 직접 진행하세요.\n의뢰서와 기록함에서 문서를 읽고, 이야기에서 열린 장의 시작과 마침을 다시 볼 수 있습니다." % session.puzzle_count(), [
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
