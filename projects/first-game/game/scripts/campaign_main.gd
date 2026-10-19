@@ -13,6 +13,9 @@ var environment_audio: AudioStreamPlayer
 var environment_audio_exiting := false
 
 func _ready() -> void:
+	# Keep the established user:// location; the legacy project name is also
+	# its save-directory key. Only the player-facing window title changes here.
+	get_window().title = "음영 인쇄소"
 	print("CAMPAIGN_AUDIO_DRIVER ", AudioServer.get_driver_name())
 	super._ready()
 
@@ -78,7 +81,7 @@ func _reset_campaign_hints() -> void:
 
 func _build_interface() -> void:
 	super._build_interface()
-	title_area.get_child(0).text = "음영 인쇄소 · 야간 의뢰"
+	title_area.get_child(0).text = "음영 인쇄소"
 	story_button = _button(next_button.get_parent(), "이야기", _open_story, 100)
 	order_cue = _label(heading.get_parent(), "", 15)
 	order_cue.name = "CurrentOrderCue"
@@ -95,6 +98,7 @@ func _build_interface() -> void:
 	var column := _column(panel, 8)
 	_label(column, "18개 퍼즐 완료 · 아침의 서명", 21, GREEN)
 	_button(column, "크레딧", show_credits, 130)
+	_button(column, "전체 캠페인 다시 플레이", _ask_campaign_replay, 130)
 	_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17)
 	ending_panel.hide()
 
@@ -139,13 +143,32 @@ func is_finished() -> bool:
 	return session.is_finished()
 
 func show_credits() -> void:
+	# Public callers can open credits while an ending reading is still visible.
+	if overlay != null and overlay.get_meta("campaign_event_id", "") == "C03_ENDING":
+		_show_ending_credits()
+		return
+	_open_credits(Callable(self, "_noop"), "결말로 돌아가기")
+
+func _show_ending_credits() -> void:
+	# Dialog actions clear event metadata before dispatch, so bind the origin
+	# explicitly instead of relying on metadata surviving dialog replacement.
+	_open_credits(Callable(self, "_replay_event").bind("C03_ENDING"), "결말 기록으로 돌아가기")
+
+func _open_credits(back: Callable, back_caption: String) -> void:
 	if not is_finished() or not game_active:
 		return
 	var credits: Dictionary = CampaignState.story_data()["credits"]
-	# The export preset already includes *.md; keep the original ending credits.
 	var attribution := FileAccess.get_file_as_string("res://CREDITS_KO.md")
-	_show_dialog(credits["title"], credits["text"] + "\n\n" + attribution + "\n\n" + _engine_credits(), [
-		{"label": "결말로 돌아가기", "call": Callable(self, "_noop")},
+	_show_dialog(credits["title"], credits["text"] + "\n\n" + attribution, [
+		{"label": back_caption, "call": back},
+		{"label": "엔진·글꼴 라이선스 전문", "call": Callable(self, "_show_credit_notices").bind(back, back_caption)},
+	])
+
+func _show_credit_notices(back: Callable, back_caption: String) -> void:
+	if not is_finished() or not game_active:
+		return
+	_show_dialog("엔진·글꼴 라이선스 고지", _engine_credits(), [
+		{"label": "크레딧으로 돌아가기", "call": Callable(self, "_open_credits").bind(back, back_caption)},
 	])
 
 func _engine_credits() -> String:
@@ -283,7 +306,7 @@ func _open_start() -> void:
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
 		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start")},
 		{"label": "기록함", "call": Callable(self, "_open_journal")},
-		{"label": "이야기 · 장 선택", "call": Callable(self, "_open_story")},
+		{"label": "이야기 다시 읽기", "call": Callable(self, "_open_story")},
 		{"label": "도움말", "call": Callable(self, "_open_help")},
 		{"label": "설정", "call": Callable(self, "_open_settings")},
 		{"label": "종료", "call": Callable(self, "_quit_game")},
@@ -294,13 +317,31 @@ func _open_start() -> void:
 	_confine_journal_focus()
 
 func _ask_new_game() -> void:
-	if _has_valid_save():
-		_show_dialog("새 캠페인", "제1장을 처음부터 시작하고 캠페인 저장을 교체할까요?", [
-			{"label": "취소", "call": Callable(self, "_open_start")},
-			{"label": "처음부터 시작", "call": Callable(self, "_new_game")},
-		])
+	if game_active and overlay != null and overlay.get_meta("campaign_event_id", "") == "C03_ENDING":
+		_ask_ending_replay()
+		return
+	if game_active or _has_valid_save():
+		_confirm_new_campaign(Callable(self, "_noop") if game_active else Callable(self, "_open_start"))
 	else:
 		start_new()
+
+func _ask_campaign_replay() -> void:
+	if not game_active or not is_finished():
+		return
+	_confirm_new_campaign(Callable(self, "_noop"))
+
+func _ask_ending_replay() -> void:
+	if not game_active or not is_finished():
+		return
+	_confirm_new_campaign(Callable(self, "_replay_event").bind("C03_ENDING"))
+
+func _confirm_new_campaign(back: Callable) -> void:
+	# First option is also Escape. Opening/cancelling only changes the dialog;
+	# the affirmative action alone enters the existing new-campaign lifecycle.
+	_show_dialog("전체 캠페인 다시 시작", "제1장 첫 의뢰부터 열여덟 의뢰를 모두 다시 시작합니다. 현재 캠페인 진행과 캠페인 저장을 새 진행으로 교체합니다. 인쇄·되돌리기 기록, 힌트와 읽은 의뢰서 기록도 초기화됩니다. 설정은 유지됩니다.\n\n처음부터 다시 플레이할까요?", [
+		{"label": "취소", "call": back},
+		{"label": "전체 캠페인 시작", "call": Callable(self, "_new_game")},
+	])
 
 func _open_help() -> void:
 	_show_dialog("캠페인 · 플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 반전됩니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\nAFTER는 무료 미리보기입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 각 의뢰에서 허용된 도장만 선택할 수 있습니다.\n3장, 모두 %d개 퍼즐입니다. 장의 마지막 목표를 완성해도 다음 버튼으로 직접 진행합니다. 이야기와 의뢰서 읽기는 퍼즐을 진행하지 않습니다. 마지막 완성 후 결말과 크레딧을 볼 수 있습니다. 되돌리기나 초기화로 마지막 퍼즐을 다시 열 수 있습니다." % session.puzzle_count(), [
@@ -319,7 +360,7 @@ func _open_story() -> void:
 			"disabled": not intro_available, "tooltip": "장의 시작을 다시 읽습니다." if intro_available else "다음 버튼으로 이 장의 첫 퍼즐에 들어가면 읽을 수 있습니다."})
 		options.append({"label": chapter["title"] + " · 마침 기록 읽기", "call": Callable(self, "_replay_event").bind(chapter["outro_event"]),
 			"disabled": not outro_available, "tooltip": "장의 마침 기록을 다시 읽습니다." if outro_available else "이 장의 마지막 퍼즐을 완성하면 읽을 수 있습니다."})
-	_show_dialog("이야기 · 장 선택", "\n\n".join(summaries), options)
+	_show_dialog("이야기 다시 읽기", "열린 장의 기록을 다시 읽습니다. 퍼즐을 선택하거나 진행을 바꾸지 않습니다.\n\n" + "\n\n".join(summaries), options)
 
 func _story_source():
 	if game_active:
@@ -333,9 +374,11 @@ func _replay_event(id: String) -> void:
 		return
 	# First presentation and every replay use the same immutable event text.
 	# Reading/dismissal never saves, marks completion or unlocks a chapter.
-	_show_dialog(source.event_title(id), source.event_text(id), [
-		{"label": "장 선택으로", "call": Callable(self, "_open_story")},
-	])
+	var options: Array = [{"label": "이야기 목록으로", "call": Callable(self, "_open_story")}]
+	if id == "C03_ENDING" and game_active and is_finished():
+		options.append({"label": "크레딧", "call": Callable(self, "_show_ending_credits")})
+		options.append({"label": "전체 캠페인 다시 플레이", "call": Callable(self, "_ask_ending_replay")})
+	_show_dialog(source.event_title(id), source.event_text(id), options)
 	overlay.set_meta("campaign_event_id", id)
 
 func _open_order() -> void:
@@ -459,7 +502,7 @@ func _open_hint() -> void:
 
 func _guidance(data: Dictionary, preview_cells: Array) -> String:
 	if is_finished():
-		return "✓ %d개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 아침의 서명과 크레딧을 확인하세요. U/Z 되돌리기 · R 초기화 · 메뉴에서 처음부터." % session.puzzle_count()
+		return "✓ %d개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 아침의 서명과 크레딧을 확인하세요. U/Z 되돌리기 · R 초기화 · 결말에서 전체 캠페인 다시 플레이." % session.puzzle_count()
 	if bool(data["solved"]) and int(data["puzzle"]) in [7, 12]:
 		return "✓ 장의 목표 완성! 이야기에서 마침 기록을 읽거나 N · 다음 퍼즐로 다음 장에 직접 진행하세요. U/Z로 완료를 되돌릴 수 있습니다."
 	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
