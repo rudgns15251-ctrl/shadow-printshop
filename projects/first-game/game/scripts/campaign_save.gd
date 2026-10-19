@@ -12,7 +12,7 @@ const MAX_BYTES := 8 * 1024 * 1024
 
 func envelope(session, hints: Array) -> Dictionary:
 	return {"format": FORMAT, "schema_version": SCHEMA_VERSION,
-		"campaign_version": CAMPAIGN_VERSION, "chapter_id": "C01",
+		"campaign_version": CAMPAIGN_VERSION, "chapter_id": session.chapter_id(),
 		"progress": session.export_progress(), "hints": hints.duplicate()}
 
 func validate(data: Variant) -> bool:
@@ -34,10 +34,13 @@ func candidate(data: Variant) -> Dictionary:
 		return {}
 	if not CampaignState._whole(data["campaign_version"], CAMPAIGN_VERSION, CAMPAIGN_VERSION):
 		return {}
-	if not data["chapter_id"] is String or data["chapter_id"] != "C01":
+	if not data["chapter_id"] is String:
 		return {}
 	var restored = CampaignState.new()
-	if not data["hints"] is Array or data["hints"].size() != restored.puzzle_count():
+	if not data["hints"] is Array:
+		return {}
+	var legacy: bool = data["hints"].size() == 8
+	if data["hints"].size() != restored.puzzle_count() and not legacy:
 		return {}
 	var hints: Array = []
 	for value in data["hints"]:
@@ -48,6 +51,14 @@ func candidate(data: Variant) -> Dictionary:
 		return {}
 	if not restored.import_progress(data["progress"]):
 		return {}
+	# Eight-slot campaign-v1 saves describe C01 only. Preserve every field and
+	# append empty hint slots in memory; loading never rewrites either source.
+	if legacy and int(restored.snapshot()["puzzle"]) > 7:
+		return {}
+	if data["chapter_id"] != restored.chapter_id():
+		return {}
+	while hints.size() < restored.puzzle_count():
+		hints.append(0)
 	return {"session": restored, "hints": hints}
 
 func _read_bytes(path: String) -> Variant:
