@@ -1400,6 +1400,16 @@ def operator_integrate(run_id, c, p, push=True):
         operator_safe_stop()
         plan, task, run, data = operator_run(run_id)
         require(data['phase'] in {'VERIFIED', 'INTEGRATE', 'COMMITTED', 'BACKUP'}, 'Run not verified')
+        if task['status'] == 'BLOCKED' and data['phase'] == 'VERIFIED':
+            # A guard refused before any copy (e.g. dirty tree). Nothing was integrated;
+            # retry only with the accepted review still bound to the exact verified source.
+            require(data.get('failure_category') not in FATAL, 'Fatal failure requires a person')
+            require(data.get('production_review_snapshot') == data.get('validated_snapshot') == snapshot(run / 'game'),
+                    'Verified source or review changed')
+            data.setdefault('integration_retries', []).append({'time': now(), 'previous_error': data.get('error')})
+            data.update(status='RUNNING'); data.pop('error', None)
+            task['status'] = 'RUNNING'
+            checkpoint(run, data)
         previous, TASK_REVIEWER = TASK_REVIEWER, (lambda *args: None)  # require recorded review in integrate()
         try:
             execute(task, plan, c, p, recover=True, push=push)
