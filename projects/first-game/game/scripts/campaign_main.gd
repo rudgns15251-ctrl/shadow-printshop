@@ -23,8 +23,16 @@ func get_environment_audio() -> AudioStreamPlayer:
 	return environment_audio
 
 func _build_audio() -> void:
-	# Retain the inherited three-player SFX dictionary and its lifecycle.
+	# Retain the inherited three-player SFX dictionary and its lifecycle. The
+	# paper and chapter cues join that dictionary, so the inherited volume, mute
+	# and exit cleanup own them too.
 	super._build_audio()
+	for key in ["paper", "chapter"]:
+		var cue := AudioStreamPlayer.new()
+		cue.name = {"paper": "PaperSfx", "chapter": "ChapterSfx"}[key]
+		cue.stream = load({"paper": "res://assets/audio/menu_paper.wav", "chapter": "res://assets/audio/chapter_transition.wav"}[key])
+		add_child(cue)
+		audio[key] = cue
 	var ambience: AudioStreamWAV = load("res://assets/audio/shop_ambience.wav").duplicate()
 	ambience.loop_begin = 0
 	ambience.loop_end = int(round(ambience.get_length() * ambience.mix_rate))
@@ -137,7 +145,23 @@ func load_campaign() -> bool:
 
 func advance() -> void:
 	# Keep explicit Next, solved checks, input gates and the available final boundary.
+	var before: int = int(session.snapshot()["puzzle"])
 	super._next()
+	var after: int = int(session.snapshot()["puzzle"])
+	if after != before and int(session.puzzle_data()[after]["chapter"]) != int(session.puzzle_data()[before]["chapter"]):
+		_show_chapter_transition(int(session.puzzle_data()[after]["chapter"]))
+
+func _show_chapter_transition(chapter_number: int) -> void:
+	# The finished chapter's record and the new chapter's opening, read once at
+	# the boundary the player chose to cross. Progress was already saved by Next;
+	# reading and closing change nothing. Both remain replayable in 이야기.
+	var outro_id: String = CampaignState.CHAPTERS[chapter_number - 2]["outro_event"]
+	var intro_id: String = CampaignState.CHAPTERS[chapter_number - 1]["intro_event"]
+	_show_dialog(CampaignState.CHAPTERS[chapter_number - 1]["title"], "%s\n%s\n\n%s\n%s" % [
+		session.event_title(outro_id), session.event_text(outro_id), session.event_title(intro_id), session.event_text(intro_id)], [
+		{"label": "작업 시작", "call": Callable(self, "_noop")},
+	])
+	_play_sound("chapter")
 
 func is_finished() -> bool:
 	return session.is_finished()
@@ -387,6 +411,7 @@ func _replay_event(id: String) -> void:
 		options.append({"label": "전체 캠페인 다시 플레이", "call": Callable(self, "_ask_ending_replay")})
 	_show_dialog(source.event_title(id), source.event_text(id), options)
 	overlay.set_meta("campaign_event_id", id)
+	_play_sound("paper")
 
 func _open_order() -> void:
 	if not game_active or overlay.visible:
@@ -415,6 +440,7 @@ func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
 	])
 	_add_order_portrait(row)
 	_confine_journal_focus()
+	_play_sound("paper")
 
 func _add_order_portrait(row: Dictionary) -> void:
 	# Current orders and archive replay share this presentation-only mapping.
@@ -474,6 +500,7 @@ func _open_journal() -> void:
 		message = "읽은 의뢰서를 선택해 전문을 다시 볼 수 있습니다.\n읽은 순서: " + " → ".join(ids)
 	_show_dialog("캠페인 · 기록함", message, options)
 	_confine_journal_focus()
+	_play_sound("paper")
 
 func _replay_order(id: String) -> void:
 	if not _journal_read_ids().has(id):
@@ -511,7 +538,7 @@ func _guidance(data: Dictionary, preview_cells: Array) -> String:
 	if is_finished():
 		return "✓ %d개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 아침의 서명과 크레딧을 확인하세요. U/Z 되돌리기 · R 초기화 · 결말에서 전체 캠페인 다시 플레이." % session.puzzle_count()
 	if bool(data["solved"]) and int(data["puzzle"]) in [7, 12]:
-		return "✓ 장의 목표 완성! 이야기에서 마침 기록을 읽거나 N · 다음 퍼즐로 다음 장에 직접 진행하세요. U/Z로 완료를 되돌릴 수 있습니다."
+		return "✓ 장의 목표 완성! N · 다음 퍼즐을 누르면 이 장의 마침 기록과 다음 장의 시작을 읽고 진행합니다. U/Z로 완료를 되돌릴 수 있습니다."
 	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
 		var selection := "도장 %s · %d°" % ["A" if int(data["selected_mask"]) == 0 else "B", int(data["rotation"]) * 90]
 		if preview_cells == data["target"]:
@@ -553,4 +580,4 @@ func _refresh() -> void:
 		next_button.tooltip_text = "18개 퍼즐을 모두 완성했습니다. 다음 퍼즐이 없습니다."
 	elif session.is_solved() and int(session.snapshot()["puzzle"]) in [7, 12]:
 		subheading.text = chapter["title"] + " 완료 · 다음 버튼 또는 N으로 다음 장에 직접 진행하세요."
-		next_button.tooltip_text = "다음 장의 첫 퍼즐로 직접 진행합니다. (N)"
+		next_button.tooltip_text = "이 장의 마침 기록과 다음 장의 시작을 보여 주고 다음 장의 첫 퍼즐로 진행합니다. (N)"

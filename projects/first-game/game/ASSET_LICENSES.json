@@ -183,5 +183,67 @@
       "scripts/slice_main.gd::_open_settings"
     ],
     "review_pending": "Qualified coordinator runtime/import/export and WASAPI probes; human listening for seam, tone, fatigue and startling effects; human verification of provenance, grant and credits. Existing importer-owned metadata is untouched."
+  },
+  {
+    "path": "assets/audio/menu_paper.wav",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original procedural synthesis authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Generated offline with Python standard-library math, random (fixed seed), struct, io and wave only. No recordings, external samples, downloads, network access or generative audio services.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "synthesis": {
+      "generator": ".autodev/audio_lab/synth_s07_sfx.py (repository path, outside the shipped game folder; sha256 2d146d7ab67b578bb8ac3a0fdda14849574805f25a41e33b39bb4a461d7719a3 as committed)",
+      "seed": 20261021,
+      "recipe": "White noise from random.Random(20261021) through a 1200 Hz one-pole high-pass and 5200 Hz one-pole low-pass; envelope = 0.12*sin(pi*t/0.42) slide bed + three crinkle bursts at 0, 0.11, 0.24 s (gains 1.0, 0.7, 0.45; 6 ms linear attack; exponential decay 45/40/55 ms); 2 ms raised-cosine fade-in, 30 ms fade-out, final sample 0; peak normalized to 0.20."
+    },
+    "final_encoded_measurements": {
+      "sha256": "b49b85b93514d62fd0264357bdeb1996d92cb7a8b2d766d1252f500254c0fd83",
+      "format": "WAV RIFF PCM16 mono",
+      "sample_rate_hz": 48000,
+      "frame_count": 20160,
+      "duration_seconds": 0.42,
+      "absolute_peak_pcm16": 6553,
+      "normalized_absolute_peak": 0.199981689453125,
+      "first_sample_pcm16": 0,
+      "last_sample_pcm16": 0
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_build_audio",
+      "scripts/campaign_main.gd::_show_order",
+      "scripts/campaign_main.gd::_open_journal",
+      "scripts/campaign_main.gd::_replay_event"
+    ],
+    "review_pending": "Human speaker/headphone listening for loudness, fatigue and character; human verification of provenance and credits."
+  },
+  {
+    "path": "assets/audio/chapter_transition.wav",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original procedural synthesis authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Generated offline with Python standard-library math, random (fixed seed), struct, io and wave only. No recordings, external samples, downloads, network access or generative audio services.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "synthesis": {
+      "generator": ".autodev/audio_lab/synth_s07_sfx.py (repository path, outside the shipped game folder; sha256 2d146d7ab67b578bb8ac3a0fdda14849574805f25a41e33b39bb4a461d7719a3 as committed)",
+      "seed": 19981118,
+      "recipe": "Muffled press thump: sine sweeping 92->58 Hz (58+34*exp(-t/0.09)), 12 ms attack, exp(-t/0.28) decay; 180 Hz wood knock 0.35*exp(-t/0.05); softer release thump at 0.62 s (72->52 Hz, 0.45 gain, exp decay 0.22 s); paper slide = noise (300 Hz high-pass, 2500 Hz low-pass) under a 0.18-1.35 s half-sine envelope; faint 523.25/784 Hz ring at 0.04*exp(-t/0.6); 0.5 ms fade-in, 150 ms raised-cosine fade-out, final sample 0; peak normalized to 0.34."
+    },
+    "final_encoded_measurements": {
+      "sha256": "730b7ad7789c876d0e7ade675894289a8f2e575a58a76d24dc741b915954e63a",
+      "format": "WAV RIFF PCM16 mono",
+      "sample_rate_hz": 48000,
+      "frame_count": 86400,
+      "duration_seconds": 1.8,
+      "absolute_peak_pcm16": 11141,
+      "normalized_absolute_peak": 0.339996337890625,
+      "first_sample_pcm16": 0,
+      "last_sample_pcm16": 0
+    },
+    "offline_mix_evidence": {
+      "worst_two_sfx_plus_ambience_peak_bound": 0.913086,
+      "calculation": "largest retained SFX peak (slice_print 0.5131) + chapter_transition peak + shop_ambience peak, asserted below 1.0; not a runtime or listening claim."
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_build_audio",
+      "scripts/campaign_main.gd::_show_chapter_transition"
+    ],
+    "review_pending": "Human speaker/headphone listening for startle, loudness and fit with the ambience; human verification of provenance and credits."
   }
 ]
