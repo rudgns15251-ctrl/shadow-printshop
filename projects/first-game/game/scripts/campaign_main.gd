@@ -524,7 +524,10 @@ func _refresh() -> void:
 	var data: Dictionary = session.snapshot()
 	var puzzle: Dictionary = session.puzzle_data()[int(data["puzzle"])]
 	var chapter: Dictionary = CampaignState.CHAPTERS[int(puzzle["chapter"]) - 1]
-	heading.text = chapter["title"] + " · " + heading.text
+	# The original eight keep their protected English data titles; show Korean
+	# display names from story data. Later puzzles already carry Korean titles.
+	var title: String = str(CampaignState.story_data().get("display_titles", {}).get(puzzle["id"], puzzle["title"]))
+	heading.text = "%s · 퍼즐 %d / %d     ·     %s" % [chapter["title"], int(data["puzzle"]) + 1, session.puzzle_count(), title]
 	# Context only: never open an order or mark it read during refresh.
 	if order_cue != null:
 		for row in CampaignState.story_data()["orders"]:
