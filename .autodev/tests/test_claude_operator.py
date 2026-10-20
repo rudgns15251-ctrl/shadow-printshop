@@ -164,6 +164,26 @@ class OperatorPath(base.Coordinator):
         self.assertEqual(data['production_reviews'][-1]['reviewer'], 'independent read-only reviewer')
         self.assertEqual(a.git('status', '--porcelain'), '')
 
+    def test_pre_integration_guard_refusal_can_retry_without_reverification(self):
+        run, stage = self.stage()
+        (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit\n')
+        with patch('builtins.print'):
+            a.operator_verify(run, self.file('out.json', outcome()), self.c, self.p)
+            a.operator_review(run, self.review(), 'reviewer', self.c, self.p)
+        stray = self.root / 'stray.txt'; stray.write_text('unrelated')
+        with self.assertRaisesRegex(a.ERROR, 'dirty'):
+            a.operator_integrate(run, self.c, self.p, push=False)
+        self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
+        (stage / 'scripts/slice_main.gd').write_text('extends Control\n# tampered\n')
+        stray.unlink()
+        with self.assertRaisesRegex(a.ERROR, 'changed'):
+            a.operator_integrate(run, self.c, self.p, push=False)
+        (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit\n')
+        with patch('builtins.print'):
+            a.operator_integrate(run, self.c, self.p, push=False)
+        self.assertEqual(a.read(a.PLAN)['tasks'][0]['status'], 'DONE')
+        self.assertEqual(len(a.read(a.HERE / 'runs' / run / 'autonomous.json')['integration_retries']), 1)
+
     def test_integration_refused_without_review_or_after_revise(self):
         run, stage = self.stage()
         (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit\n')
