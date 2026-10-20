@@ -224,7 +224,13 @@ func _clear_dialog() -> void:
 		_disconnect_dialog_actions(dialog)
 		super._clear_dialog()
 
+func _cancel_presentation_motion() -> void:
+	# Modals block input; a print/undo flourish must not keep animating behind them.
+	_finish_reaction()
+	_clear_impression()
+
 func _show_dialog(title: String, message: String, options: Array) -> void:
+	_cancel_presentation_motion()
 	super._show_dialog(title, message, options)
 	var buttons: Node = dialog.get_child(dialog.get_child_count() - 1)
 	for index in range(options.size()):
@@ -261,6 +267,7 @@ func _collect_dialog_controls(node: Node, controls: Array[Control]) -> void:
 		_collect_dialog_controls(child, controls)
 
 func _open_settings() -> void:
+	_cancel_presentation_motion()
 	super._open_settings()
 	_confine_journal_focus()
 
