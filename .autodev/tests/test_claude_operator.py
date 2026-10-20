@@ -112,6 +112,20 @@ class ClaudeAdapter(base.Coordinator):
         self.assertNotIn('CLAUDECODE', env); self.assertNotIn('CLAUDE_CODE_SIMPLE', env)
         self.assertNotIn('CLAUDE_AGENT_SDK_VERSION', env); self.assertEqual(env['KEEP_ME'], 'y')
 
+    def test_probe_engine_crash_is_environment_not_unknown(self):
+        task = a.validate_tasks([dict(self.task(), acceptance_probes=['campaign_shell'])], self.p)[0]
+        def crash(cmd, run, data, name, *args, **kwargs):
+            if name.endswith('campaign_shell'):
+                return 3221225477, 'CAMPAIGN_SHELL_PASS'
+            return self.provider(cmd, run, data, name, *args, **kwargs)
+        stage = self.root / 'stage'; a.auto.copy_game(self.game, stage)
+        data = {'attempts': 1, 'baseline': a.snapshot(stage), 'changes': [], 'qa': [], 'failures': []}
+        with patch.object(a, 'process', crash), patch.object(a.auto, 'check_template', return_value='x'), \
+             patch.object(a, 'static_check'), patch('builtins.print'):
+            with self.assertRaises(a.ERROR) as caught:
+                a.qa(stage, self.run, data, self.c, self.p, task)
+        self.assertEqual(a.classify('QA', str(caught.exception)), 'ENVIRONMENT')
+
     def test_codex_remains_default(self):
         c = dict(self.c); c.pop('model_cli')
         with patch.object(a, 'codex_executable', side_effect=a.ERROR('codex path used')):

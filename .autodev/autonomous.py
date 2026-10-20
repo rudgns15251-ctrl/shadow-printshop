@@ -785,7 +785,8 @@ def qa(stage, run, data, c, p, task):
             ok = ok and 'Unicode parsing error' not in text
         data['qa'].append({'name': 'ACCEPTANCE:' + probe, 'pass': ok, 'marker': marker})
         checkpoint(run, data)
-        require(ok, 'ACCEPTANCE: ' + text[-14000:])
+        # Exit code included like core gates, so an engine access violation is classified.
+        require(ok, 'ACCEPTANCE: ' + probe + ': exit=' + str(rc) + '\n' + text[-14000:])
     # Verify source after QA; tests cannot secretly mutate allowed game content.
     data['validated_snapshot'] = snapshot(stage)
     data['changes'] = run_changes(data, data['validated_snapshot'], task, p)
@@ -1199,6 +1200,7 @@ def reconcile_infrastructure(run_id, c, p):
                    '.autodev/tests/test_blocked_recovery.py', '.autodev/checks/campaign_recovery.gd',
                    '.autodev/campaign_data.py', '.autodev/tests/test_campaign_data.py'}
         allowed.add('.autodev/checks/campaign_hints.gd')
+        allowed.update({'.autodev/tests/test_claude_operator.py', '.autodev/audio_lab/synth_s07_sfx.py'})
         require(set(files) <= allowed, 'Unreviewed infrastructure changes')
         if '.gitattributes' in files:
             require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [
