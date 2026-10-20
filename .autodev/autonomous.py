@@ -43,7 +43,12 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'campaign_hints': ('campaign_hints.gd', 'CAMPAIGN_HINT_PASS'),
                      'campaign_full': ('campaign_full.gd', 'CAMPAIGN_FULL_PASS'),
                      'sound_content': ('sound_content.gd', 'SOUND_CONTENT_PASS'),
-                     'release_candidate': ('release_candidate.gd', 'RELEASE_CANDIDATE_PASS')}
+                     'release_candidate': ('release_candidate.gd', 'RELEASE_CANDIDATE_PASS'),
+                     # S07 release polish, written test-first by the Claude Code operator.
+                     'modal_motion': ('modal_motion.gd', 'MODAL_MOTION_PASS'),
+                     'campaign_titles': ('campaign_titles.gd', 'CAMPAIGN_TITLES_PASS'),
+                     'chapter_transition': ('chapter_transition.gd', 'CHAPTER_TRANSITION_PASS'),
+                     'asset_licenses': ('asset_licenses.gd', 'ASSET_LICENSES_PASS')}
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
 def now():
@@ -284,7 +289,148 @@ def codex_executable(c):
     require(executable, 'Native Codex CLI missing; no installation attempted')
     return executable
 
+IMPLEMENTATION_SCHEMA = {'type': 'object', 'additionalProperties': False,
+    'properties': {'status': {'type': 'string', 'enum': ['implemented', 'code_ready', 'blocked']},
+                   'summary': {'type': 'string'},
+                   'unverified_acceptance': {'type': 'array', 'items': {'type': 'string'}},
+                   'tests_actually_run': {'type': 'array', 'items': {'type': 'string'}},
+                   'verification_pending': {'type': 'array', 'items': {'type': 'string'}},
+                   'human_review_pending': {'type': 'array', 'items': {'type': 'string'}}},
+    'required': ['status', 'summary', 'unverified_acceptance', 'tests_actually_run',
+                 'verification_pending', 'human_review_pending']}
+
+def accept_outcome(run, data, c, name, last):
+    """The writer's own structured claim; blocked or unverified is never success."""
+    outcome = read(last)
+    data.setdefault('model_outcomes', []).append({'name': name, 'time': now(), **outcome})
+    checkpoint(run, data)
+    require((outcome['status'] == 'implemented' or
+             (outcome['status'] == 'code_ready' and handoff_enabled(c))) and not outcome['unverified_acceptance'],
+            'ACCEPTANCE_UNVERIFIED: ' + json.dumps(outcome['unverified_acceptance'], ensure_ascii=False))
+
+def model_cli(c):
+    name = c.get('model_cli', 'codex')
+    require(name in {'codex', 'claude'}, 'Unknown model CLI: ' + str(name))
+    return name
+
+# Claude Code CLI contract (verified against the installed 2.1.x --help and a real
+# unauthenticated call): one JSON result object on stdout, is_error/subtype for
+# failures, structured_output when --json-schema is given. File tools only; no
+# shell, so the restricted writer cannot launch Godot, commit, push or install.
+CLAUDE_FLAGS = ('--print', '--output-format', '--json-schema', '--tools', '--allowedTools', '--permission-mode',
+                '--no-session-persistence', '--safe-mode', '--strict-mcp-config', '--max-budget-usd')
+CLAUDE_READ_TOOLS = ('Read', 'Grep', 'Glob')
+CLAUDE_WRITE_TOOLS = CLAUDE_READ_TOOLS + ('Edit', 'Write')
+CLAUDE_AUTH = re.compile(r'(?i)not logged in|please run /login|invalid api key|oauth token|credit balance|'
+                         r'usage limit|rate.limit|quota|overloaded')
+
+def claude_executable(c):
+    executable = c.get('claude_executable') or shutil.which('claude')
+    require(executable and Path(executable).is_file(), 'Claude Code CLI missing; no installation attempted')
+    return executable
+
+def claude_env():
+    # A director started from inside an interactive Claude session must not hand its
+    # session identity, bare mode or host-auth channel to the independent worker.
+    env = os.environ.copy()
+    for key in list(env):
+        if key == 'CLAUDECODE' or key.startswith(('CLAUDE_CODE_', 'CLAUDE_AGENT_SDK_')) or key in {'CLAUDE_PID'}:
+            env.pop(key)
+    return env
+
+def claude_logged_in(c):
+    """Ask the CLI itself; never read, copy or log credential files or tokens."""
+    try:
+        p = subprocess.run([claude_executable(c), 'auth', 'status'], capture_output=True, encoding='utf-8',
+                           errors='replace', timeout=60, env=claude_env(), stdin=subprocess.DEVNULL,
+                           creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        return bool(json.loads(p.stdout).get('loggedIn'))
+    except (ValueError, OSError, subprocess.SubprocessError, AttributeError):
+        return False
+
+def require_model_ready(c):
+    """Refuse before any attempt is spent; a person must authenticate the CLI."""
+    if model_cli(c) == 'claude':
+        require(claude_logged_in(c), 'AUTH_OR_USAGE: bounded stop; Claude Code CLI is not logged in. '
+                'A person must run `claude auth login` once; no attempt consumed')
+
+def schema_errors(value, schema, where='$'):
+    """Minimal trusted check of the subset of JSON Schema the coordinator writes."""
+    kind = schema.get('type')
+    if kind == 'object':
+        if not isinstance(value, dict): return [where + ' not object']
+        errors = [where + '.' + key + ' missing' for key in schema.get('required', []) if key not in value]
+        if schema.get('additionalProperties') is False:
+            errors += [where + '.' + key + ' unexpected' for key in value if key not in schema.get('properties', {})]
+        for key, sub in schema.get('properties', {}).items():
+            if key in value: errors += schema_errors(value[key], sub, where + '.' + key)
+        return errors
+    if kind == 'array':
+        if not isinstance(value, list): return [where + ' not array']
+        return [e for i, item in enumerate(value) for e in schema_errors(item, schema.get('items', {}), '%s[%d]' % (where, i))]
+    if kind == 'string':
+        if not isinstance(value, str): return [where + ' not string']
+        return [where + ' not allowed'] if 'enum' in schema and value not in schema['enum'] else []
+    return []
+
+def claude(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
+    exe = claude_executable(c)
+    rc, help_text = process([exe, '--help'], run, data, name + '-help', 60, env=claude_env())
+    require(rc == 0 and all(flag in help_text for flag in CLAUDE_FLAGS), 'Installed Claude CLI options unsupported')
+    require_model_ready(c)
+    last = run / (name + '-last.txt')
+    implementation_schema = schema is None
+    if implementation_schema:
+        schema = run / (name + '-schema.json')
+        write(schema, IMPLEMENTATION_SCHEMA)
+    expected = read(schema)
+    budget = float(c.get('claude_max_budget_usd', 3.0))
+    require(0 < budget <= 20, 'Unsafe per-call model budget')
+    tools = ','.join(CLAUDE_READ_TOOLS if read_only else CLAUDE_WRITE_TOOLS)
+    cmd = [exe, '--print', '--output-format', 'json', '--json-schema', json.dumps(expected, separators=(',', ':')),
+           '--tools', tools, '--allowedTools', tools,
+           # Read-only roles deny anything not pre-allowed; the writer may edit only
+           # inside its disposable stage (cwd). Scope is re-checked by snapshots.
+           '--permission-mode', 'dontAsk' if read_only else 'acceptEdits',
+           '--no-session-persistence', '--safe-mode', '--strict-mcp-config', '--max-budget-usd', str(budget)]
+    if c.get('claude_model'): cmd += ['--model', c['claude_model']]
+    if c.get('claude_effort'): cmd += ['--effort', c['claude_effort']]
+    (run / (name + '-prompt.txt')).write_text(prompt, encoding='utf-8')
+    rc, output = process(cmd, run, data, name, p['codex_timeout_seconds'], stdin=prompt, cwd=stage, env=claude_env())
+    result = None
+    for line in reversed(output.splitlines()):
+        try:
+            item = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(item, dict) and item.get('type') == 'result':
+            result = item
+            break
+    record = {'name': name, 'cli': 'claude', 'time': now(), 'exit_code': rc}
+    if result:
+        record.update({k: result.get(k) for k in ('subtype', 'is_error', 'num_turns', 'total_cost_usd',
+                                                    'duration_ms', 'api_error_status', 'terminal_reason')})
+        record['permission_denials'] = len(result.get('permission_denials') or [])
+    data.setdefault('model_calls', []).append(record)
+    checkpoint(run, data)
+    if not result or rc != 0 or result.get('is_error') or result.get('subtype') != 'success':
+        detail = str((result or {}).get('result') or (result or {}).get('subtype') or 'no result object')[:300]
+        if (CLAUDE_AUTH.search(detail) or (result or {}).get('api_error_status') in (401, 403, 429) or
+                'budget' in str((result or {}).get('subtype', ''))):
+            raise ERROR('AUTH_OR_USAGE: bounded stop; Claude CLI stopped: ' + detail)
+        raise ERROR('CODEX: bounded stop; Claude CLI failed (' + detail + '); see private run log')
+    structured = result.get('structured_output')
+    problems = schema_errors(structured, expected)
+    require(not problems, 'CODEX: bounded stop; Claude structured output invalid: ' + '; '.join(problems[:5]))
+    write(last, structured)
+    if implementation_schema:
+        accept_outcome(run, data, c, name, last)
+    return last
+
 def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
+    # The single model seam: planner, writer and independent reviewer all pass here.
+    if model_cli(c) == 'claude':
+        return claude(stage, run, data, prompt, c, p, name, read_only, schema)
     exe = codex_executable(c)
     rc, help_text = process([exe, 'exec', '--help'], run, data, name + '-help', 30)
     require(rc == 0 and all(flag in help_text for flag in ('--sandbox', '--json', '--output-last-message')), 'Installed CLI options unsupported')
@@ -292,15 +438,7 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
     implementation_schema = schema is None
     if implementation_schema:
         schema = run / (name + '-schema.json')
-        write(schema, {'type': 'object', 'additionalProperties': False,
-                       'properties': {'status': {'type': 'string', 'enum': ['implemented', 'code_ready', 'blocked']},
-                                      'summary': {'type': 'string'},
-                                      'unverified_acceptance': {'type': 'array', 'items': {'type': 'string'}},
-                                      'tests_actually_run': {'type': 'array', 'items': {'type': 'string'}},
-                                      'verification_pending': {'type': 'array', 'items': {'type': 'string'}},
-                                      'human_review_pending': {'type': 'array', 'items': {'type': 'string'}}},
-                       'required': ['status', 'summary', 'unverified_acceptance', 'tests_actually_run',
-                                    'verification_pending', 'human_review_pending']})
+        write(schema, IMPLEMENTATION_SCHEMA)
     cmd = [exe, 'exec', '--sandbox', 'read-only' if read_only else 'workspace-write',
            '-C', stage, '--json', '--output-last-message', last]
     if schema:
@@ -322,12 +460,7 @@ def codex(stage, run, data, prompt, c, p, name, read_only=False, schema=None):
             continue
     require(any(e.get('type') == 'turn.completed' for e in events) and not any(e.get('type') in {'turn.failed', 'error'} for e in events), 'CODEX: no clean completed turn')
     if implementation_schema:
-        outcome = read(last)
-        data.setdefault('model_outcomes', []).append({'name': name, 'time': now(), **outcome})
-        checkpoint(run, data)
-        require((outcome['status'] == 'implemented' or
-                 (outcome['status'] == 'code_ready' and handoff_enabled(c))) and not outcome['unverified_acceptance'],
-                'ACCEPTANCE_UNVERIFIED: ' + json.dumps(outcome['unverified_acceptance'], ensure_ascii=False))
+        accept_outcome(run, data, c, name, last)
     return last
 
 def classify(step, text):
@@ -484,6 +617,7 @@ def make_plan(c, p):
     with locked():
         clean()
         branch = branch_ok(p)
+        require_model_ready(c)
         require((STATE / 'goal.json').exists(), 'Register a goal first')
         if PLAN.exists():
             existing = read(PLAN)
@@ -993,6 +1127,15 @@ def run_plan(c, p, recover=False, push=False, limit=None):
         if not recover:
             require(not any(t['status'] in {'RUNNING', 'PAUSED'} for t in plan['tasks']),
                     'Interrupted/paused task requires resume before new work')
+        # Writers/reviewers need the model; refuse before an attempt is counted.
+        # Verified integration/backup recovery needs no model and stays available.
+        def needs_model(task):
+            if task['status'] == 'DONE': return False
+            if not task.get('run'): return True
+            meta = read(inside(HERE / 'runs', task['run']) / 'autonomous.json')
+            return meta['phase'] not in {'VERIFIED', 'INTEGRATE', 'COMMITTED', 'BACKUP', 'DONE'}
+        if any(needs_model(t) for t in plan['tasks']):
+            require_model_ready(c)
         if recover and PAUSE.exists():
             PAUSE.rename(STATE / ('pause-handled-' + uuid.uuid4().hex + '.json'))
         count = 0
@@ -1143,6 +1286,130 @@ def qualify_verification(run_id, c, p):
             raise
     print('OBJECTIVE_VERIFICATION_RECORDED_FRESH_WRITER_REQUIRED')
 
+# ---------------------------------------------------------------------------
+# Operator path: an interactive Claude Code session acts as the writer while the
+# background director cannot call a model (e.g. CLI not logged in). Only the
+# writer changes. Scope snapshots, every QA gate, a recorded independent review,
+# the integration journal and the verified backup are the unchanged trusted code.
+# ---------------------------------------------------------------------------
+REVIEW_SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
+    'decision': {'type': 'string', 'enum': ['accept', 'revise']},
+    'implementation_status': {'type': 'string', 'enum': ['code_ready', 'blocked']},
+    'narrative_editor': {'type': 'array', 'items': {'type': 'string'}},
+    'design_visual_flow_technical': {'type': 'array', 'items': {'type': 'string'}},
+    'blocking_issues': {'type': 'array', 'items': {'type': 'string'}},
+    'human_review_pending': {'type': 'array', 'items': {'type': 'string'}}},
+    'required': ['decision', 'implementation_status', 'narrative_editor', 'design_visual_flow_technical',
+                 'blocking_issues', 'human_review_pending']}
+
+def operator_safe_stop():
+    owner = STATE / 'production/owner.json'
+    require(not owner.exists() or not alive(read(owner).get('pid')), 'Production owner is live; operator work only at a safe stop')
+
+def operator_run(run_id):
+    plan = read(PLAN)
+    task = next((t for t in plan['tasks'] if t.get('run') == run_id), None)
+    require(task is not None, 'Run is not in the current plan')
+    run = inside(HERE / 'runs', run_id)
+    data = read(run / 'autonomous.json')
+    require(data.get('operator') and not alive(data.get('child_pid')), 'Not an idle operator run')
+    require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')
+    return plan, task, run, data
+
+def operator_stage(task_id, c, p):
+    with locked():
+        operator_safe_stop()
+        plan = read(PLAN)
+        require(plan.get('status') not in {'SUPERSEDED', 'DONE'}, 'No active plan')
+        require(plan['policy_sha256'] == auto.sha(HERE / 'policy.json'), 'Policy changed; replan required')
+        task = next((t for t in plan['tasks'] if t['id'] == task_id), None)
+        require(task is not None and task['status'] == 'PENDING' and not task.get('run'), 'Task is not pending')
+        require(task is next_task(plan), 'Dependencies first')
+        run, data = new_run(task, c, p, plan)
+        data['operator'] = {'writer': 'claude-code-interactive-session', 'time': now(),
+                            'note': 'Writer edits only the disposable stage; trusted QA/review/integration unchanged'}
+        checkpoint(run, data, 'IMPLEMENT')
+        task.update(run=run.name, status='RUNNING')
+        write(PLAN, plan)
+    print(json.dumps({'run': run.name, 'stage': str(run / 'game'), 'allowed': task['allowed']}, ensure_ascii=False))
+
+def operator_verify(run_id, outcome_file, c, p):
+    with locked():
+        operator_safe_stop()
+        plan, task, run, data = operator_run(run_id)
+        stage = run / 'game'
+        require(data['phase'] in {'IMPLEMENT', 'REPAIR'}, 'Run is not awaiting implementation')
+        require(git('rev-parse', 'HEAD') == data['source_commit'] and snapshot(source(c)) == data['source_snapshot'],
+                'Source changed during implementation')
+        require(git('rev-parse', 'HEAD', cwd=stage) == data['stage_commit'], 'Stage Git history changed')
+        outcome = read(outcome_file)
+        problems = schema_errors(outcome, IMPLEMENTATION_SCHEMA)
+        require(not problems, 'Invalid operator outcome: ' + '; '.join(problems))
+        limit = min(p['max_fixes'] + 1, c.get('task_attempt_limits', {}).get(task['id'], p['max_fixes'] + 1))
+        require(data['attempts'] < limit, 'Repair budget exhausted')
+        data['attempts'] += 1
+        task['attempts'] = data['attempts']
+        name = 'coder-%d' % data['attempts']
+        write(run / (name + '-last.txt'), outcome)
+        data.setdefault('model_calls', []).append({'name': name, 'cli': 'claude-code-operator', 'time': now()})
+        try:
+            accept_outcome(run, data, c, name, run / (name + '-last.txt'))
+            require(run_changes(data, snapshot(stage), task, p), 'Operator made no real allowed changes')
+            qa(stage, run, data, c, p, task)
+        except (ERROR, OSError, subprocess.SubprocessError) as exc:
+            category, repeated = record_failure(run, data, exc, task)
+            data['status'] = 'RUNNING'
+            checkpoint(run, data, 'REPAIR')
+            write(PLAN, plan)
+            raise ERROR(category + ': operator verification failed (attempt %d/%d, same failure %dx); stage kept for repair'
+                        % (data['attempts'], limit, repeated))
+        write(PLAN, plan)
+    print('OPERATOR_QA_VERIFIED ' + data['qa_source_sha256'])
+
+def operator_review(run_id, review_file, reviewer, c, p):
+    """Record a separate read-only reviewer's verdict on the exact verified source."""
+    with locked():
+        operator_safe_stop()
+        plan, task, run, data = operator_run(run_id)
+        require(data['phase'] == 'VERIFIED' and snapshot(run / 'game') == data['validated_snapshot'],
+                'Review requires the exact verified stage')
+        review = read(review_file)
+        problems = schema_errors(review, REVIEW_SCHEMA)
+        require(not problems, 'Invalid review: ' + '; '.join(problems))
+        index = len(data.get('production_reviews', [])) + 1
+        stored = run / ('product-review-%d-last.txt' % index)
+        write(stored, review)
+        data.setdefault('production_reviews', []).append({'time': now(), 'source_sha256': data['qa_source_sha256'],
+                                                         'reviewer': reviewer, 'record': stored.name,
+                                                         'record_sha256': auto.sha(stored), **review})
+        if review['decision'] == 'accept' and review['implementation_status'] == 'code_ready' and not review['blocking_issues']:
+            data['production_review_snapshot'] = dict(data['validated_snapshot'])
+            checkpoint(run, data, 'VERIFIED')
+            print('OPERATOR_REVIEW_ACCEPTED')
+            return
+        data.pop('production_review_snapshot', None)
+        data['failures'].append({'attempt': data['attempts'], 'phase': 'REVIEW', 'category': 'REVIEW_REPAIR',
+                                 'fingerprint': hashlib.sha256(json.dumps(review['blocking_issues']).encode()).hexdigest(),
+                                 'detail': 'REVIEW FAIL: ' + json.dumps(review['blocking_issues'], ensure_ascii=False), 'time': now()})
+        checkpoint(run, data, 'REPAIR')
+    raise ERROR('REVIEW FAIL: ' + json.dumps(review['blocking_issues'], ensure_ascii=False))
+
+def operator_integrate(run_id, c, p, push=True):
+    global TASK_REVIEWER
+    with locked():
+        operator_safe_stop()
+        plan, task, run, data = operator_run(run_id)
+        require(data['phase'] in {'VERIFIED', 'INTEGRATE', 'COMMITTED', 'BACKUP'}, 'Run not verified')
+        previous, TASK_REVIEWER = TASK_REVIEWER, (lambda *args: None)  # require recorded review in integrate()
+        try:
+            execute(task, plan, c, p, recover=True, push=push)
+        finally:
+            TASK_REVIEWER = previous
+            plan['status'] = 'DONE' if all(t['status'] == 'DONE' for t in plan['tasks']) else 'INCOMPLETE'
+            write(PLAN, plan)
+        require(task['status'] == 'DONE', 'Integration blocked: ' + str(task.get('last_failure')))
+    print('OPERATOR_INTEGRATED ' + task['commit'])
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Durable C01 autonomous development, using existing AutoDev QA')
     sub = parser.add_subparsers(dest='command', required=True)
@@ -1160,6 +1427,12 @@ def main(argv=None):
     q = sub.add_parser('qa'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('reconcile-infrastructure'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('qualify-verification'); q.add_argument('--run-id', required=True)
+    q = sub.add_parser('operator-stage'); q.add_argument('--task-id', required=True)
+    q = sub.add_parser('operator-verify'); q.add_argument('--run-id', required=True); q.add_argument('--outcome', required=True)
+    q = sub.add_parser('operator-review'); q.add_argument('--run-id', required=True); q.add_argument('--review', required=True)
+    q.add_argument('--reviewer', required=True, help='Who reviewed, e.g. independent read-only Claude subagent')
+    q = sub.add_parser('operator-integrate'); q.add_argument('--run-id', required=True)
+    q.add_argument('--no-push', action='store_true')
     sub.add_parser('backup')
     args = parser.parse_args(argv)
     try:
@@ -1177,6 +1450,10 @@ def main(argv=None):
         elif args.command == 'report': report()
         elif args.command == 'reconcile-infrastructure': reconcile_infrastructure(args.run_id, c, p)
         elif args.command == 'qualify-verification': qualify_verification(args.run_id, c, p)
+        elif args.command == 'operator-stage': operator_stage(args.task_id, c, p)
+        elif args.command == 'operator-verify': operator_verify(args.run_id, args.outcome, c, p)
+        elif args.command == 'operator-review': operator_review(args.run_id, args.review, args.reviewer, c, p)
+        elif args.command == 'operator-integrate': operator_integrate(args.run_id, c, p, not args.no_push)
         elif args.command == 'backup':
             with locked():
                 clean()

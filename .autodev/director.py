@@ -156,6 +156,10 @@ def report():
     owner=read(OWNER,{})
     state=dict(state,worker_running=held() and a.alive(owner.get('pid')),owner_pid=owner.get('pid'),
                pause_requested=PAUSE.exists(),workspace=str(ROOT))
+    try:
+        c=a.config();state['model_cli']=a.model_cli(c)
+        state['model_cli_ready']=a.claude_logged_in(c) if state['model_cli']=='claude' else None
+    except (a.ERROR,OSError,ValueError,KeyError):state['model_cli_ready']=False
     if state.get('status')=='RUNNING' and not state['worker_running']:state['status']='INTERRUPTED'
     plan=read(a.PLAN,{})
     if plan:
@@ -170,7 +174,8 @@ def report():
             state['current_tasks'].append(row)
     HOME.mkdir(parents=True,exist_ok=True);a.write(HOME/'report.json',state)
     rows='\n'.join('%s : %s'%(t['id'],t['status']) for t in state.get('milestones',[]))
-    (HOME/'현황_KO.txt').write_text('음영 인쇄소 제작 상태\n'+state['status']+'\n실제 관리자 실행: '+str(state['worker_running'])+'\n'+rows+'\n마지막 검증 커밋: '+str(state.get('last_verified_commit'))+'\n최근 빌드: '+str(state.get('latest_build','없음'))+'\n사람의 플레이·청취·출시 승인은 별도입니다.\n',encoding='utf-8')
+    ready={True:'로그인됨',False:'로그인 필요 (claude auth login)',None:'해당 없음'}.get(state.get('model_cli_ready'),'확인 불가')
+    (HOME/'현황_KO.txt').write_text('음영 인쇄소 제작 상태\n'+state['status']+'\n실제 관리자 실행: '+str(state['worker_running'])+'\n모델 CLI: '+str(state.get('model_cli'))+' · '+ready+'\n'+rows+'\n마지막 검증 커밋: '+str(state.get('last_verified_commit'))+'\n최근 빌드: '+str(state.get('latest_build','없음'))+'\n사람의 플레이·청취·출시 승인은 별도입니다.\n',encoding='utf-8')
     return state
 
 def environment():
@@ -249,7 +254,7 @@ def certify_release(state,c):
     result.update(passed=True,archive=state['latest_build'],archive_sha256=state['latest_build_sha256'],fresh_graphical_log=str(log.relative_to(ROOT)))
     a.write(evidence,result);state['release_evidence']=str(evidence.relative_to(ROOT))
 
-def run_item(item,state,c,p):
+def milestone_goal(item,state):
     goal=item['goal']+'\nTrusted production rules: preserve all nine production bibles. Exactly '+str(item['tasks'])+' sequential small implementation tasks. '
     repair=next((x.get('release_repair') for x in state['milestones'] if x['id']==item['id']),None)
     if repair:goal+='\nConcrete final release failure to repair without relaxing criteria: '+json.dumps(repair,ensure_ascii=False)+'\n'
@@ -258,6 +263,10 @@ def run_item(item,state,c,p):
     goal+='Complete static implementation reports code_ready with runtime checks in verification_pending. Human taste/listening are human_review_pending. '
     goal+='Only new metadata sidecars explicitly in the exact policy/task allowlist may be created. New GDScripts need valid unique .uid files. No agents, installs, commits, network or Godot from restricted model. '
     goal+='\nBIBLE SUMMARY:\n'+(ROOT/'NARRATIVE_BIBLE.md').read_text(encoding='utf-8')+'\n'+(ROOT/'CHARACTER_BIBLE.md').read_text(encoding='utf-8')
+    return goal
+
+def run_item(item,state,c,p):
+    goal=milestone_goal(item,state)
     existing=read(a.PLAN,{})
     if any(t['status']=='BLOCKED' for t in existing.get('tasks',[])):
         a.require(existing.get('goal')==goal,'Blocked plan goal differs; explicit reconciliation required')
@@ -385,6 +394,49 @@ def start(recover=False):
     a.require(held(),'Worker failed startup; inspect '+str(log.relative_to(ROOT)))
     return report()
 
+def operator_plan(milestone_id,tasks_file,reason):
+    """Replace a milestone's plan with an operator-authored one at a safe stop.
+
+    The prior plan is archived (never deleted) by autonomous.goal, its runs stay
+    under .autodev/runs, and the tasks pass the same validator as model plans.
+    A milestone is never marked DONE here: only verified integration can.
+    """
+    HOME.mkdir(parents=True,exist_ok=True)
+    a.require(reason.strip(),'Operator replan reason required')
+    with lease():
+        m=manifest();state=read(STATE)
+        a.require(state is not None,'No production state')
+        digest=a.auto.sha(MANIFEST)
+        if state['manifest_sha256']!=digest:
+            # Only scope/goal text may change; milestone identity and order stay fixed.
+            a.require([x['id'] for x in state['milestones']]==[x['id'] for x in m['milestones']],'Milestone identity changed')
+            state['events'].append({'type':'MANIFEST_RECONCILED','previous':state['manifest_sha256'],'current':digest,
+                                    'by':'claude-code-operator','reason':reason,'time':a.now()})
+            state['manifest_sha256']=digest
+        item=next((x for x in m['milestones'] if x['id']==milestone_id),None)
+        a.require(item is not None,'Unknown milestone')
+        current=next(x for x in state['milestones'] if x['id']==milestone_id)
+        done={x['id'] for x in state['milestones'] if x['status']=='DONE'}
+        a.require(set(item['depends_on'])<=done and current['status'] in {'PENDING','BLOCKED'},'Milestone not ready for an operator plan')
+        c,p=a.config(),a.policy()
+        a.require(a.branch_ok(p)==m['branch'],'Production branch mismatch');a.clean()
+        old=read(a.PLAN,{})
+        current.setdefault('operator_replans',[]).append({'time':a.now(),'reason':reason,'previous_plan_status':old.get('status'),
+            'previous_planning_run':old.get('planning_run'),
+            'previous_tasks':[{k:t.get(k) for k in ('id','status','run','attempts','last_failure')} for t in old.get('tasks',[])]})
+        goal=milestone_goal(item,state)
+        a.goal(goal,replace_incomplete=True)  # archives the old plan; refuses live children/partial integration
+        tasks=a.validate_tasks(a.read(Path(tasks_file))['tasks'],p)
+        a.require(len(tasks)==item['tasks'],'Operator task count differs from production scope')
+        a.require(all(set(item['probes'])<=set(t['acceptance_probes']) for t in tasks),'Missing production acceptance probe')
+        a.write(a.PLAN,{'version':1,'goal':goal,'created':a.now(),'branch':m['branch'],
+                        'policy_sha256':a.auto.sha(a.HERE/'policy.json'),'tasks':tasks,
+                        'planning_run':'operator-'+uuid.uuid4().hex[:10],'planner':'claude-code-operator','status':'PLANNED'})
+        current['status']='PENDING';current.pop('error',None)
+        state['events'].append({'milestone':milestone_id,'status':'OPERATOR_REPLAN','time':a.now()})
+        state.update(status='READY',current=milestone_id);checkpoint(state,'OPERATOR_PLAN')
+    return report()
+
 def redirect(args):
     pointer=read(a.STATE/'production-home.json')
     if not pointer:return None
@@ -397,12 +449,16 @@ def main(argv=None):
     forwarded=redirect(argv)
     if forwarded is not None:return forwarded
     parser=argparse.ArgumentParser(description='음영 인쇄소 지속 제작 관리자')
-    parser.add_argument('command',choices=['start','resume','recover','status','report','pause','_worker'])
+    parser.add_argument('command',choices=['start','resume','recover','status','report','pause','operator-plan','_worker'])
     parser.add_argument('--max-milestones',type=int)
     parser.add_argument('--recover-blocked',action='store_true')
+    parser.add_argument('--milestone');parser.add_argument('--tasks');parser.add_argument('--reason',default='')
     args=parser.parse_args(argv)
     try:
         if args.command=='_worker':return worker(args.max_milestones,args.recover_blocked)
+        if args.command=='operator-plan':
+            a.require(args.milestone and args.tasks,'operator-plan requires --milestone and --tasks')
+            print(json.dumps(operator_plan(args.milestone,args.tasks,args.reason),ensure_ascii=False,indent=2));return 0
         if args.command in {'start','resume','recover'}:result=start(recover=args.command=='recover')
         elif args.command=='pause':
             a.write(PAUSE,{'time':a.now(),'mode':'cooperative; no kill or unverified integration'})
