@@ -182,11 +182,46 @@ func _open_credits(back: Callable, back_caption: String) -> void:
 	if not is_finished() or not game_active:
 		return
 	var credits: Dictionary = CampaignState.story_data()["credits"]
-	var attribution := FileAccess.get_file_as_string("res://CREDITS_KO.md")
+	# The dialog renders plain text; drop Markdown heading markers from the file.
+	var attribution := RegEx.create_from_string("(?m)^#{1,6}[ \\t]+").sub(FileAccess.get_file_as_string("res://CREDITS_KO.md"), "", true)
 	_show_dialog(credits["title"], credits["text"] + "\n\n" + attribution, [
 		{"label": back_caption, "call": back},
+		{"label": "자산 출처·라이선스", "call": Callable(self, "_show_asset_licenses").bind(back, back_caption)},
 		{"label": "엔진·글꼴 라이선스 전문", "call": Callable(self, "_show_credit_notices").bind(back, back_caption)},
 	])
+
+func _show_asset_licenses(back: Callable, back_caption: String) -> void:
+	if not is_finished() or not game_active:
+		return
+	_show_dialog("자산 출처·라이선스", _asset_license_text(FileAccess.get_file_as_string("res://ASSET_LICENSES.json")), [
+		{"label": "크레딧으로 돌아가기", "call": Callable(self, "_open_credits").bind(back, back_caption)},
+	])
+
+func _asset_license_text(raw: String) -> String:
+	# Attribution and permission fields only; synthesis/audit metadata stays in the
+	# file. Unreadable data is reported plainly and nothing is filled in for it.
+	var failure := "자산 대장(ASSET_LICENSES.json)을 읽을 수 없습니다. 기록이 없거나 형식이 올바르지 않아 자산의 출처와 허가를 표시하지 않습니다."
+	var parser := JSON.new()
+	if raw.strip_edges().is_empty() or parser.parse(raw) != OK or not parser.data is Array or parser.data.is_empty():
+		return failure
+	var sections: Array[String] = ["게임에 포함된 자산과 기록된 출처·허가입니다. NOASSERTION은 기록된 허가 없음을 뜻하며, 권리 상태는 사람의 검토가 필요합니다."]
+	for row in parser.data:
+		if not row is Dictionary or not row.has("path") or not row.has("license"):
+			return failure
+		var license := str(row["license"])
+		var lines: Array[String] = [str(row["path"])]
+		if row.has("dependency"):
+			# The license belongs to the third-party dependency used at this path,
+			# never to the project file itself.
+			lines = ["대상: " + str(row["dependency"]), "사용 위치: " + str(row["path"])]
+		lines.append("허가: " + license + (" (기록된 허가 없음)" if license == "NOASSERTION" else ""))
+		for field in [["creator", "제작"], ["origin", "출처"], ["rights_evidence", "권리 기록"]]:
+			if row.has(field[0]):
+				lines.append(field[1] + ": " + str(row[field[0]]))
+		if row.has("license_text"):
+			lines.append("허가 원문:\n" + str(row["license_text"]))
+		sections.append("\n".join(lines))
+	return "\n\n".join(sections)
 
 func _show_credit_notices(back: Callable, back_caption: String) -> void:
 	if not is_finished() or not game_active:
