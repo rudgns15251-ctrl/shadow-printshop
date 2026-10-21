@@ -31,6 +31,10 @@ var touch_top: HBoxContainer
 var touch_menu_key: Button
 var _touch_homes: Array = []
 const TOUCH_KEY := 84.0
+var touch_backing: PanelContainer
+var touch_titles: VBoxContainer
+var _safe_side := 0
+var _fit_passes := 0
 static var _scene_rows: Array = []
 var workbench_scroll: ScrollContainer
 var ending_panel: Control
@@ -342,10 +346,11 @@ func _set_title_look(enabled: bool) -> void:
 		var button: Button = keys[index]
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("focus", _title_focus_style())
-		if (index >= 2 or touch_mode) and index < keys.size() - 1:
+		if (index >= 2 or touch_mode) and (touch_mode or index < keys.size() - 1):
 			button.reparent(grid)
 	# 종료 keeps its own full-width row instead of sitting alone in the grid.
-	menu.move_child(keys[keys.size() - 1], menu.get_child_count() - 1)
+	if not touch_mode:
+		menu.move_child(keys[keys.size() - 1], menu.get_child_count() - 1)
 	_fit_dialog.call_deferred()
 
 func _title_focus_style() -> StyleBoxFlat:
@@ -373,6 +378,35 @@ func _update_responsive() -> void:
 	if touch_mode and title_navigation != null:
 		# A rotation can move the notch: read the display again.
 		apply_safe_area(_display_safe_area())
+		# Measured after layout, over a few frames (growth only, so it settles).
+		_fit_passes = 4
+		if is_inside_tree() and not get_tree().process_frame.is_connected(_fit_touch_sheets):
+			get_tree().process_frame.connect(_fit_touch_sheets)
+
+func _fit_touch_sheets() -> void:
+	# Grow the three sheets until the empty desk above the touch bar is a small
+	# gap, never wider than the row allows and never pushing the bar away.
+	_fit_passes -= 1
+	var grown := false
+	var scroll: Control = find_child("WorkbenchScroll", true, false)
+	if touch_mode and touch_bar != null and touch_bar.is_visible_in_tree() and boards_grid != null and after_view != null and scroll != null:
+		var edge: float = after_view.custom_minimum_size.x
+		# Everything in the workbench (sheets, captions, legend) must still fit unscrolled.
+		var band: float = scroll.size.y - scroll.get_child(0).get_combined_minimum_size().y - 8.0
+		var columns: int = maxi(1, boards_grid.columns)
+		var gap: float = float(boards_grid.get_theme_constant("h_separation"))
+		var chrome: float = (boards_grid.get_combined_minimum_size().x - gap * (columns - 1)) / columns - edge
+		# The window, not the scroll (whose width follows its content), bounds the row.
+		var padding: float = scroll.get_combined_minimum_size().x - boards_grid.get_combined_minimum_size().x
+		var room: float = size.x - 32.0 - 2.0 * _safe_side - maxf(0.0, padding) - 4.0
+		var widest: float = (room - gap * (columns - 1)) / columns - chrome
+		var target: float = floorf(clampf(edge + band, edge, widest))
+		if target > edge + 0.5:
+			grown = true
+			for view in [before_view, after_view, target_view]:
+				view.custom_minimum_size = Vector2(target, target)
+	if _fit_passes <= 0 or (not grown and _fit_passes < 3):
+		get_tree().process_frame.disconnect(_fit_touch_sheets)
 
 func _update_header_layout() -> void:
 	# One arrangement per window width, never per text length, so the header
@@ -453,7 +487,7 @@ func _fit_dialog() -> void:
 			popup_scroll.custom_minimum_size.y = maxf(120.0, size.y - 96.0 - dialog_hint.get_combined_minimum_size().y - 4.0)
 	if title_backdrop != null and title_backdrop.visible and popup_panel != null:
 		# A narrower title panel leaves more of the night workshop visible.
-		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0)
+		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0 - 2.0 * _safe_side)
 
 const PORTRAITS := {"백인호": preload("res://assets/art/portrait_baek_neutral.svg"),
 	"윤해린": preload("res://assets/art/portrait_yoon_record.svg"), "0번 의뢰인": preload("res://assets/art/portrait_client_sealed.svg")}
@@ -990,7 +1024,7 @@ func _open_settings_marks() -> void:
 				node.text = caption + (" ✓" if is_equal_approx(float(settings["font_scale"]), value) else "")
 	for node in dialog.find_children("*", "Label", true, false):
 		if str(node.text) == "설정은 로컬에 저장됩니다.":
-			node.text = "설정은 이 컴퓨터에 저장됩니다."
+			node.text = "설정은 이 기기에 저장됩니다." if touch_mode else "설정은 이 컴퓨터에 저장됩니다."
 
 func _set_font_scale(value: float) -> void:
 	super._set_font_scale(value)
@@ -1036,11 +1070,19 @@ func _arrange_for_touch(enabled: bool) -> void:
 		return
 	if touch_bar == null:
 		var layout: VBoxContainer = title_navigation.get_parent()
+		touch_backing = PanelContainer.new()
+		touch_backing.name = "TouchTopBacking"
+		var night := UiTheme.surface(Color(UiTheme.NIGHT, 0.84), 10, 4)
+		night.border_color = Color(UiTheme.LAMP, 0.22)
+		touch_backing.add_theme_stylebox_override("panel", night)
+		layout.add_child(touch_backing)
+		layout.move_child(touch_backing, 0)
 		touch_top = HBoxContainer.new()
 		touch_top.name = "TouchTopBar"
 		touch_top.add_theme_constant_override("separation", 10)
-		layout.add_child(touch_top)
-		layout.move_child(touch_top, 0)
+		touch_backing.add_child(touch_top)
+		# The backing shows exactly when the bar does.
+		touch_top.visibility_changed.connect(func() -> void: touch_backing.visible = touch_top.visible)
 		touch_menu_key = _button(touch_top, "≡ 메뉴", _open_pause, 140)
 		touch_menu_key.name = "TouchMenuKey"
 		touch_menu_key.custom_minimum_size.y = TOUCH_KEY
@@ -1049,10 +1091,20 @@ func _arrange_for_touch(enabled: bool) -> void:
 		touch_bar.add_theme_constant_override("separation", 8)
 		layout.add_child(touch_bar)
 		layout.move_child(touch_bar, layout.get_child_count() - 2)
+		touch_titles = VBoxContainer.new()
+		touch_titles.name = "TouchTitles"
+		touch_titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		touch_titles.alignment = BoxContainer.ALIGNMENT_CENTER
+		touch_titles.add_theme_constant_override("separation", 2)
+		touch_top.add_child(touch_titles)
 		touch_top.hide()
 		touch_bar.hide()
 	if enabled and _touch_homes.is_empty():
-		for node in [heading, hint_key, order_card]:
+		# Heading and the instruction line share the top bar; the hint key and
+		# the order card sit after them.
+		for node in [heading, subheading]:
+			_move_for_touch(node, touch_titles)
+		for node in [hint_key, order_card]:
 			if node != null:
 				_move_for_touch(node, touch_top)
 		heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1065,6 +1117,11 @@ func _arrange_for_touch(enabled: bool) -> void:
 		for node in [stamp_buttons[0], stamp_buttons[1]] + rotate_keys + [print_button, undo_button, next_button]:
 			_move_for_touch(node, touch_bar)
 			_touch_key(node)
+		# The chosen stamp, turned as it will print, leads the bar: the bench is
+		# gone, but the shape with its 1 = 뒤집힐 칸 cells stays in view.
+		_move_for_touch(stamp_view, touch_bar)
+		touch_bar.move_child(stamp_view, 0)
+		stamp_view.custom_minimum_size = Vector2(80, 72)
 		title_navigation.hide()
 		find_child("StampBench", true, false).hide()
 		touch_top.show()
@@ -1118,6 +1175,10 @@ func apply_safe_area(area: Rect2i) -> void:
 		margins.add_theme_constant_override("margin_" + edge, 16 + side)
 	for edge in ["top", "bottom"]:
 		margins.add_theme_constant_override("margin_" + edge, 16 + ends)
+	_safe_side = side
+	if story_stage != null:
+		story_stage.set_safe_inset(side, ends)
+	_fit_dialog.call_deferred()
 
 func _ask_reset() -> void:
 	if not game_active or overlay.visible:
@@ -1173,8 +1234,7 @@ func _open_start() -> void:
 		{"label": "이야기 다시 읽기", "call": Callable(self, "_open_story")},
 		{"label": "도움말", "call": Callable(self, "_open_help")},
 		{"label": "설정", "call": Callable(self, "_open_settings")},
-		{"label": "종료", "call": Callable(self, "_quit_game")},
-	])
+	] + ([] if touch_mode else [{"label": "종료", "call": Callable(self, "_quit_game")}]))
 	# Escape on the start screen must not silently start a new game.
 	dialog_back = Callable()
 	_primary_button(get_viewport().gui_get_focus_owner() as Button)
@@ -1285,7 +1345,7 @@ const TOUCH_PHRASES := [
 	["창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동하며 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.",
 		"긴 글은 손가락으로 밀어 올려 읽을 수 있습니다. 읽어도 진행은 바뀌지 않습니다."],
 	["꺾임 도장 [1] · 막대 도장 [2] · 돌리기 [Q]·[E] · 인쇄 [Space]·[Enter] · 되돌리기 [U]·[Z] · 초기화 [R] · 다음 의뢰 [N]",
-		"도장 고르기·돌리기·인쇄·되돌리기·다음 의뢰는 화면 아래 버튼으로 합니다. 뒤로 가기는 창을 닫거나 메뉴를 엽니다."],
+		"도장 고르기·돌리기·인쇄·되돌리기·다음 의뢰는 화면 아래 버튼으로 합니다. 의뢰 초기화·진행 저장·저장 불러오기는 ≡ 메뉴에 있습니다. 뒤로 가기는 창을 닫거나 메뉴를 엽니다."],
 	["돌리기는 [Q]·[E]입니다.", "돌리기는 ↶·↷ 버튼으로 합니다."],
 ]
 var _key_hint := RegEx.create_from_string(" ?\\[(Space|Enter|Esc|Q|E|U|Z|N|R|1|2|PageDown|PageUp|Home|End)\\](·\\[(Enter|Z|E)\\]|/\\[(2|E)\\])?| ?\\((N|U/Z|Space/Enter|Enter|Esc|R|Q/E|1/2)\\)")

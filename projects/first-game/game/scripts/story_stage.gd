@@ -28,6 +28,7 @@ var portrait_for: Callable
 var atmosphere: ColorRect
 var reduce_motion := false
 var touch_mode := false
+var margins: MarginContainer
 var _fades: Array[Tween] = []
 var _portrait_fade: Tween
 
@@ -59,7 +60,7 @@ func build(host: Control) -> void:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
-	var margins := MarginContainer.new()
+	margins = MarginContainer.new()
 	margins.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margins.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for edge in ["left", "right", "top", "bottom"]:
@@ -152,6 +153,15 @@ func play(scene: Dictionary, scene_texture: Texture2D, portraits: Callable) -> v
 	advance_key.grab_focus()
 	# Cosmetic only: keys read on at once even while the scene fades in.
 	_fade(self, SCENE_FADE)
+
+func set_safe_inset(side: int, ends: int) -> void:
+	# A phone's notch: the scene's text and keys keep clear of it.
+	if margins == null:
+		return
+	for edge in ["left", "right"]:
+		margins.add_theme_constant_override("margin_" + edge, 28 + maxi(0, side))
+	for edge in ["top", "bottom"]:
+		margins.add_theme_constant_override("margin_" + edge, 28 + maxi(0, ends))
 
 func set_touch_mode(enabled: bool) -> void:
 	# Fingers tap the keys or the scene itself; keyboard hints are for desktops.
