@@ -4,6 +4,9 @@ extends Control
 ## the host decides what follows. Reading never touches puzzle state or saves.
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const ATMOSPHERE = preload("res://shaders/atmosphere.gdshader")
+const SCENE_FADE := 0.35
+const PORTRAIT_FADE := 0.3
 const KIND_TEXT := {"live": "현장 발화", "document": "보관 문서", "narration": "기록"}
 
 signal advanced
@@ -22,6 +25,9 @@ var text: Label
 var advance_key: Button
 var skip_key: Button
 var portrait_for: Callable
+var atmosphere: ColorRect
+var reduce_motion := false
+var _fades: Array[Tween] = []
 
 func build(host: Control) -> void:
 	# Labels and keys come from the host so font scaling and key styling match
@@ -36,6 +42,16 @@ func build(host: Control) -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	# The room's fluorescent flicker and paper grain also lie over the scenes.
+	atmosphere = ColorRect.new()
+	atmosphere.name = "SceneAtmosphere"
+	atmosphere.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var material := ShaderMaterial.new()
+	material.shader = ATMOSPHERE
+	atmosphere.material = material
+	add_child(atmosphere)
+	set_reduce_motion(false)
 	var shade := ColorRect.new()
 	shade.color = Color(UiTheme.SHADOW, 0.30)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -116,7 +132,12 @@ func build(host: Control) -> void:
 		pair[0].focus_neighbor_bottom = NodePath(".")
 	hide()
 
+func set_reduce_motion(enabled: bool) -> void:
+	reduce_motion = enabled
+	atmosphere.material.set_shader_parameter("motion", 0.0 if enabled else 1.0)
+
 func play(scene: Dictionary, scene_texture: Texture2D, portraits: Callable) -> void:
+	_stop_fades()
 	scene_id = str(scene["id"])
 	lines = scene["lines"]
 	line_index = 0
@@ -125,8 +146,11 @@ func play(scene: Dictionary, scene_texture: Texture2D, portraits: Callable) -> v
 	show()
 	_show_line()
 	advance_key.grab_focus()
+	# Cosmetic only: keys read on at once even while the scene fades in.
+	_fade(self, SCENE_FADE)
 
 func stop() -> void:
+	_stop_fades()
 	scene_id = ""
 	lines = []
 	line_index = 0
@@ -158,9 +182,31 @@ func _show_line() -> void:
 	name_plate.visible = not speaker.is_empty()
 	line_kind.text = KIND_TEXT.get(str(line["kind"]), "")
 	var texture: Texture2D = portrait_for.call(speaker, str(line.get("expression", ""))) if not speaker.is_empty() else null
+	var arrives: bool = texture != null and line_index > 0 and speaker != str(lines[line_index - 1]["speaker"])
 	portrait.texture = texture
 	portrait_frame.visible = texture != null
+	if arrives:
+		_fade(portrait_frame, PORTRAIT_FADE)
 	advance_key.text = "다음 [Space]" if line_index + 1 < lines.size() else "닫기 [Space]"
+
+func _fade(item: CanvasItem, seconds: float) -> void:
+	item.modulate.a = 1.0
+	if reduce_motion:
+		return
+	item.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(item, "modulate:a", 1.0, seconds)
+	_fades.append(tween)
+
+func _stop_fades() -> void:
+	# A skipped or replaced scene leaves no fade running and nothing half-faded.
+	for tween in _fades:
+		if tween.is_valid():
+			tween.kill()
+	_fades.clear()
+	modulate.a = 1.0
+	if portrait_frame != null:
+		portrait_frame.modulate.a = 1.0
 
 func _gui_input(event: InputEvent) -> void:
 	# A click anywhere on the scene reads on, like the advance key.

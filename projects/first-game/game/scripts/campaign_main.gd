@@ -152,6 +152,7 @@ func _build_interface() -> void:
 	story_stage = StoryStage.new()
 	story_stage.build(self)
 	overlay.add_child(story_stage)
+	story_stage.set_reduce_motion(bool(settings["reduce_motion"]))
 	story_stage.advanced.connect(_play_sound.bind("paper"))
 	story_stage.skipped.connect(_end_scene)
 	var ending_scene := _button(ending_panel.get_child(0), "결말 장면 보기", func(): play_scene(_scene_for("ending")), 130)
@@ -502,6 +503,8 @@ func _room_outline(label: Label) -> void:
 func _update_atmosphere() -> void:
 	if atmosphere != null:
 		atmosphere.material.set_shader_parameter("motion", 0.0 if bool(settings["reduce_motion"]) else 1.0)
+	if story_stage != null:
+		story_stage.set_reduce_motion(bool(settings["reduce_motion"]))
 
 func _setting_value_changed(value: Variant, key: String) -> void:
 	super._setting_value_changed(value, key)
