@@ -65,7 +65,10 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'story_stage': ('story_stage.gd', 'STORY_STAGE_PASS'),
                      'story_portraits': ('story_portraits.gd', 'STORY_PORTRAITS_PASS'),
                      'scene_backgrounds': ('scene_backgrounds.gd', 'SCENE_BACKGROUNDS_PASS'),
-                     'scene_motion': ('scene_motion.gd', 'SCENE_MOTION_PASS')}
+                     'scene_motion': ('scene_motion.gd', 'SCENE_MOTION_PASS'),
+                     # S12 product review.
+                     'screen_fit': ('screen_fit.gd', 'SCREEN_FIT_PASS'),
+                     'player_copy': ('player_copy.gd', 'PLAYER_COPY_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
