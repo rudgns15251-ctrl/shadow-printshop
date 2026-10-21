@@ -1,0 +1,39 @@
+diff --git a/modules/gdscript/gdscript.cpp b/modules/gdscript/gdscript.cpp
+index f9f9567..fba3883 100644
+--- a/modules/gdscript/gdscript.cpp
++++ b/modules/gdscript/gdscript.cpp
+@@ -2236,14 +2236,15 @@ void GDScriptLanguage::finish() {
+ 
+ 	// Clear dependencies between scripts, to ensure cyclic references are broken
+ 	// (to avoid leaks at exit).
+-	SelfList<GDScript> *s = script_list.first();
+-	while (s) {
+-		// This ensures the current script is not released before we can check
+-		// what's the next one in the list (we can't get the next upfront because we
+-		// don't know if the reference breaking will cause it -or any other after
+-		// it, for that matter- to be released so the next one is not the same as
+-		// before).
+-		Ref<GDScript> scr = s->self();
++	// C01 patch: hold every listed script for the whole pass. Releasing the
++	// current script at the end of a loop iteration could free a script it kept
++	// alive (e.g. a preload) that is the already-read next list node, so the next
++	// iteration dereferenced freed memory (intermittent 0xC0000005 at exit).
++	Vector<Ref<GDScript>> scripts;
++	for (SelfList<GDScript> *s = script_list.first(); s; s = s->next()) {
++		scripts.push_back(Ref<GDScript>(s->self()));
++	}
++	for (Ref<GDScript> &scr : scripts) {
+ 		if (scr.is_valid()) {
+ 			for (KeyValue<StringName, GDScriptFunction *> &E : scr->member_functions) {
+ 				GDScriptFunction *func = E.value;
+@@ -2260,8 +2261,9 @@ void GDScriptLanguage::finish() {
+ 			// check
+ 			scr->clear();
+ 		}
+-		s = s->next();
+ 	}
++	// Scripts whose references were all broken are released here, together.
++	scripts.clear();
+ 	script_list.clear();
+ 	function_list.clear();
+ 

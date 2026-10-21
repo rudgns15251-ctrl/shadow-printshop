@@ -13,19 +13,60 @@
     "windows_sdk": "10.0.22621.0"
   },
   "common_scons_arguments": [
-    "platform=windows", "arch=x86_64", "msvc_version=14.3",
-    "mssdk_version=10.0.22621.0", "d3d12=no", "angle=no",
-    "accesskit=no", "debug_symbols=yes", "lto=none", "-j8"
+    "platform=windows",
+    "arch=x86_64",
+    "msvc_version=14.3",
+    "mssdk_version=10.0.22621.0",
+    "d3d12=no",
+    "angle=no",
+    "accesskit=no",
+    "debug_symbols=yes",
+    "lto=none",
+    "-j8"
   ],
-  "targets": ["editor", "template_debug", "template_release"],
-  "existing_probes_must_remain_unchanged": ["probe.gd", "original_immediate.gd"],
+  "targets": [
+    "editor",
+    "template_debug",
+    "template_release"
+  ],
+  "existing_probes_must_remain_unchanged": [
+    "probe.gd",
+    "original_immediate.gd"
+  ],
   "original_immediate_sha256": "c2d324affd3f97c4e59eec50397ed35ba86c762b84d7c4b29854f9da8d49273d",
   "minimum_repeats_per_stress_group": 30,
-  "required_drivers": ["WASAPI", "Dummy"],
+  "required_drivers": [
+    "WASAPI",
+    "Dummy"
+  ],
   "notes": [
     "This file records a reproducible recipe, not a claim that any build or runtime gate passed.",
     "Use separate source checkouts and output paths. Never replace installed Godot or export templates.",
     "D3D12, ANGLE and AccessKit are disabled equally in the comparison; this is a C01 GL Compatibility validation profile.",
     "Record all failures and independently audit raw logs. Compilation alone never certifies a leak fix."
+  ],
+  "additional_patches": [
+    {
+      "file": "godot-4.7.1-gdscript-finish-uaf.patch",
+      "patch_sha256": "c2e87a9309f3711aabbb86b573dfd5361b38c5b2fa39a6b1891566d19d95aec5",
+      "patched_gdscript_source_sha256": "853e0065e64e2caf33ce588389c5fe4de4cf10ab24bfbe78e9e912899fe448ee",
+      "applied": "2026-10-21 by Claude Code (user-approved engine fix attempt)",
+      "defect": "GDScriptLanguage::finish released the current script at the end of each loop iteration after reading the next script_list node; releasing it could free a script it kept alive (preload), leaving the next node dangling. Intermittent 0xC0000005 at exit in editor and templates (WER offsets editor 0x50eb586/StringName, template 0x309bdb0 = ref_counted.cpp:75 from gdscript.cpp:2246).",
+      "fix": "Hold Refs to every listed script for the whole clearing pass, release them together after the loop.",
+      "evidence": {
+        "debug_heap_repro_old_template": "3/3 access violations at gdscript.cpp:2246 (Win32 debugger, debug heap)",
+        "debug_heap_fixed_template": "0/20 WASAPI + 0/20 Dummy, exit 0",
+        "debug_heap_old_editor_campaign_shell": "4/5 access violations at gdscript.cpp:2246",
+        "debug_heap_fixed_editor_campaign_shell": "0/5",
+        "normal_heap_old_rates": "debug template S06 1/300, S07 1/100, S08 2/100; release template 0/260",
+        "exit_leak_reports": "none before or after (67-line verbose log identical in shutdown)"
+      },
+      "binaries": {
+        "godot.windows.editor.x86_64.exe": "d02af8c516e53b51dd704f634e1766e127bef649241162f99de83e49139b7f62",
+        "godot.windows.template_debug.x86_64.exe": "2bf167a200c2d8d0186d7358bff39b63dc66cd9924ffe50d88aa2cefd572dcc8",
+        "godot.windows.template_release.x86_64.exe": "7e2002984d8af365637102e4e44bb2c6fce531e48ea5861b912256aefcdd59da"
+      },
+      "previous_binaries_kept": "binaries/patched (2026-10-17) and bin-before-gdscript-finish-fix; old qualified templates kept"
+    }
   ]
 }

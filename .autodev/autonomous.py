@@ -51,7 +51,9 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'asset_licenses': ('asset_licenses.gd', 'ASSET_LICENSES_PASS'),
                      # S08 product identity and keyboard dialog reading.
                      'product_identity': ('product_identity.gd', 'PRODUCT_IDENTITY_PASS'),
-                     'dialog_scroll': ('dialog_scroll.gd', 'DIALOG_SCROLL_PASS')}
+                     'dialog_scroll': ('dialog_scroll.gd', 'DIALOG_SCROLL_PASS'),
+                     'window_icon': ('window_icon.gd', 'WINDOW_ICON_PASS'),
+                     'transition_sections': ('transition_sections.gd', 'TRANSITION_SECTIONS_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 

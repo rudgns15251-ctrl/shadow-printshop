@@ -35,7 +35,9 @@
     "assets/art/portrait_client.svg.import",
     "assets/audio/shop_ambience.wav.import",
     "assets/audio/menu_paper.wav.import",
-    "assets/audio/chapter_transition.wav.import"
+    "assets/audio/chapter_transition.wav.import",
+    "assets/art/app_icon.svg",
+    "assets/art/app_icon.svg.import"
   ],
   "max_tasks": 8,
   "max_fixes": 3,
