@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>음영 인쇄소 아이콘</title>
+  <!-- Wood stamp block -->
+  <rect x="8" y="8" width="240" height="240" rx="36" fill="#d8c7ad" stroke="#24211d" stroke-width="10"/>
+  <path d="M30 70 Q96 58 160 72 T228 66 M30 190 Q100 178 168 194 T228 186" fill="none" stroke="#24211d" stroke-opacity="0.18" stroke-width="5"/>
+  <!-- Paper sheet -->
+  <rect x="46" y="42" width="164" height="172" rx="8" fill="#f4ebdd" stroke="#24211d" stroke-width="6"/>
+  <!-- 3x3 print grid: ink cells form the A (elbow) stamp shape -->
+  <g stroke="#24211d" stroke-width="5">
+    <rect x="66" y="62" width="38" height="38" rx="4" fill="#24211d"/>
+    <rect x="109" y="62" width="38" height="38" rx="4" fill="#24211d"/>
+    <rect x="152" y="62" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="66" y="105" width="38" height="38" rx="4" fill="#24211d"/>
+    <rect x="109" y="105" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="152" y="105" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="66" y="148" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="109" y="148" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="152" y="148" width="38" height="38" rx="4" fill="#315d49"/>
+  </g>
+  <!-- Vermilion seal in the corner -->
+  <circle cx="196" cy="198" r="34" fill="#8a3f24" stroke="#24211d" stroke-width="6"/>
+  <rect x="182" y="184" width="28" height="28" rx="3" fill="none" stroke="#f4ebdd" stroke-width="5"/>
+</svg>

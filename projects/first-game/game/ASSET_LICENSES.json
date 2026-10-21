@@ -245,5 +245,21 @@
       "scripts/campaign_main.gd::_show_chapter_transition"
     ],
     "review_pending": "Human speaker/headphone listening for startle, loudness and fit with the ambience; human verification of provenance and credits."
+  },
+  {
+    "path": "assets/art/app_icon.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original vector authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG markup (rectangles, paths, circle) in the ART_STYLE_BIBLE palette: wood stamp block, paper sheet, 3x3 print grid with the stamp-A cells inked, vermilion seal. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "d85b8a16ffa70e7e49042e978d8bc06b0fd90cb20e0628f00b1d7cf174525d45",
+      "bytes": 1539,
+      "viewbox": "0 0 256 256"
+    },
+    "usage": [
+      "project.godot application/config/icon (window and taskbar icon)"
+    ],
+    "review_pending": "Human review of icon taste and legibility at 16-32 px; exported .exe resources are intentionally unmodified."
   }
 ]
