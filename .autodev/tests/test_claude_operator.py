@@ -206,6 +206,38 @@ class OperatorPath(base.Coordinator):
         self.assertEqual(a.read(a.PLAN)['tasks'][0]['status'], 'DONE')
         self.assertEqual(len(a.read(a.HERE / 'runs' / run / 'autonomous.json')['integration_retries']), 1)
 
+    def test_adopt_director_run_blocked_by_environment_and_finish_it(self):
+        def crash(cmd, run, data, name, *args, **kwargs):
+            if name.endswith('IMPORT'):
+                return 3221225477, 'reimport crash'
+            return self.provider(cmd, run, data, name, *args, **kwargs)
+        with patch.object(a, 'process', crash), patch('builtins.print'):
+            a.run_plan(self.c, self.p)
+        task = a.read(a.PLAN)['tasks'][0]
+        self.assertEqual(task['status'], 'BLOCKED')
+        run = task['run']
+        self.assertEqual(a.read(a.HERE / 'runs' / run / 'autonomous.json')['failure_category'], 'ENVIRONMENT')
+        stage_file = a.HERE / 'runs' / run / 'game/scripts/slice_main.gd'
+        written = stage_file.read_text()
+        with patch('builtins.print'):
+            a.operator_adopt(run, self.c, self.p)
+            with self.assertRaisesRegex(a.ERROR, 'Not a blocked task run'):
+                a.operator_adopt(run, self.c, self.p)
+            a.operator_verify(run, self.file('out.json', outcome()), self.c, self.p)
+            a.operator_review(run, self.review(), 'reviewer', self.c, self.p)
+            a.operator_integrate(run, self.c, self.p, push=False)
+        self.assertEqual(a.read(a.PLAN)['tasks'][0]['status'], 'DONE')
+        self.assertEqual((self.game / 'scripts/slice_main.gd').read_text(), written)
+        self.assertEqual(a.read(a.HERE / 'runs' / run / 'autonomous.json')['operator']['adopted_from'], 'director')
+
+    def test_adopt_refuses_fatal_blocks(self):
+        run, stage = self.stage()
+        plan = a.read(a.PLAN); plan['tasks'][0]['status'] = 'BLOCKED'; a.write(a.PLAN, plan)
+        path = a.HERE / 'runs' / run / 'autonomous.json'
+        data = a.read(path); data.pop('operator'); data.update(failure_category='SCOPE', phase='REPAIR'); a.write(path, data)
+        with self.assertRaisesRegex(a.ERROR, 'non-fatal'):
+            a.operator_adopt(run, self.c, self.p)
+
     def test_integration_refused_without_review_or_after_revise(self):
         run, stage = self.stage()
         (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit\n')
@@ -302,6 +334,19 @@ class OperatorReplan(dbase.ProductionTests):
         self.assertEqual([(x['id'], x['status']) for x in saved['milestones']],
                          [('story', 'DONE'), ('art', 'DONE'), ('ending', 'DONE'), ('polish', 'PENDING')])
         self.assertEqual(saved['events'][-2]['added_milestones'], ['polish'])
+
+    def test_blocked_milestone_with_finished_plan_is_recoverable_for_packaging(self):
+        for name in ('NARRATIVE_BIBLE.md', 'CHARACTER_BIBLE.md'): (self.root / name).write_text('fixture', encoding='utf-8')
+        state = d.initial(self.m); state['current'] = 'story'; state['milestones'][0]['status'] = 'BLOCKED'
+        item = self.m['milestones'][0]
+        done = {'status': 'DONE', 'goal': d.milestone_goal(item, state),
+                'tasks': [{'id': 't', 'status': 'DONE', 'backup': {'status': 'VERIFIED'}}]}
+        a.write(a.PLAN, done)
+        self.assertTrue(d.recoverable_item(item, state, {}))
+        done['tasks'][0]['backup'] = {'status': 'NOT_REQUESTED'}; a.write(a.PLAN, done)
+        self.assertFalse(d.recoverable_item(item, state, {}))
+        done['tasks'][0]['backup'] = {'status': 'VERIFIED'}; done['goal'] = 'other'; a.write(a.PLAN, done)
+        self.assertFalse(d.recoverable_item(item, state, {}))
 
     def test_operator_plan_refuses_wrong_task_count_and_done_milestone(self):
         state = d.initial(self.m); state['manifest_sha256'] = 'x'; state['milestones'][0]['status'] = 'DONE'

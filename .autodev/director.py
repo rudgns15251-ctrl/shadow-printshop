@@ -92,6 +92,11 @@ def recoverable_item(item,state,p):
     # supersede it with a freshly generated plan or reset its attempt counter.
     if state.get('current') != item['id']:return False
     plan=read(a.PLAN,{})
+    # Every task verified and backed up (e.g. after operator recovery): only the
+    # milestone's packaging step remains, which run_item performs without a model.
+    if (plan.get('status')=='DONE' and plan.get('tasks') and plan.get('goal')==milestone_goal(item,state)
+            and all(t.get('backup',{}).get('status')=='VERIFIED' for t in plan['tasks'])):
+        return True
     blocked=[t for t in plan.get('tasks',[]) if t['status']=='BLOCKED']
     return bool(blocked) and all(t.get('run') and a.recovery_decision(
         a.read(a.HERE/'runs'/t['run']/'autonomous.json'),p,t)[0] for t in blocked)

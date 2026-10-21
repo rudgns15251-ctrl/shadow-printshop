@@ -149,6 +149,12 @@ def isolated_env(run_root, test):
         appdata.mkdir(parents=True, exist_ok=True)
         env['APPDATA'] = str(appdata)
         env['XDG_DATA_HOME'] = str(appdata)
+        # Editor caches (doc/shader caches) and temp files stay per QA session,
+        # never shared across runs or engine builds.
+        for key, sub in (('LOCALAPPDATA', 'qa_local'), ('TEMP', 'qa_temp'), ('TMP', 'qa_temp')):
+            folder = run_root / sub
+            folder.mkdir(parents=True, exist_ok=True)
+            env[key] = str(folder)
     return env
 
 def run_qa(godot, stage, run_root, config, round_id):

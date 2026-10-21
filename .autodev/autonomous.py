@@ -57,7 +57,10 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      # S09 visual foundation (second production pass).
                      'fonts_theme': ('fonts_theme.gd', 'FONTS_THEME_PASS'),
                      'night_atmosphere': ('night_atmosphere.gd', 'NIGHT_ATMOSPHERE_PASS'),
-                     'title_screen': ('title_screen.gd', 'TITLE_SCREEN_PASS')}
+                     'title_screen': ('title_screen.gd', 'TITLE_SCREEN_PASS'),
+                     # S10 workbench UI.
+                     'player_labels': ('player_labels.gd', 'PLAYER_LABELS_PASS'),
+                     'workbench_layout': ('workbench_layout.gd', 'WORKBENCH_LAYOUT_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
@@ -1213,7 +1216,7 @@ def reconcile_infrastructure(run_id, c, p):
                    '.autodev/tests/test_blocked_recovery.py', '.autodev/checks/campaign_recovery.gd',
                    '.autodev/campaign_data.py', '.autodev/tests/test_campaign_data.py'}
         allowed.add('.autodev/checks/campaign_hints.gd')
-        allowed.update({'.autodev/tests/test_claude_operator.py', '.autodev/audio_lab/synth_s07_sfx.py'})
+        allowed.update({'.autodev/tests/test_claude_operator.py', '.autodev/audio_lab/synth_s07_sfx.py', '.autodev/auto.py'})
         # Trusted probes may be corrected between attempts; every change is recorded
         # by blob hash and the run re-executes every gate before integration.
         probe_changes = [rel for rel in files if rel.startswith('.autodev/checks/') and rel.endswith('.gd')]
@@ -1357,6 +1360,31 @@ def operator_stage(task_id, c, p):
         write(PLAN, plan)
     print(json.dumps({'run': run.name, 'stage': str(run / 'game'), 'allowed': task['allowed']}, ensure_ascii=False))
 
+def operator_adopt(run_id, c, p):
+    """Take over a blocked director run whose model work is done but whose trusted
+    QA stopped on a non-fatal failure. The stage is kept exactly as written; every
+    gate and the independent review still run before integration."""
+    with locked():
+        operator_safe_stop()
+        plan = read(PLAN)
+        task = next((t for t in plan['tasks'] if t.get('run') == run_id), None)
+        require(task is not None and task['status'] == 'BLOCKED', 'Not a blocked task run')
+        run = inside(HERE / 'runs', run_id)
+        data = read(run / 'autonomous.json')
+        require(not data.get('operator'), 'Already an operator run')
+        require(not alive(data.get('child_pid')), 'Previous child is alive')
+        require(data.get('failure_category') not in FATAL and data['phase'] in {'IMPLEMENT', 'REPAIR', 'QA'},
+                'Only non-fatal pre-integration blocks can be adopted')
+        require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')
+        data['operator'] = {'writer': 'adopted', 'adopted_from': 'director', 'time': now(),
+                            'previous_failure': str(data.get('last_failure', ''))[:500],
+                            'note': 'Model-written stage kept unchanged; operator re-runs trusted QA and independent review'}
+        data.update(status='RUNNING', phase='REPAIR')
+        checkpoint(run, data)
+        task['status'] = 'RUNNING'
+        write(PLAN, plan)
+    print('OPERATOR_ADOPTED ' + run_id)
+
 def operator_verify(run_id, outcome_file, c, p):
     with locked():
         operator_safe_stop()
@@ -1462,6 +1490,7 @@ def main(argv=None):
     q = sub.add_parser('reconcile-infrastructure'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('qualify-verification'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('operator-stage'); q.add_argument('--task-id', required=True)
+    q = sub.add_parser('operator-adopt'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('operator-verify'); q.add_argument('--run-id', required=True); q.add_argument('--outcome', required=True)
     q = sub.add_parser('operator-review'); q.add_argument('--run-id', required=True); q.add_argument('--review', required=True)
     q.add_argument('--reviewer', required=True, help='Who reviewed, e.g. independent read-only Claude subagent')
@@ -1485,6 +1514,7 @@ def main(argv=None):
         elif args.command == 'reconcile-infrastructure': reconcile_infrastructure(args.run_id, c, p)
         elif args.command == 'qualify-verification': qualify_verification(args.run_id, c, p)
         elif args.command == 'operator-stage': operator_stage(args.task_id, c, p)
+        elif args.command == 'operator-adopt': operator_adopt(args.run_id, c, p)
         elif args.command == 'operator-verify': operator_verify(args.run_id, args.outcome, c, p)
         elif args.command == 'operator-review': operator_review(args.run_id, args.review, args.reviewer, c, p)
         elif args.command == 'operator-integrate': operator_integrate(args.run_id, c, p, not args.no_push)
