@@ -157,10 +157,17 @@ func _show_chapter_transition(chapter_number: int) -> void:
 	# reading and closing change nothing. Both remain replayable in 이야기.
 	var outro_id: String = CampaignState.CHAPTERS[chapter_number - 2]["outro_event"]
 	var intro_id: String = CampaignState.CHAPTERS[chapter_number - 1]["intro_event"]
-	_show_dialog(CampaignState.CHAPTERS[chapter_number - 1]["title"], "%s\n%s\n\n%s\n%s" % [
-		session.event_title(outro_id), session.event_text(outro_id), session.event_title(intro_id), session.event_text(intro_id)], [
+	_show_dialog(CampaignState.CHAPTERS[chapter_number - 1]["title"], session.event_text(outro_id), [
 		{"label": "작업 시작", "call": Callable(self, "_noop")},
 	])
+	# Two sections, record first: each event title is its own accent heading,
+	# larger than the body text it introduces and kept above the buttons.
+	var record_heading := _label(dialog, session.event_title(outro_id), 21, ACCENT)
+	dialog.move_child(record_heading, 1)
+	var opening_heading := _label(dialog, session.event_title(intro_id), 21, ACCENT)
+	var opening_body := _label(dialog, session.event_text(intro_id), 17)
+	dialog.move_child(opening_heading, dialog.get_child_count() - 3)
+	dialog.move_child(opening_body, dialog.get_child_count() - 2)
 	_play_sound("chapter")
 
 func is_finished() -> bool:
