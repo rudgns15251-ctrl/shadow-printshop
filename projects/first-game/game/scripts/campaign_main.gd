@@ -26,6 +26,11 @@ var rotate_keys: Array = []
 var hint_key: Button
 var touch_mode := false
 var reset_key: Button
+var touch_bar: HBoxContainer
+var touch_top: HBoxContainer
+var touch_menu_key: Button
+var _touch_homes: Array = []
+const TOUCH_KEY := 84.0
 static var _scene_rows: Array = []
 var workbench_scroll: ScrollContainer
 var ending_panel: Control
@@ -359,9 +364,15 @@ func _update_responsive() -> void:
 		boards_grid.columns = 3 if size.x >= 1100.0 else 2
 	# Sheets shrink only as far as the larger text needs; digits keep their size.
 	var edge: float = 156.0 if float(settings["font_scale"]) <= 1.0 else (136.0 if float(settings["font_scale"]) <= 1.25 else 112.0)
+	if touch_mode:
+		# The bench is gone on phones: the sheets take the room it left.
+		edge = 220.0 if float(settings["font_scale"]) <= 1.0 else (196.0 if float(settings["font_scale"]) <= 1.25 else 150.0)
 	for view in [before_view, after_view, target_view]:
 		if view != null:
 			view.custom_minimum_size = Vector2(edge, edge)
+	if touch_mode and title_navigation != null:
+		# A rotation can move the notch: read the display again.
+		apply_safe_area(_display_safe_area())
 
 func _update_header_layout() -> void:
 	# One arrangement per window width, never per text length, so the header
@@ -973,6 +984,128 @@ func _set_font_scale(value: float) -> void:
 	if overlay != null and overlay.visible:
 		_open_settings_marks()
 
+func _open_pause() -> void:
+	if not touch_mode:
+		super._open_pause()
+		return
+	_show_dialog("메뉴", "진행은 자동 저장됩니다.", [
+		{"label": "계속", "call": Callable(self, "_noop")},
+		{"label": "이야기", "call": Callable(self, "_open_story")},
+		{"label": "기록함", "call": Callable(self, "_open_journal")},
+		{"label": "도움말", "call": Callable(self, "_open_help")},
+		{"label": "설정", "call": Callable(self, "_open_settings")},
+		{"label": "의뢰 초기화", "call": Callable(self, "_ask_reset_from_menu")},
+		{"label": "진행 저장", "call": Callable(self, "_save_manually")},
+		{"label": "저장 불러오기", "call": Callable(self, "_ask_load_from_menu")},
+		{"label": "시작 화면", "call": Callable(self, "_open_start")},
+	])
+
+func _ask_reset_from_menu() -> void:
+	# The menu closes first, so the inherited guard against open dialogs passes.
+	_ask_reset()
+
+func _ask_load_from_menu() -> void:
+	_ask_load()
+
+func _move_for_touch(node: Control, parent: Node) -> void:
+	# Remember where a node lived so the desktop arrangement can be restored exactly.
+	_touch_homes.append([node, node.get_parent(), node.get_index(), node.custom_minimum_size, node.size_flags_horizontal])
+	node.reparent(parent)
+
+func _touch_key(node: Control) -> void:
+	node.custom_minimum_size.y = TOUCH_KEY
+	node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if node is Button:
+		node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+func _arrange_for_touch(enabled: bool) -> void:
+	if print_button == null:
+		return
+	if touch_bar == null:
+		var layout: VBoxContainer = title_navigation.get_parent()
+		touch_top = HBoxContainer.new()
+		touch_top.name = "TouchTopBar"
+		touch_top.add_theme_constant_override("separation", 10)
+		layout.add_child(touch_top)
+		layout.move_child(touch_top, 0)
+		touch_menu_key = _button(touch_top, "≡ 메뉴", _open_pause, 140)
+		touch_menu_key.name = "TouchMenuKey"
+		touch_menu_key.custom_minimum_size.y = TOUCH_KEY
+		touch_bar = HBoxContainer.new()
+		touch_bar.name = "TouchBar"
+		touch_bar.add_theme_constant_override("separation", 8)
+		layout.add_child(touch_bar)
+		layout.move_child(touch_bar, layout.get_child_count() - 2)
+		touch_top.hide()
+		touch_bar.hide()
+	if enabled and _touch_homes.is_empty():
+		for node in [heading, hint_key, order_card]:
+			if node != null:
+				_move_for_touch(node, touch_top)
+		heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for node in [hint_key, order_card]:
+			if node != null:
+				node.custom_minimum_size.y = TOUCH_KEY
+				node.size_flags_horizontal = Control.SIZE_SHRINK_END
+		if hint_key != null:
+			hint_key.custom_minimum_size.x = 150
+		for node in [stamp_buttons[0], stamp_buttons[1]] + rotate_keys + [print_button, undo_button, next_button]:
+			_move_for_touch(node, touch_bar)
+			_touch_key(node)
+		title_navigation.hide()
+		find_child("StampBench", true, false).hide()
+		touch_top.show()
+		touch_bar.show()
+		if ending_panel != null:
+			for node in ending_panel.find_children("*", "Button", true, false):
+				node.custom_minimum_size.y = TOUCH_KEY
+	elif not enabled and not _touch_homes.is_empty():
+		touch_top.hide()
+		touch_bar.hide()
+		for i in range(_touch_homes.size() - 1, -1, -1):
+			var home: Array = _touch_homes[i]
+			var node: Control = home[0]
+			node.reparent(home[1])
+			home[1].move_child(node, home[2])
+			node.custom_minimum_size = home[3]
+			node.size_flags_horizontal = home[4]
+			if node is Button and node != order_card:
+				node.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_touch_homes.clear()
+		title_navigation.show()
+		find_child("StampBench", true, false).show()
+		if ending_panel != null:
+			for node in ending_panel.find_children("*", "Button", true, false):
+				node.custom_minimum_size.y = 46
+	if is_inside_tree():
+		_update_responsive()
+		apply_safe_area(_display_safe_area())
+
+func _display_safe_area() -> Rect2i:
+	# The phone's notch and rounded corners, in this viewport's coordinates.
+	var view := get_viewport_rect()
+	if not touch_mode or not OS.has_feature("mobile"):
+		return Rect2i(Vector2i.ZERO, Vector2i(view.size))
+	var safe := DisplayServer.get_display_safe_area()
+	var window := Vector2(get_window().size)
+	if window.x <= 0 or window.y <= 0:
+		return Rect2i(Vector2i.ZERO, Vector2i(view.size))
+	var scale := view.size / window
+	return Rect2i(Vector2i(Vector2(safe.position) * scale), Vector2i(Vector2(safe.size) * scale))
+
+func apply_safe_area(area: Rect2i) -> void:
+	# Keep every key clear of the notch: the screen margins grow by the insets.
+	var margins: MarginContainer = title_navigation.get_parent().get_parent()
+	var view := get_viewport_rect().size
+	# Both long edges keep the larger inset, so a half turn of the phone
+	# (which moves the notch without a resize) never puts keys under it.
+	var side := maxi(0, maxi(area.position.x, int(view.x) - area.end.x))
+	var ends := maxi(0, maxi(area.position.y, int(view.y) - area.end.y))
+	for edge in ["left", "right"]:
+		margins.add_theme_constant_override("margin_" + edge, 16 + side)
+	for edge in ["top", "bottom"]:
+		margins.add_theme_constant_override("margin_" + edge, 16 + ends)
+
 func _ask_reset() -> void:
 	if not game_active or overlay.visible:
 		return
@@ -1149,6 +1282,7 @@ func set_touch_mode(enabled: bool) -> void:
 	touch_mode = enabled
 	if story_stage != null:
 		story_stage.set_touch_mode(enabled)
+	_arrange_for_touch(enabled)
 	if print_button != null:
 		print_button.text = _touch_text("인쇄 [Space]")
 		undo_button.text = _touch_text("되돌리기 [U]")
@@ -1189,6 +1323,10 @@ func _notification(what: int) -> void:
 		if environment_audio != null:
 			environment_audio.stream_paused = false
 		_update_audio()
+		if touch_mode:
+			apply_safe_area(_display_safe_area())
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN and touch_mode and title_navigation != null:
+		apply_safe_area(_display_safe_area())
 
 func _go_back() -> void:
 	# The Android back gesture is Escape: skip a scene, close a dialog, else the menu.
