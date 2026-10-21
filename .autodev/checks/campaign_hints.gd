@@ -51,11 +51,12 @@ func hint_scenario(view,row: Dictionary,label: String) -> Array:
 				var board := bits(view.session.get_board());var target := bits(row["target"])
 				var next_board: int = board ^ MASKS[int(action["stamp"])*4+int(action["rotation"])]
 				check(distance(next_board,target,row["allowed_masks"]) == distance(board,target,row["allowed_masks"])-1,label+" reduces actual shortest distance by one")
-				var expression := RegEx.new();expression.compile("([AB]) 도장을 시계 방향 ([0-9]+)°")
+				# Player-facing stamp names (S10): 꺾임 = mask 0, 막대 = mask 1.
+				var expression := RegEx.new();expression.compile("(꺾임|막대) 도장을 시계 방향 ([0-9]+)°")
 				var rendered := expression.search(text_of(view.dialog))
 				check(rendered != null,label+" actual dialog renders existing level-three suggestion")
 				if rendered != null:
-					check((0 if rendered.get_string(1)=="A" else 1)==int(action["stamp"]) and int(rendered.get_string(2))==int(action["rotation"])*90,label+" rendered suggestion matches live solver")
+					check((0 if rendered.get_string(1)=="꺾임" else 1)==int(action["stamp"]) and int(rendered.get_string(2))==int(action["rotation"])*90,label+" rendered suggestion matches live solver")
 		view.dismiss_story()
 	check(view.save_campaign(),label+" hinted state saves")
 	var hints: Array = view.hint_levels.duplicate()
@@ -103,7 +104,7 @@ func run() -> void:
 		check(view.load_campaign() and view.session.export_progress()==solved and view.hint_levels==hints,"full solved-boundary round trip")
 		check(view.session==identity and view.puzzle_view.state==identity,"stable authoritative state identity")
 		view.hint_levels[index] = 2;view._open_hint()
-		check(not "제안:" in text_of(view.dialog) and "목표" in text_of(view.dialog),"solved hint reports completion without print action")
+		check(not "제안:" in text_of(view.dialog) and "견본" in text_of(view.dialog),"solved hint reports completion without print action")
 		view.dismiss_story()
 		if index < 17:view.advance()
 	check(view.is_finished() and view.ending_panel.visible,"final ending restored")

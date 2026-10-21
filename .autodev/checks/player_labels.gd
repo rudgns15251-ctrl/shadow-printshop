@@ -2,7 +2,8 @@ extends SceneTree
 ## Trusted S10 probe: the play screen speaks to the player in Korean. No developer
 ## labels (CURRENT/AFTER/TARGET/STAMP/SPACE/NEXT) appear on the screen, in
 ## guidance or in action tooltips across game states; every action keeps its
-## shortcut as a bracketed secondary hint, and every shortcut still works.
+## shortcut as a bracketed secondary hint, and every shortcut still works. Selection
+## feedback and hint dialogs (levels 1-3) use the stamp names, never A/B.
 var failures: Array = []
 var checks := 0
 const FORBIDDEN := ["CURRENT", "AFTER", "TARGET", "STAMP", "SPACE", "NEXT"]
@@ -37,6 +38,30 @@ func clean(main, label: String) -> void:
 			if text.contains(word):
 				found.append(word + " in '" + text.left(40) + "'")
 	check(found.is_empty(), label + ": no developer labels " + str(found.slice(0, 4)))
+
+func old_stamp_names(text: String) -> bool:
+	var expression := RegEx.create_from_string("(?<![A-Za-z])[AB](?![A-Za-z])")
+	return expression.search(text) != null
+
+func hints_clean(main, label: String) -> void:
+	var index: int = int(main.session.snapshot()["puzzle"])
+	var saved: int = int(main.hint_levels[index])
+	main.hint_levels[index] = 0
+	for level in range(1, 4):
+		main._open_hint()
+		await process_frame
+		var text := ""
+		for child in main.dialog.get_children():
+			if child is Label:
+				text += str(child.text) + "
+"
+		var found := []
+		for word in FORBIDDEN:
+			if text.contains(word):
+				found.append(word)
+		check(found.is_empty() and not old_stamp_names(text), label + " hint %d: player names only '%s'" % [level, text.left(60)])
+		main.dismiss_story()
+	main.hint_levels[index] = saved
 
 func key(code: Key) -> void:
 	var focus: Control = root.gui_get_focus_owner()
@@ -79,6 +104,7 @@ func run() -> void:
 	key(KEY_2)
 	await process_frame
 	check(int(main.session.snapshot()["selected_mask"]) == 1, "2 selects the bar stamp")
+	check(not old_stamp_names(str(main.reaction_label.text)) and str(main.reaction_label.text).contains("막대"), "selection feedback names the bar stamp: " + str(main.reaction_label.text))
 	key(KEY_1)
 	key(KEY_E)
 	await process_frame
@@ -88,6 +114,7 @@ func run() -> void:
 	await process_frame
 	check(int(main.session.snapshot()["moves"]) == 1, "Space prints")
 	clean(main, "after a print")
+	await hints_clean(main, "first puzzle")
 	key(KEY_U)
 	await process_frame
 	check(int(main.session.snapshot()["history_size"]) == 0, "U undoes")
@@ -109,6 +136,7 @@ func run() -> void:
 	await process_frame
 	clean(main, "chapter 2, single-stamp puzzle")
 	check(main.stamp_buttons[1].disabled or main.stamp_buttons[0].disabled, "an unavailable stamp is shown as unavailable")
+	await hints_clean(main, "chapter 2")
 	main._open_help()
 	await process_frame
 	var help := ""
