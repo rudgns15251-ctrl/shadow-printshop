@@ -389,6 +389,7 @@ def start(recover=False,max_milestones=None):
     if recover:cmd.append('--recover-blocked')
     # Stop after N milestones so an operator can plan the next one with test-first probes.
     if max_milestones is not None:cmd+=['--max-milestones',str(int(max_milestones))]
+    launched=a.now()
     with log.open('xb') as output:
         kw={'creationflags':subprocess.DETACHED_PROCESS|subprocess.CREATE_NEW_PROCESS_GROUP} if os.name=='nt' else {'start_new_session':True}
         child=subprocess.Popen(cmd,cwd=ROOT,env=environment(),stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,**kw)
@@ -398,8 +399,11 @@ def start(recover=False,max_milestones=None):
         if held() and owner.get('pid')==child.pid:return report()
         if child.poll() is not None:break
         time.sleep(0.05)
-    # A worker can finish real work (e.g. packaging only) before this check.
-    if child.poll()==0 and read(OWNER,{}).get('pid')==child.pid:return report()
+    # A worker can finish real work (e.g. packaging only) before this check. A venv
+    # python.exe is a launcher, so the owner pid may be its child: also accept an
+    # owner record written after this launch by a worker that exited cleanly.
+    owner=read(OWNER,{})
+    if child.poll()==0 and (owner.get('pid')==child.pid or str(owner.get('started',''))>=launched):return report()
     a.require(held(),'Worker failed startup; inspect '+str(log.relative_to(ROOT)))
     return report()
 
