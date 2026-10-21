@@ -363,7 +363,7 @@ def worker(max_milestones=None,recover_blocked=False):
     report()
     return 0 if state['status'] not in {'BLOCKED','BLOCKED_DEPENDENCIES'} else 2
 
-def start(recover=False):
+def start(recover=False,max_milestones=None):
     HOME.mkdir(parents=True,exist_ok=True)
     if held():return report()
     # Never clear a running child's checkpoint merely because its coordinator died.
@@ -382,6 +382,8 @@ def start(recover=False):
     log=HOME/('worker-'+uuid.uuid4().hex+'.log')
     cmd=[sys.executable,'-X','utf8',str(Path(__file__).resolve()),'_worker']
     if recover:cmd.append('--recover-blocked')
+    # Stop after N milestones so an operator can plan the next one with test-first probes.
+    if max_milestones is not None:cmd+=['--max-milestones',str(int(max_milestones))]
     with log.open('xb') as output:
         kw={'creationflags':subprocess.DETACHED_PROCESS|subprocess.CREATE_NEW_PROCESS_GROUP} if os.name=='nt' else {'start_new_session':True}
         child=subprocess.Popen(cmd,cwd=ROOT,env=environment(),stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,**kw)
@@ -463,7 +465,7 @@ def main(argv=None):
         if args.command=='operator-plan':
             a.require(args.milestone and args.tasks,'operator-plan requires --milestone and --tasks')
             print(json.dumps(operator_plan(args.milestone,args.tasks,args.reason),ensure_ascii=False,indent=2));return 0
-        if args.command in {'start','resume','recover'}:result=start(recover=args.command=='recover')
+        if args.command in {'start','resume','recover'}:result=start(recover=args.command=='recover',max_milestones=args.max_milestones)
         elif args.command=='pause':
             a.write(PAUSE,{'time':a.now(),'mode':'cooperative; no kill or unverified integration'})
             a.write(a.PAUSE,{'requested':a.now(),'mode':'production cooperative boundary'})
