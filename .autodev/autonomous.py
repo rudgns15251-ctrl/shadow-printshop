@@ -72,7 +72,10 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      # S13 mobile touch.
                      'touch_mode': ('touch_mode.gd', 'TOUCH_MODE_PASS'),
                      'touch_layout': ('touch_layout.gd', 'TOUCH_LAYOUT_PASS'),
-                     'touch_dialogs': ('touch_dialogs.gd', 'TOUCH_DIALOGS_PASS')}
+                     'touch_dialogs': ('touch_dialogs.gd', 'TOUCH_DIALOGS_PASS'),
+                     # S14 Android release.
+                     'android_project': ('android_project.gd', 'ANDROID_PROJECT_PASS'),
+                     'phone_polish': ('phone_polish.gd', 'PHONE_POLISH_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
