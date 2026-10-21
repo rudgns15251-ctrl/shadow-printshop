@@ -138,6 +138,7 @@ func _build_interface() -> void:
 	_button(column, "전체 캠페인 다시 플레이", _ask_campaign_replay, 130)
 	UiTheme.document_font(_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17))
 	ending_panel.hide()
+	_apply_player_labels()
 	# Last: every label the night scene recolours now exists.
 	_build_night_scene()
 	_build_title_backdrop()
@@ -229,6 +230,59 @@ func _fit_dialog() -> void:
 	if title_backdrop != null and title_backdrop.visible and popup_panel != null:
 		# A narrower title panel leaves more of the night workshop visible.
 		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0)
+
+const BOARD_NAMES := [["지금 종이", "지금 인쇄된 종이"], ["찍으면 · 미리보기", "인쇄 횟수에 포함되지 않아요"], ["견본", "이 모양과 같게 찍으세요"]]
+const CAPTIONS := {"Q · ↶ 90°": "↶ 왼쪽으로 [Q]", "E · ↷ 90°": "↷ 오른쪽으로 [E]", "R · 초기화": "초기화 [R]",
+	"1  도장 선택 · 회전": "도장 고르기", "2  미리보기 확인 · 인쇄": "미리보기를 견본과 비교하고 찍기",
+	"목판 / STAMP": "목판", "1 = 반전할 칸": "1 = 뒤집힐 칸"}
+
+func _apply_player_labels() -> void:
+	# Campaign only: player-facing Korean with the shortcut as a bracketed hint.
+	# The legacy prototype scene (protected tests) keeps its original captions.
+	for index in range(3):
+		var view: Control = [before_view, after_view, target_view][index]
+		var card: Node = view.get_parent()
+		card.get_child(0).get_child(0).text = BOARD_NAMES[index][0]
+		card.get_child(card.get_child_count() - 1).text = BOARD_NAMES[index][1]
+	print_button.text = "인쇄 [Space]"
+	undo_button.text = "되돌리기 [U]"
+	next_button.text = "다음 의뢰 [N]"
+	var stack: Array = [self]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if (node is Label or node is Button) and CAPTIONS.has(node.text):
+			node.text = CAPTIONS[node.text]
+		stack.append_array(node.get_children())
+
+func _stamp_name(index: int) -> String:
+	return "꺾임" if index == 0 else "막대"
+
+func _player_terms(text: String) -> String:
+	# The authored hint data predates the player-facing names; translate at display
+	# time only so the story data keeps its original text.
+	for pair in [["TARGET", "견본"], ["CURRENT", "지금 종이"], ["AFTER", "미리보기"]]:
+		text = text.replace(pair[0], pair[1])
+	var stamp := RegEx.create_from_string("(?<![A-Za-z])([AB])(?![A-Za-z])(와|는|를|가)?")
+	var particles := {"": "", "와": "과", "는": "은", "를": "을", "가": "이"}
+	var out := ""
+	var at := 0
+	for found in stamp.search_all(text):
+		out += text.substr(at, found.get_start() - at)
+		out += _stamp_name(0 if found.get_string(1) == "A" else 1) + " 도장" + particles[found.get_string(2)]
+		at = found.get_end()
+	return out + text.substr(at)
+
+func _select(index: int) -> void:
+	if not game_active or overlay.visible:
+		return
+	if session.select_mask(index):
+		_refresh()
+		_selection_feedback("%s 도장 선택" % _stamp_name(index))
+
+func _react(kind: String = "print") -> void:
+	super._react(kind)
+	if kind == "solve":
+		reaction_label.text = "✓ 견본 일치"
 
 func _build_night_scene() -> void:
 	# The inherited daylight backdrop becomes the night workshop; an atmosphere
@@ -619,7 +673,7 @@ func _confirm_new_campaign(back: Callable) -> void:
 	])
 
 func _open_help() -> void:
-	_show_dialog("캠페인 · 플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 반전됩니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\n창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동해 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.\nAFTER는 무료 미리보기입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 각 의뢰에서 허용된 도장만 선택할 수 있습니다.\n3장, 모두 %d개 퍼즐입니다. 장의 마지막 목표를 완성해도 다음 버튼으로 직접 진행합니다. 이야기와 의뢰서 읽기는 퍼즐을 진행하지 않습니다. 마지막 완성 후 결말과 크레딧을 볼 수 있습니다. 되돌리기나 초기화로 마지막 퍼즐을 다시 열 수 있습니다." % session.puzzle_count(), [
+	_show_dialog("캠페인 · 플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 뒤집힙니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n세 장의 종이: 지금 종이(지금 인쇄된 상태) · 찍으면(무료 미리보기) · 견본(맞춰야 할 모양).\n꺾임 도장 [1] · 막대 도장 [2] · 왼쪽/오른쪽으로 돌리기 [Q]/[E] · 인쇄 [Space]/[Enter] · 되돌리기 [U]/[Z] · 초기화 [R] · 다음 의뢰 [N]\n창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동해 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.\n미리보기는 무료입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 각 의뢰에서 허용된 도장만 선택할 수 있습니다.\n3장, 모두 %d개 퍼즐입니다. 장의 마지막 견본을 완성해도 다음 의뢰 [N]로 직접 넘어갑니다. 이야기와 의뢰서 읽기는 퍼즐을 진행하지 않습니다. 마지막 완성 후 결말과 크레딧을 볼 수 있습니다. 되돌리기나 초기화로 마지막 퍼즐을 다시 열 수 있습니다." % session.puzzle_count(), [
 		{"label": "돌아가기", "call": Callable(self, "_return_from_help")},
 	])
 
@@ -762,35 +816,52 @@ func _open_hint() -> void:
 	var puzzle: int = session.snapshot()["puzzle"]
 	var puzzle_id: String = session.puzzle_data()[puzzle]["id"]
 	var contextual: Dictionary = CampaignState.story_data().get("hints", {}).get(puzzle_id, {})
-	# Original eight: inherited presentation. Level three: inherited BFS from
-	# the live board, including allowed masks and the solved-board response.
-	if contextual.is_empty() or int(hint_levels[puzzle]) >= 2:
-		super._open_hint()
-		return
 	hint_levels[puzzle] = mini(3, int(hint_levels[puzzle]) + 1)
 	var level: int = hint_levels[puzzle]
-	var message: String = str(contextual["observation"] if level == 1 else contextual["comparison"])
+	# Levels one and two: authored notes for the new puzzles, the general rule and
+	# mismatch count for the original eight. Level three: the inherited search from
+	# the live board, including allowed masks. Same steps as before, player names.
+	var message := "도장에 표시된 칸은 인쇄할 때 뒤집힙니다. 같은 칸을 두 번 뒤집으면 원래대로 돌아옵니다."
+	if level == 2:
+		message = "지금 종이는 견본과 %d칸 다릅니다. 견본의 0/1을 한 칸씩 비교해 보세요." % session.mismatch_count()
+	if not contextual.is_empty() and level < 3:
+		message = _player_terms(str(contextual["observation"] if level == 1 else contextual["comparison"]))
+	if level == 3:
+		var hint: Dictionary = _find_next_move()
+		if hint.is_empty():
+			message = "이 상태의 짧은 해답을 찾지 못했습니다. 되돌리기 [U]나 초기화 [R]를 써 보세요."
+		else:
+			message = "제안: %s 도장을 시계 방향 %d°로 돌리고 인쇄해 보세요." % [_stamp_name(int(hint["stamp"])), int(hint["rotation"]) * 90]
 	if session.is_solved():
-		message = "이미 목표와 일치합니다."
+		message = "이미 견본과 일치합니다."
 	# Persist only the existing hint slot; never select, rotate or print here.
 	_autosave()
 	_refresh()
-	_show_dialog("힌트 %d / 3" % level, message + "\n힌트는 보드나 인쇄 횟수를 변경하지 않습니다.", [
+	_show_dialog("힌트 %d / 3" % level, message + "
+힌트는 종이나 인쇄 횟수를 바꾸지 않습니다.", [
 		{"label": "닫기", "call": Callable(self, "_noop")},
-		{"label": "다음 힌트", "call": Callable(self, "_hint_again")},
+		{"label": "다음 힌트", "call": Callable(self, "_hint_again")} if level < 3 else {"label": "의뢰로", "call": Callable(self, "_noop")},
 	])
 
 func _guidance(data: Dictionary, preview_cells: Array) -> String:
 	if is_finished():
-		return "✓ %d개 퍼즐을 모두 해결했습니다! 다음 퍼즐이 없습니다. 아침의 서명과 크레딧을 확인하세요. U/Z 되돌리기 · R 초기화 · 결말에서 전체 캠페인 다시 플레이." % session.puzzle_count()
+		return "✓ 의뢰 %d건을 모두 마쳤습니다. 다음 의뢰는 없습니다. 아침의 서명과 크레딧을 확인하세요. 되돌리기 [U] · 초기화 [R] · 결말에서 처음부터 다시 할 수 있습니다." % session.puzzle_count()
 	if bool(data["solved"]) and int(data["puzzle"]) in [7, 12]:
-		return "✓ 장의 목표 완성! N · 다음 퍼즐을 누르면 이 장의 마침 기록과 다음 장의 시작을 읽고 진행합니다. U/Z로 완료를 되돌릴 수 있습니다."
-	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
-		var selection := "도장 %s · %d°" % ["A" if int(data["selected_mask"]) == 0 else "B", int(data["rotation"]) * 90]
-		if preview_cells == data["target"]:
-			return "%s의 AFTER가 TARGET과 일치합니다. Space로 인쇄하면 완성됩니다." % selection
-		return "%s 선택 중 · 1/2 선택 · Q/E 회전 · Space 인쇄 · 도움말/힌트." % selection
-	return super._guidance(data, preview_cells)
+		return "✓ 이 장의 마지막 견본을 맞췄습니다. 다음 의뢰 [N]를 누르면 장의 마침 기록과 다음 장의 시작을 읽고 넘어갑니다. 되돌리기 [U]로 완료를 취소할 수 있습니다."
+	if bool(data["solved"]):
+		return "✓ 견본과 일치합니다. 다음 의뢰 [N]로 넘어가세요. 되돌리기 [U]로 완료를 취소할 수 있습니다."
+	var selection := "%s 도장 · %d°" % [_stamp_name(int(data["selected_mask"])), int(data["rotation"]) * 90]
+	var message := "인쇄 기록 없음 · " if int(data["history_size"]) == 0 and int(data["moves"]) == 0 else "인쇄 %d회 · " % int(data["moves"])
+	if preview_cells == data["target"]:
+		message += "%s의 미리보기가 견본과 같습니다. 인쇄 [Space]로 완성하세요." % selection
+	else:
+		# Keys already carry their shortcuts; guidance stays one line at 1280x720.
+		message += "%s의 미리보기를 견본과 비교하세요." % selection
+	if int(data["puzzle"]) == 0:
+		message += " 같은 도장·방향으로 다시 찍으면 그 칸은 원래대로 돌아갑니다."
+	elif int(data["history_size"]) > 0:
+		message += " 되돌리기 [U]로 취소할 수 있습니다."
+	return message
 
 func _refresh() -> void:
 	super._refresh()
@@ -809,9 +880,23 @@ func _refresh() -> void:
 				break
 	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
 		if int(data["history_size"]) == 0:
-			subheading.text = "CURRENT를 바꿀 도장을 고르고, 무료 AFTER 미리보기를 TARGET과 비교한 뒤 인쇄하세요."
+			subheading.text = "도장을 고르고, 미리보기를 견본과 비교한 뒤 인쇄하세요. 미리보기는 무료입니다."
 		else:
-			subheading.text = "인쇄 후 CURRENT는 TARGET과 %d칸 다릅니다. 다음 인쇄를 미리 보거나 U/Z로 되돌리세요." % session.mismatch_count()
+			subheading.text = "지금 종이는 견본과 %d칸 다릅니다. 다음 인쇄를 미리 보거나 되돌리기 [U]를 쓰세요." % session.mismatch_count()
+	elif int(data["puzzle"]) == 0:
+		subheading.text = "견본 완성! 다음 의뢰 [N]로 직접 넘어가세요."
+	else:
+		subheading.text = "종이에 도장을 찍어 견본과 같은 무늬를 만드세요."
+	if bool(data["solved"]):
+		reaction_label.text = "✓ 견본 일치"
+	detail.text = "선택: %s 도장  ·  회전 %d°" % [_stamp_name(int(data["selected_mask"])), int(data["rotation"]) * 90]
+	for index in range(stamp_buttons.size()):
+		var state_cue: String = " · 사용 불가" if stamp_buttons[index].disabled else (" ✓ 선택" if index == int(data["selected_mask"]) else "")
+		stamp_buttons[index].text = "%s 도장 [%d]%s" % [_stamp_name(index), index + 1, state_cue]
+	if not next_button.disabled:
+		next_button.tooltip_text = "다음 의뢰로 직접 넘어갑니다. (N)"
+	elif not bool(data["solved"]):
+		next_button.tooltip_text = "지금 의뢰의 견본을 먼저 완성해야 다음 의뢰로 넘어갈 수 있습니다."
 	if story_button != null:
 		story_button.tooltip_text = "진행에 따라 열린 장의 시작과 마침 기록을 다시 읽습니다. 읽기나 닫기는 퍼즐을 진행하지 않습니다."
 	if ending_panel != null:
@@ -825,5 +910,5 @@ func _refresh() -> void:
 		subheading.text = "3장 · 18개 의뢰 완료 · 아침의 서명"
 		next_button.tooltip_text = "18개 퍼즐을 모두 완성했습니다. 다음 퍼즐이 없습니다."
 	elif session.is_solved() and int(session.snapshot()["puzzle"]) in [7, 12]:
-		subheading.text = chapter["title"] + " 완료 · 다음 버튼 또는 N으로 다음 장에 직접 진행하세요."
+		subheading.text = chapter["title"] + " 완료 · 다음 의뢰 [N]로 다음 장에 직접 넘어가세요."
 		next_button.tooltip_text = "이 장의 마침 기록과 다음 장의 시작을 보여 주고 다음 장의 첫 퍼즐로 진행합니다. (N)"
