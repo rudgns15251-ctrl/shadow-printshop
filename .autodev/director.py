@@ -408,10 +408,14 @@ def operator_plan(milestone_id,tasks_file,reason):
         a.require(state is not None,'No production state')
         digest=a.auto.sha(MANIFEST)
         if state['manifest_sha256']!=digest:
-            # Only scope/goal text may change; milestone identity and order stay fixed.
-            a.require([x['id'] for x in state['milestones']]==[x['id'] for x in m['milestones']],'Milestone identity changed')
+            # Scope/goal text may change and new milestones may be appended; existing
+            # milestone identity and order stay fixed and their status is untouched.
+            known=[x['id'] for x in state['milestones']];ids=[x['id'] for x in m['milestones']]
+            a.require(ids[:len(known)]==known,'Milestone identity changed')
+            added=ids[len(known):]
+            state['milestones'].extend({'id':x,'status':'PENDING'} for x in added)
             state['events'].append({'type':'MANIFEST_RECONCILED','previous':state['manifest_sha256'],'current':digest,
-                                    'by':'claude-code-operator','reason':reason,'time':a.now()})
+                                    'added_milestones':added,'by':'claude-code-operator','reason':reason,'time':a.now()})
             state['manifest_sha256']=digest
         item=next((x for x in m['milestones'] if x['id']==milestone_id),None)
         a.require(item is not None,'Unknown milestone')

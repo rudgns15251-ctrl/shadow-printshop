@@ -48,7 +48,10 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'modal_motion': ('modal_motion.gd', 'MODAL_MOTION_PASS'),
                      'campaign_titles': ('campaign_titles.gd', 'CAMPAIGN_TITLES_PASS'),
                      'chapter_transition': ('chapter_transition.gd', 'CHAPTER_TRANSITION_PASS'),
-                     'asset_licenses': ('asset_licenses.gd', 'ASSET_LICENSES_PASS')}
+                     'asset_licenses': ('asset_licenses.gd', 'ASSET_LICENSES_PASS'),
+                     # S08 product identity and keyboard dialog reading.
+                     'product_identity': ('product_identity.gd', 'PRODUCT_IDENTITY_PASS'),
+                     'dialog_scroll': ('dialog_scroll.gd', 'DIALOG_SCROLL_PASS')}
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
 def now():

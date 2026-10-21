@@ -81,6 +81,21 @@
         "release_candidate",
         "context_tooltips"
       ]
+    },
+    {
+      "id": "s08_release_polish",
+      "depends_on": [
+        "s07_release"
+      ],
+      "tasks": 2,
+      "goal": "Release polish requested by the user after the S07 release candidate: exactly 2 small tasks. (1) Product identity: player-facing project name 음영 인쇄소 instead of the prototype name, keeping user:// at the exact legacy directory so all existing saves stay compatible; the coordinator exports ShadowPrintshop.exe. (2) Keyboard-only reading of long dialogs (PageUp/PageDown/Home/End) without moving focus, closing dialogs or changing progress, named in help. Preserve every S02-S07 interface, probe, save format and audio lifecycle. Re-certify the release candidate with fresh user data. Never manufacture human playtesting/listening claims. Do not Steam upload or publicly publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
     }
   ]
 }

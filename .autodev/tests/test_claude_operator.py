@@ -267,6 +267,34 @@ class OperatorReplan(dbase.ProductionTests):
         self.assertTrue(any(e.get('type') == 'MANIFEST_RECONCILED' for e in saved['events']))
         self.assertEqual(saved['milestones'][0]['operator_replans'][0]['previous_tasks'][0]['id'], 'old')
 
+    def test_operator_plan_appends_milestone_but_refuses_reorder(self):
+        for name in ('NARRATIVE_BIBLE.md', 'CHARACTER_BIBLE.md'): (self.root / name).write_text('fixture', encoding='utf-8')
+        state = d.initial(self.m); state['manifest_sha256'] = 'previous'
+        for row in state['milestones']: row['status'] = 'DONE'
+        a.write(d.STATE, state)
+        tasks_file = self.root / 'tasks.json'
+        a.write(tasks_file, {'tasks': [{'id': 'fresh', 'objective': 'o', 'allowed': ['scripts/slice_main.gd'], 'risk': 'low',
+                                        'depends_on': [], 'acceptance': ['x'], 'expected_failures': ['y'], 'recovery': 'z',
+                                        'deliverables': ['w'], 'acceptance_probes': []}]})
+        policy = {'approved_game_files': ['scripts/slice_main.gd'], 'protected': [], 'max_tasks': 8, 'max_fixes': 3}
+        a.write(a.HERE / 'policy.json', policy)
+        context = [patch.object(a, 'config', return_value={}), patch.object(a, 'policy', return_value=policy),
+                   patch.object(a, 'branch_ok', return_value='codex/fixture'), patch.object(a, 'clean'),
+                   patch.object(d, 'report', return_value={}), patch('builtins.print')]
+        for item in context: item.start(); self.addCleanup(item.stop)
+        reordered = dict(self.m, milestones=list(reversed(self.m['milestones'])))
+        a.write(d.MANIFEST, reordered)
+        with self.assertRaisesRegex(a.ERROR, 'identity changed'):
+            d.operator_plan('story', str(tasks_file), 'reason')
+        extended = dict(self.m, milestones=self.m['milestones'] + [
+            {'id': 'polish', 'depends_on': ['ending'], 'tasks': 1, 'goal': 'polish', 'probes': []}])
+        a.write(d.MANIFEST, extended)
+        d.operator_plan('polish', str(tasks_file), 'append polish')
+        saved = a.read(d.STATE)
+        self.assertEqual([(x['id'], x['status']) for x in saved['milestones']],
+                         [('story', 'DONE'), ('art', 'DONE'), ('ending', 'DONE'), ('polish', 'PENDING')])
+        self.assertEqual(saved['events'][-2]['added_milestones'], ['polish'])
+
     def test_operator_plan_refuses_wrong_task_count_and_done_milestone(self):
         state = d.initial(self.m); state['manifest_sha256'] = 'x'; state['milestones'][0]['status'] = 'DONE'
         a.write(d.STATE, state)
