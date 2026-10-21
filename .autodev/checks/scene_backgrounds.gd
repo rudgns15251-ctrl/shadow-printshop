@@ -89,7 +89,9 @@ func run() -> void:
 		if str(scene["trigger"]["type"]) == "chapter":
 			check(key == CHAPTER_KEYS.get(int(scene["trigger"]["chapter"]), ""), str(scene["id"]) + ": chapter scene uses its chapter's time of night")
 	check(used.has("ledger"), "the ledger close-up appears in a scene")
-	# The play screen follows the chapter.
+	# The play screen follows the chapter. Autosave off so the chapter-2 save
+	# below is the one that loads (each Next would otherwise overwrite it).
+	main.autosave_enabled = false
 	main.start_new()
 	main.dismiss_story()
 	check(scene_texture(main) == FILES["night"], "chapter 1 plays at night")
