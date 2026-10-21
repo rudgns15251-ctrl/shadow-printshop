@@ -9,7 +9,7 @@ extends SceneTree
 ## exactly as before (keyboard hints back when touch mode is off).
 var failures: Array = []
 var checks := 0
-var key_hint := RegEx.create_from_string("\\[(Space|Enter|Esc|Q|E|U|Z|N|R|1|2|PageDown|PageUp|Home|End)\\]|PageDown|PageUp|Home/End")
+var key_hint := RegEx.create_from_string("\\[(Space|Enter|Esc|Q|E|U|Z|N|R|1|2|PageDown|PageUp|Home|End)\\]|\\((N|U/Z|Space/Enter|Enter|Esc|R|Q/E|1/2)\\)|PageDown|PageUp|Home/End")
 
 func check(ok: bool, message: String) -> void:
 	checks += 1
@@ -67,7 +67,12 @@ func run() -> void:
 		quit(2)
 		return
 	check(main.touch_mode == OS.has_feature("mobile"), "touch mode follows the platform by default")
+	check(not main.get_tree().quit_on_go_back, "the engine does not quit on the back gesture; the game handles it")
+	# A title already open when touch mode starts (first launch on a phone) loses its key hints too.
+	main._open_start()
+	await settle()
 	main.set_touch_mode(true)
+	await no_keys(main.overlay, "title open before touch mode")
 	# Title: back never quits or starts a game.
 	main._open_start()
 	await settle()
