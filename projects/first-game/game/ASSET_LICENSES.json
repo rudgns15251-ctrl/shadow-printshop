@@ -12,7 +12,9 @@
     "license": "NOASSERTION",
     "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation or external resources.",
     "geometry_recipe": "192x224 paper frame, curved broad face and side hair silhouette, short facial strokes, polygonal shirt and green apron; paper/ink/wood/rust palette.",
-    "usage": ["scripts/campaign_main.gd::_add_order_portrait", "scripts/campaign_main.gd::_show_order (current and archive)"],
+    "usage": [
+      "Not referenced by the game since S12 (rc_19): order documents and the order card use the expression portraits. File retained unchanged for history."
+    ],
     "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
   },
   {
@@ -20,7 +22,9 @@
     "license": "NOASSERTION",
     "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation or external resources.",
     "geometry_recipe": "192x224 folded paper mount, curved hair and face, short facial strokes, collared shirt and abstract archive lines. Shared paper/ink palette, small green clip and rust archive mark.",
-    "usage": ["scripts/campaign_main.gd::_add_order_portrait", "scripts/campaign_main.gd::_show_order (current and archive)"],
+    "usage": [
+      "Not referenced by the game since S12 (rc_19): order documents and the order card use the expression portraits. File retained unchanged for history."
+    ],
     "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
   },
   {
@@ -28,7 +32,9 @@
     "license": "NOASSERTION",
     "origin": "Original project SVG authored directly by OpenAI Codex on 2026-10-19 using apply_patch text editing. No image generation or external resources.",
     "geometry_recipe": "192x224 paper frame, polygonal envelope and folded sheet, abstract document rules and empty green signature rectangle; no face, initials, names or identifying human silhouette.",
-    "usage": ["scripts/campaign_main.gd::_add_order_portrait", "scripts/campaign_main.gd::_show_order (current and archive)"],
+    "usage": [
+      "Not referenced by the game since S12 (rc_19): order documents and the order card use the expression portraits. File retained unchanged for history."
+    ],
     "rights_evidence": "Authored in this task for the project; no separate public distribution license granted here. Human rights review pending."
   },
   {
@@ -363,7 +369,8 @@
       "bytes": 3214
     },
     "usage": [
-      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 백인호 neutral lines)"
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 백인호 neutral lines)",
+      "scripts/campaign_main.gd::PORTRAITS (order card and order documents for 백인호)"
     ],
     "review_pending": "Human review of likeness, expression legibility and style consistency."
   },
@@ -408,7 +415,8 @@
       "bytes": 49022
     },
     "usage": [
-      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 윤해린 record lines before the ending)"
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 윤해린 record lines before the ending)",
+      "scripts/campaign_main.gd::PORTRAITS (order card and order documents for 윤해린's retained records)"
     ],
     "review_pending": "Human review of likeness, the archival look and style consistency."
   },
@@ -438,7 +446,8 @@
       "bytes": 1091
     },
     "usage": [
-      "scripts/campaign_main.gd::_scene_portrait (StoryStage mark for 0번 의뢰인 documents before chapter 3)"
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage mark for 0번 의뢰인 documents before chapter 3)",
+      "scripts/campaign_main.gd::PORTRAITS (order card and order documents for 0번 의뢰인)"
     ],
     "review_pending": "Human review of readability as an anonymous document mark."
   },

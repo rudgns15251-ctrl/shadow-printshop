@@ -60,6 +60,19 @@ static func key(color: Color, edge: Color, pressed: bool = false) -> StyleBoxFla
 	style.anti_aliasing = true
 	return style
 
+## Korean words stay whole when a line wraps: a zero-width word joiner sits
+## between neighbouring Hangul syllables (idempotent; spaces still break).
+static func keep_words(text: String) -> String:
+	var out := ""
+	for i in range(text.length()):
+		out += text[i]
+		if i + 1 < text.length() and _hangul(text.unicode_at(i)) and _hangul(text.unicode_at(i + 1)):
+			out += char(0x2060)
+	return out
+
+static func _hangul(code: int) -> bool:
+	return code >= 0xAC00 and code <= 0xD7A3
+
 static func title_font(label: Control) -> void:
 	label.add_theme_font_override("font", MYEONGJO_BOLD)
 

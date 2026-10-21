@@ -7,7 +7,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const ATMOSPHERE = preload("res://shaders/atmosphere.gdshader")
 const SCENE_FADE := 0.35
 const PORTRAIT_FADE := 0.3
-const KIND_TEXT := {"live": "현장 발화", "document": "보관 문서", "narration": "기록"}
+const KIND_TEXT := {"live": "직접 말함", "document": "남겨진 문서", "narration": "기록"}
 
 signal advanced
 signal skipped
@@ -179,7 +179,7 @@ func skip() -> void:
 func _show_line() -> void:
 	var line: Dictionary = lines[line_index]
 	var speaker := str(line["speaker"])
-	text.text = str(line["text"])
+	text.text = UiTheme.keep_words(str(line["text"]))
 	text.visible_ratio = 1.0
 	name_plate.text = speaker
 	name_plate.visible = not speaker.is_empty()

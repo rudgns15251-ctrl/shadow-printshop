@@ -23,6 +23,7 @@ var ending_scene_key: Button
 var workbench_panel: Control
 var dialog_hint: Label
 var rotate_keys: Array = []
+var hint_key: Button
 static var _scene_rows: Array = []
 var workbench_scroll: ScrollContainer
 var ending_panel: Control
@@ -143,10 +144,10 @@ func _build_interface() -> void:
 	content.move_child(panel, 1)
 	ending_panel = panel
 	var column := _column(panel, 8)
-	UiTheme.title_font(_label(column, "18개 퍼즐 완료 · 아침의 서명", 21, GREEN))
+	UiTheme.title_font(_label(column, "의뢰 18건 완료 · 아침의 서명", 21, GREEN))
 	_button(column, "크레딧", show_credits, 130)
-	_button(column, "전체 캠페인 다시 플레이", _ask_campaign_replay, 130)
-	UiTheme.document_font(_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17))
+	_button(column, "처음부터 다시 하기", _ask_campaign_replay, 130)
+	UiTheme.document_font(_label(column, UiTheme.keep_words(str(CampaignState.story_data()["events"]["C03_ENDING"]["text"])), 17))
 	ending_panel.hide()
 	_apply_player_labels()
 	_build_workbench()
@@ -309,7 +310,7 @@ func _set_title_look(enabled: bool) -> void:
 	dialog.move_child(subtitle, 1)
 	var body: Label = dialog.get_child(2)
 	# How to play lives in 도움말; the title keeps one short line.
-	body.text = "세 장, 열여덟 의뢰, 하나의 결말"
+	body.text = "세 장, 의뢰 18건, 하나의 결말"
 	body.add_theme_color_override("font_color", Color(UiTheme.PAPER, 0.86))
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# The start actions become a centred menu column of equal-width keys.
@@ -330,8 +331,10 @@ func _set_title_look(enabled: bool) -> void:
 		var button: Button = keys[index]
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("focus", _title_focus_style())
-		if index >= 2:
+		if index >= 2 and index < keys.size() - 1:
 			button.reparent(grid)
+	# 종료 keeps its own full-width row instead of sitting alone in the grid.
+	menu.move_child(keys[keys.size() - 1], menu.get_child_count() - 1)
 	_fit_dialog.call_deferred()
 
 func _title_focus_style() -> StyleBoxFlat:
@@ -404,6 +407,8 @@ func _open_story_at(title: String) -> void:
 	for node in dialog.find_children("*", "Button", true, false):
 		if node.text == "장면 · " + title:
 			node.grab_focus()
+			# After the dialog's own deferred scroll-to-top, bring the entry into view.
+			popup_scroll.call_deferred("ensure_control_visible", node)
 			break
 
 func _build_dialog_hint() -> void:
@@ -430,8 +435,8 @@ func _fit_dialog() -> void:
 		# A narrower title panel leaves more of the night workshop visible.
 		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0)
 
-const PORTRAITS := {"백인호": preload("res://assets/art/portrait_baek.svg"),
-	"윤해린": preload("res://assets/art/portrait_yoon.svg"), "0번 의뢰인": preload("res://assets/art/portrait_client.svg")}
+const PORTRAITS := {"백인호": preload("res://assets/art/portrait_baek_neutral.svg"),
+	"윤해린": preload("res://assets/art/portrait_yoon_record.svg"), "0번 의뢰인": preload("res://assets/art/portrait_client_sealed.svg")}
 
 func _build_workbench() -> void:
 	# The puzzle as a desk: paper sheets lie on a dark Workbench, the stamp and its
@@ -478,7 +483,7 @@ func _build_workbench() -> void:
 	order_card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	order_card.add_theme_constant_override("icon_max_width", 40)
 	order_card.add_theme_constant_override("h_separation", 10)
-	order_card.tooltip_text = "지금 의뢰서를 다시 엽니다. 읽기는 퍼즐을 진행하지 않습니다."
+	order_card.tooltip_text = "지금 의뢰의 의뢰서를 엽니다. 읽어도 진행은 바뀌지 않습니다."
 	# Workbench: the three sheets and their legend on the dark bench.
 	var bench := PanelContainer.new()
 	bench.name = "Workbench"
@@ -541,6 +546,15 @@ func _build_workbench() -> void:
 		if node.text in ["도장 고르기", "미리보기를 견본과 비교하고 찍기"]:
 			node.hide()
 	reaction_label.add_theme_color_override("font_color", UiTheme.INK)
+	# The stamp art needs no caption, and the hint state rides on the hint key, so
+	# the bench ends with the print row instead of half-cut status lines.
+	for node in stamp_bench.find_children("*", "Label", true, false):
+		if node.text == "목판":
+			node.hide()
+	hint_label.hide()
+	for node in tools.find_children("*", "Button", true, false):
+		if str(node.text) == "힌트":
+			hint_key = node
 	stamp_view.custom_minimum_size = Vector2(124, 100)
 	# A smaller play-screen title leaves room for the work.
 	var title_label: Label = title_area.get_child(0)
@@ -730,13 +744,12 @@ func _show_ending_credits() -> void:
 	# explicitly instead of relying on metadata surviving dialog replacement.
 	_open_credits(Callable(self, "_replay_event").bind("C03_ENDING"), "결말 기록으로 돌아가기")
 
+const CREDITS_PAGE := "음영 인쇄소\n1998년 11월 17일 밤, 한 인쇄소의 야간 작업 기록\n\n게임 엔진 · Godot Engine 4 (Godot Engine 기여자들, MIT 라이선스)\n규칙 · 겹쳐 찍으면 뒤집히는 3×3 도장 인쇄\n글꼴 · 나눔고딕, 나눔명조 (SIL Open Font License 1.1)\n그림·글·소리 · 대부분 이 게임을 위해 AI 도구(OpenAI Codex, Anthropic Claude Code)로 새로 만든 원본입니다. 일부 기존 자산은 제작자가 확인되지 않았습니다. 파일별 출처와 허가, 사람의 권리 검토 대기 상태는 ‘자산 출처·라이선스’에서 볼 수 있습니다.\n\n세 장, 열여덟 의뢰의 기록을 읽어 주셔서 감사합니다."
+
 func _open_credits(back: Callable, back_caption: String) -> void:
 	if not is_finished() or not game_active:
 		return
-	var credits: Dictionary = CampaignState.story_data()["credits"]
-	# The dialog renders plain text; drop Markdown heading markers from the file.
-	var attribution := RegEx.create_from_string("(?m)^#{1,6}[ \\t]+").sub(FileAccess.get_file_as_string("res://CREDITS_KO.md"), "", true)
-	_show_dialog(credits["title"], credits["text"] + "\n\n" + attribution, [
+	_show_dialog("크레딧", CREDITS_PAGE, [
 		{"label": back_caption, "call": back},
 		{"label": "자산 출처·라이선스", "call": Callable(self, "_show_asset_licenses").bind(back, back_caption)},
 		{"label": "엔진·글꼴 라이선스 전문", "call": Callable(self, "_show_credit_notices").bind(back, back_caption)},
@@ -745,7 +758,9 @@ func _open_credits(back: Callable, back_caption: String) -> void:
 func _show_asset_licenses(back: Callable, back_caption: String) -> void:
 	if not is_finished() or not game_active:
 		return
-	_show_dialog("자산 출처·라이선스", _asset_license_text(FileAccess.get_file_as_string("res://ASSET_LICENSES.json")), [
+	# The dialog renders plain text; drop Markdown heading markers from the file.
+	var attribution := RegEx.create_from_string("(?m)^#{1,6}[ \\t]+").sub(FileAccess.get_file_as_string("res://CREDITS_KO.md"), "", true)
+	_show_dialog("자산 출처·라이선스", attribution.strip_edges() + "\n\n" + _asset_license_text(FileAccess.get_file_as_string("res://ASSET_LICENSES.json")), [
 		{"label": "크레딧으로 돌아가기", "call": Callable(self, "_open_credits").bind(back, back_caption)},
 	])
 
@@ -925,8 +940,32 @@ func _collect_dialog_controls(node: Node, controls: Array[Control]) -> void:
 func _open_settings() -> void:
 	_cancel_presentation_motion()
 	super._open_settings()
+	_open_settings_marks()
 	_confine_journal_focus()
 	_scroll_dialog_to_top()
+
+func _open_settings_marks() -> void:
+	for node in dialog.find_children("*", "Button", true, false):
+		for value in [1.0, 1.25, 1.5]:
+			var caption := "%d%%" % int(value * 100.0)
+			if str(node.text).begins_with(caption):
+				node.text = caption + (" ✓" if is_equal_approx(float(settings["font_scale"]), value) else "")
+	for node in dialog.find_children("*", "Label", true, false):
+		if str(node.text) == "설정은 로컬에 저장됩니다.":
+			node.text = "설정은 이 컴퓨터에 저장됩니다."
+
+func _set_font_scale(value: float) -> void:
+	super._set_font_scale(value)
+	if overlay != null and overlay.visible:
+		_open_settings_marks()
+
+func _ask_reset() -> void:
+	if not game_active or overlay.visible:
+		return
+	_show_dialog("의뢰 초기화", "지금 의뢰의 인쇄와 되돌리기 기록을 지울까요?", [
+		{"label": "취소", "call": Callable(self, "_noop")},
+		{"label": "초기화", "call": Callable(self, "_reset_confirmed")},
+	])
 
 func _settings_close() -> void:
 	dismiss_story()
@@ -966,9 +1005,10 @@ func _open_start() -> void:
 	game_active = false
 	_update_audio()
 	var found: bool = _has_valid_save()
-	_show_dialog("음영 인쇄소 · 캠페인", "1998년 11월 17일 밤, 음영 인쇄소의 야간 작업을 맡았습니다.\n3장, 모두 %d개 퍼즐과 하나의 결말입니다. 각 목표를 완성할 때마다 다음 버튼 또는 N으로 직접 진행하세요.\n의뢰서와 기록함에서 문서를 읽고, 이야기에서 열린 장의 시작과 마침을 다시 볼 수 있습니다." % session.puzzle_count(), [
+	_show_dialog("음영 인쇄소", "1998년 11월 17일 밤, 음영 인쇄소의 야간 작업을 맡았습니다.\n세 장, 의뢰 18건과 하나의 결말. 견본을 맞추면 다음 의뢰 [N]로 넘어갑니다.\n의뢰서와 기록함에서 문서를 읽고, 이야기에서 열린 장과 장면을 다시 볼 수 있습니다.", [
 		{"label": "처음부터", "call": Callable(self, "_ask_new_game")},
-		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start")},
+		{"label": "이어하기" if found else "이어하기 (저장 없음)", "call": Callable(self, "_continue_game") if found else Callable(self, "_open_start"),
+			"disabled": not found, "tooltip": "" if found else "저장된 진행이 없습니다. 처음부터 시작하세요."},
 		{"label": "기록함", "call": Callable(self, "_open_journal")},
 		{"label": "이야기 다시 읽기", "call": Callable(self, "_open_story")},
 		{"label": "도움말", "call": Callable(self, "_open_help")},
@@ -1003,33 +1043,33 @@ func _ask_ending_replay() -> void:
 func _confirm_new_campaign(back: Callable) -> void:
 	# First option is also Escape. Opening/cancelling only changes the dialog;
 	# the affirmative action alone enters the existing new-campaign lifecycle.
-	_show_dialog("전체 캠페인 다시 시작", "제1장 첫 의뢰부터 열여덟 의뢰를 모두 다시 시작합니다. 현재 캠페인 진행과 캠페인 저장을 새 진행으로 교체합니다. 인쇄·되돌리기 기록, 힌트와 읽은 의뢰서 기록도 초기화됩니다. 설정은 유지됩니다.\n\n처음부터 다시 플레이할까요?", [
+	_show_dialog("처음부터 다시 하기", "제1장 첫 의뢰부터 의뢰 18건을 모두 다시 시작합니다. 지금까지의 진행과 저장을 새 진행으로 바꿉니다. 인쇄·되돌리기 기록, 힌트와 읽은 의뢰서 기록도 지워집니다. 설정은 그대로입니다.\n\n처음부터 다시 할까요?", [
 		{"label": "취소", "call": back},
-		{"label": "전체 캠페인 시작", "call": Callable(self, "_new_game")},
+		{"label": "처음부터 시작", "call": Callable(self, "_new_game")},
 	])
 
 func _open_help() -> void:
-	_show_dialog("캠페인 · 플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 뒤집힙니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n세 장의 종이: 지금 종이(지금 인쇄된 상태) · 찍으면(무료 미리보기) · 견본(맞춰야 할 모양).\n꺾임 도장 [1] · 막대 도장 [2] · 왼쪽/오른쪽으로 돌리기 [Q]/[E] · 인쇄 [Space]/[Enter] · 되돌리기 [U]/[Z] · 초기화 [R] · 다음 의뢰 [N]\n창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동해 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.\n미리보기는 무료입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 각 의뢰에서 허용된 도장만 선택할 수 있습니다.\n3장, 모두 %d개 퍼즐입니다. 장의 마지막 견본을 완성해도 다음 의뢰 [N]로 직접 넘어갑니다. 이야기와 의뢰서 읽기는 퍼즐을 진행하지 않습니다. 마지막 완성 후 결말과 크레딧을 볼 수 있습니다. 되돌리기나 초기화로 마지막 퍼즐을 다시 열 수 있습니다." % session.puzzle_count(), [
+	_show_dialog("작업 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 뒤집힙니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n세 장의 종이: 지금 종이(지금 인쇄된 상태) · 찍으면(무료 미리보기) · 견본(맞춰야 할 모양).\n꺾임 도장 [1] · 막대 도장 [2] · 돌리기 [Q]·[E] · 인쇄 [Space]·[Enter] · 되돌리기 [U]·[Z] · 초기화 [R] · 다음 의뢰 [N]\n창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동하며 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.\n미리보기는 무료입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 의뢰마다 쓸 수 있는 도장이 정해져 있습니다.\n세 장, 의뢰 18건입니다. 장의 마지막 견본을 맞춰도 다음 의뢰 [N]를 눌러야 넘어갑니다. 이야기와 의뢰서를 읽어도 진행은 바뀌지 않습니다. 마지막 의뢰를 마치면 결말과 크레딧을 볼 수 있고, 되돌리기나 초기화로 마지막 의뢰를 다시 열 수 있습니다.", [
 		{"label": "돌아가기", "call": Callable(self, "_return_from_help")},
 	])
 
 func _open_story() -> void:
 	var source = _story_source()
-	var options: Array = [{"label": "퍼즐로" if game_active else "시작 화면으로", "call": Callable(self, "_close_journal")}]
+	var options: Array = [{"label": "닫기" if game_active else "시작 화면으로", "call": Callable(self, "_close_journal")}]
 	var summaries: Array[String] = []
 	for chapter in CampaignState.CHAPTERS:
 		summaries.append(chapter["title"] + "\n" + chapter["summary"])
 		var intro_available: bool = source.event_available(chapter["intro_event"])
 		var outro_available: bool = source.event_available(chapter["outro_event"])
 		options.append({"label": chapter["title"] + " · 시작 읽기", "call": Callable(self, "_replay_event").bind(chapter["intro_event"]),
-			"disabled": not intro_available, "tooltip": "장의 시작을 다시 읽습니다." if intro_available else "다음 버튼으로 이 장의 첫 퍼즐에 들어가면 읽을 수 있습니다."})
+			"disabled": not intro_available, "tooltip": "장의 시작을 다시 읽습니다." if intro_available else "다음 의뢰 [N]로 이 장의 첫 의뢰에 들어가면 읽을 수 있습니다."})
 		options.append({"label": chapter["title"] + " · 마침 기록 읽기", "call": Callable(self, "_replay_event").bind(chapter["outro_event"]),
-			"disabled": not outro_available, "tooltip": "장의 마침 기록을 다시 읽습니다." if outro_available else "이 장의 마지막 퍼즐을 완성하면 읽을 수 있습니다."})
+			"disabled": not outro_available, "tooltip": "장의 마침 기록을 다시 읽습니다." if outro_available else "이 장의 마지막 의뢰를 마치면 읽을 수 있습니다."})
 	for scene in scene_rows():
 		var open: bool = _scene_unlocked(source, scene)
 		options.append({"label": "장면 · " + str(scene["title"]), "call": Callable(self, "play_scene").bind(str(scene["id"]), Callable(self, "_open_story_at").bind(str(scene["title"]))),
 			"disabled": not open, "tooltip": "이 장면을 다시 봅니다." if open else "이야기가 이 장면까지 진행되면 볼 수 있습니다."})
-	_show_dialog("이야기 다시 읽기", "열린 장의 기록과 장면을 다시 읽습니다. 퍼즐을 선택하거나 진행을 바꾸지 않습니다.\n\n" + "\n\n".join(summaries), options)
+	_show_dialog("이야기 다시 읽기", "열린 장의 기록과 장면을 다시 읽습니다. 의뢰를 고르거나 진행을 바꾸지 않습니다.\n\n" + "\n\n".join(summaries), options)
 
 func _story_source():
 	if game_active:
@@ -1046,7 +1086,7 @@ func _replay_event(id: String) -> void:
 	var options: Array = [{"label": "이야기 목록으로", "call": Callable(self, "_open_story")}]
 	if id == "C03_ENDING" and game_active and is_finished():
 		options.append({"label": "크레딧", "call": Callable(self, "_show_ending_credits")})
-		options.append({"label": "전체 캠페인 다시 플레이", "call": Callable(self, "_ask_ending_replay")})
+		options.append({"label": "처음부터 다시 하기", "call": Callable(self, "_ask_ending_replay")})
 	_show_dialog(source.event_title(id), source.event_text(id), options)
 	UiTheme.document_font(dialog.get_child(1))
 	overlay.set_meta("campaign_event_id", id)
@@ -1069,12 +1109,9 @@ func _open_order() -> void:
 			return
 
 func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
-	var kind := "현재 현장에서 하는 말" if row["delivery"] == "live_speech" else "보관된 문서 · 현재의 모습이나 발화가 아님"
-	var chronology := "제%d장 · 만남 순서 %d · %s" % [int(row["chapter"]), int(row["encounter_sequence"]), row["encounter_date"]]
-	if row.has("encounter_time"):
-		chronology += " " + row["encounter_time"]
-	_show_dialog("의뢰서 · %s" % row["id"], "%s\n%s\n%s 날짜: %s\n기록 명의: %s\n\n%s" % [
-		chronology, kind, "발화" if row["delivery"] == "live_speech" else "문서", row["document_date"], row["speaker"], row["text"]], [
+	var when := _date_ko(str(row["encounter_date"])) + (" " + str(row["encounter_time"]) if row.has("encounter_time") else "")
+	var origin := "%s 직접 건넨 말" % _subject(str(row["speaker"])) if row["delivery"] == "live_speech" else "%s에 남겨진 문서 · %s" % [_date_ko(str(row["document_date"])), _filed_as(row)]
+	_show_dialog("의뢰서 · 의뢰 %d" % _order_number(row), "제%d장 · %s\n%s\n\n%s" % [int(row["chapter"]), when, origin, row["text"]], [
 		{"label": caption, "call": back},
 	])
 	UiTheme.document_font(dialog.get_child(1))
@@ -1082,20 +1119,43 @@ func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
 	_confine_journal_focus()
 	_play_sound("paper")
 
+func _date_ko(date: String) -> String:
+	var parts := date.split("-")
+	return "%s년 %d월 %d일" % [parts[0], int(parts[1]), int(parts[2])] if parts.size() == 3 else date
+
+func _order_number(row: Dictionary) -> int:
+	for index in range(session.puzzle_count()):
+		if session.puzzle_data()[index]["id"] == row["puzzle_id"]:
+			return index + 1
+	return 0
+
+func _subject(name: String) -> String:
+	# Subject particle by the last syllable: 가 after a vowel, 이 after a final consonant.
+	var code := name.unicode_at(name.length() - 1)
+	return name + ("이" if code >= 0xAC00 and code <= 0xD7A3 and (code - 0xAC00) % 28 != 0 else "가")
+
+func _filed_as(row: Dictionary) -> String:
+	# Where a retained document comes from; the 0번 bundle also holds 백인호's
+	# statement, so it is never presented as 0번 의뢰인's own writing.
+	return "윤해린의 교정 기록" if str(row["speaker"]) == "윤해린" else "0번 의뢰 묶음에 보관됨"
+
+func _order_kind(row: Dictionary) -> String:
+	return "직접 건넨 말" if row["delivery"] == "live_speech" else "남겨진 문서"
+
 func _add_order_portrait(row: Dictionary) -> void:
 	# Current orders and archive replay share this presentation-only mapping.
 	var texture: Texture2D
 	var caption: String
 	match str(row["speaker"]):
 		"백인호":
-			texture = preload("res://assets/art/portrait_baek.svg")
-			caption = "백인호 · 현장 인물"
+			texture = PORTRAITS["백인호"]
+			caption = "백인호 · 인쇄소 주인"
 		"윤해린":
-			texture = preload("res://assets/art/portrait_yoon.svg")
-			caption = "윤해린 · 기록 이미지"
+			texture = PORTRAITS["윤해린"]
+			caption = "윤해린 · 남겨진 기록 사진"
 		"0번 의뢰인":
-			texture = preload("res://assets/art/portrait_client.svg")
-			caption = "무서명 의뢰서 · 익명의 문서 표식"
+			texture = PORTRAITS["0번 의뢰인"]
+			caption = "0번 의뢰 묶음의 문서"
 		_:
 			return
 	var row_view := _row(dialog, 12)
@@ -1134,11 +1194,16 @@ func _open_journal() -> void:
 	for id in ids:
 		for row in CampaignState.story_data()["orders"]:
 			if row["id"] == id:
-				options.append({"label": "%s · %s" % [id, row["speaker"]], "call": Callable(self, "_replay_order").bind(id)})
-	var message := "아직 읽은 의뢰서가 없습니다. 의뢰서를 열면 캠페인 기록함에 보관됩니다."
+				options.append({"label": "의뢰 %d · %s" % [_order_number(row), row["speaker"]], "call": Callable(self, "_replay_order").bind(id)})
+	var message := "아직 읽은 의뢰서가 없습니다. 의뢰서를 열면 기록함에 보관됩니다."
 	if not ids.is_empty():
-		message = "읽은 의뢰서를 선택해 전문을 다시 볼 수 있습니다.\n읽은 순서: " + " → ".join(ids)
-	_show_dialog("캠페인 · 기록함", message, options)
+		var order_names: Array = []
+		for id in ids:
+			for row in CampaignState.story_data()["orders"]:
+				if row["id"] == id:
+					order_names.append("의뢰 %d" % _order_number(row))
+		message = "읽은 의뢰서를 골라 전문을 다시 볼 수 있습니다.\n읽은 순서: " + " → ".join(order_names)
+	_show_dialog("기록함", message, options)
 	_confine_journal_focus()
 	_play_sound("paper")
 
@@ -1147,7 +1212,7 @@ func _replay_order(id: String) -> void:
 		return
 	for row in CampaignState.story_data()["orders"]:
 		if row["id"] == id:
-			_show_order(row, Callable(self, "_open_journal"), "기록함으로")
+			_show_order(row, Callable(self, "_open_journal"), "돌아가기")
 			return
 
 func _open_hint() -> void:
@@ -1171,7 +1236,7 @@ func _open_hint() -> void:
 		if hint.is_empty():
 			message = "이 상태의 짧은 해답을 찾지 못했습니다. 되돌리기 [U]나 초기화 [R]를 써 보세요."
 		else:
-			message = "제안: %s 도장을 시계 방향 %d°로 돌리고 인쇄해 보세요." % [_stamp_name(int(hint["stamp"])), int(hint["rotation"]) * 90]
+			message = "제안: %s 도장을 %d°로 맞춘 뒤 인쇄해 보세요. 돌리기는 [Q]·[E]입니다." % [_stamp_name(int(hint["stamp"])), int(hint["rotation"]) * 90]
 	if session.is_solved():
 		message = "이미 견본과 일치합니다."
 	# Persist only the existing hint slot; never select, rotate or print here.
@@ -1223,9 +1288,9 @@ func _refresh() -> void:
 	if order_cue != null:
 		for row in CampaignState.story_data()["orders"]:
 			if row["puzzle_id"] == puzzle["id"]:
-				order_cue.text = "현재 의뢰 %s · %s · %s" % [row["id"], row["speaker"], "현장 발화" if row["delivery"] == "live_speech" else "보관 문서"]
+				order_cue.text = "지금 의뢰 %d · %s · %s" % [_order_number(row), row["speaker"], _order_kind(row)]
 				if order_card != null:
-					order_card.text = "의뢰서 · %s\n%s · %s" % [row["id"], row["speaker"], "현장 발화" if row["delivery"] == "live_speech" else "보관 문서"]
+					order_card.text = "의뢰서 · 의뢰 %d\n%s · %s" % [_order_number(row), row["speaker"], _order_kind(row)]
 					order_card.icon = PORTRAITS.get(str(row["speaker"]))
 				break
 	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
@@ -1254,7 +1319,7 @@ func _refresh() -> void:
 	elif not bool(data["solved"]):
 		next_button.tooltip_text = "지금 의뢰의 견본을 먼저 완성해야 다음 의뢰로 넘어갈 수 있습니다."
 	if story_button != null:
-		story_button.tooltip_text = "진행에 따라 열린 장의 시작과 마침 기록, 장면을 다시 읽습니다. 읽기나 닫기는 퍼즐을 진행하지 않습니다."
+		story_button.tooltip_text = "열린 장의 시작과 마침 기록, 장면을 다시 읽습니다. 읽어도 진행은 바뀌지 않습니다."
 	if ending_panel != null:
 		var newly_finished: bool = is_finished() and not ending_panel.visible
 		ending_panel.visible = is_finished()
@@ -1265,8 +1330,17 @@ func _refresh() -> void:
 			# Bring the ending heading and its credits control into view once.
 			workbench_scroll.set_deferred("scroll_vertical", 0)
 	if is_finished():
-		subheading.text = "3장 · 18개 의뢰 완료 · 아침의 서명"
-		next_button.tooltip_text = "18개 퍼즐을 모두 완성했습니다. 다음 퍼즐이 없습니다."
+		subheading.text = "3장 · 의뢰 18건 완료 · 아침의 서명"
+		next_button.tooltip_text = "의뢰 18건을 모두 마쳤습니다. 다음 의뢰는 없습니다."
 	elif session.is_solved() and int(session.snapshot()["puzzle"]) in [7, 12]:
 		subheading.text = chapter["title"] + " 완료 · 다음 의뢰 [N]로 다음 장에 직접 넘어가세요."
-		next_button.tooltip_text = "이 장의 마침 기록과 다음 장의 시작을 보여 주고 다음 장의 첫 퍼즐로 진행합니다. (N)"
+		next_button.tooltip_text = "이 장의 마침 기록과 다음 장의 시작을 보여 주고 다음 장의 첫 의뢰로 넘어갑니다. [N]"
+	# The inherited prototype screen still names 목표/반전 in these tooltips.
+	print_button.tooltip_text = "이미 견본을 맞췄습니다. 되돌리기 [U]로 다시 찍을 수 있습니다." if session.is_solved() else "선택한 도장의 표시된 칸을 뒤집어 인쇄합니다. [Space]·[Enter]"
+	stamp_view.tooltip_text = "지금 고른 도장과 방향입니다. 1로 표시된 칸이 인쇄할 때 뒤집힙니다. 미리보기는 인쇄 횟수에 들어가지 않습니다."
+	if hint_key != null:
+		var used: int = int(hint_levels[int(data["puzzle"])])
+		hint_key.text = "힌트" if used == 0 else "힌트 · %d/3단계" % used
+	# Korean words stay whole when the status lines wrap at larger text.
+	feedback.text = UiTheme.keep_words(feedback.text)
+	subheading.text = UiTheme.keep_words(subheading.text)
