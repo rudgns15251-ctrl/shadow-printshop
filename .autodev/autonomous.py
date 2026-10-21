@@ -62,7 +62,10 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'player_labels': ('player_labels.gd', 'PLAYER_LABELS_PASS'),
                      'workbench_layout': ('workbench_layout.gd', 'WORKBENCH_LAYOUT_PASS'),
                      # S11 story scenes.
-                     'story_stage': ('story_stage.gd', 'STORY_STAGE_PASS')}
+                     'story_stage': ('story_stage.gd', 'STORY_STAGE_PASS'),
+                     'story_portraits': ('story_portraits.gd', 'STORY_PORTRAITS_PASS'),
+                     'scene_backgrounds': ('scene_backgrounds.gd', 'SCENE_BACKGROUNDS_PASS'),
+                     'scene_motion': ('scene_motion.gd', 'SCENE_MOTION_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
