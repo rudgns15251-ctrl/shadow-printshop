@@ -101,7 +101,41 @@ WASAPI/Dummy 60회 오디오 누수 검사를 그대로 적용했다. 기준 완
 150%에서 작아지는 보드, 형광등·장면 페이드의 체감, 0번 의뢰 묶음 문서의 의뢰서 카드 표기, 새 SVG·글꼴·기존 자산의 권리
 (NOASSERTION), 실제 플레이(재미·난이도·60~90분)와 청취, 최종 출시 승인. Steam 업로드·공개 배포는 하지 않았다.
 
+## 모바일(Android) 버전 S13~S14 (2026-10-21 저녁, 최신 상태)
+
+사용자 요청: "해당 빌드를 남겨두고 모바일 버전으로도 제작". 결정: Android만, 수정 엔진으로 템플릿 직접 빌드, 가로 화면,
+Play 스토어 제출 준비까지, Android SDK 라이선스 동의, 패키지 `com.shadowprintshop.game`. 업로드·계정·업로드 키는 사용자 몫.
+
+- **PC 출시 후보 보존**: `76774f0` 빌드와 증거를 `.data/release-archive/RC-20261021-76774f0/`에 그대로 보관, 로컬 태그 `rc-20261021-pc`.
+- **현재 출시 후보**: 커밋 `7c48e14` · Windows `.data/production-builds/s14_android_release-7c48e144fc9c.zip`
+  SHA-256 `3ce8ffcc497ebe7a426dbc26318dd39ab5fd03ea0d7dc7ee975d9a7e2baae530` · 최종 인증 120/120, RELEASE_CANDIDATE_READY.
+  데스크톱(터치 모드 꺼짐)은 이전 인증과 같은 동작을 유지한다(모든 이전 프로브 통과).
+- **Android 도구·템플릿**: 프로젝트 전용 JDK 17·SDK 36·NDK·빌드 도구(`.data/android-toolchain/`, 저장소 밖), 같은 패치 소스에서 빌드한
+  arm64 템플릿 `.data/qualified-templates-android-20261021/`(SHA256SUMS). 빌드 스크립트 `.data/engine-build-20261017/build_android.py`.
+- **S13 터치**: 모바일에서 자동으로 켜지는 터치 모드. 키 안내 제거, 뒤로 가기 = Esc(장면 건너뛰기·창 닫기·메뉴, 시작 화면에서는
+  종료하지 않음), 앱 일시정지 시 저장·방 소리 정지. 아래 터치 막대(도장·돌리기·인쇄·되돌리기·다음, 84 px)와 위 막대(메뉴·제목·힌트·의뢰서),
+  메뉴로 옮긴 데스크톱 키, 노치 안전 영역(양쪽 긴 변 대칭, 회전·복귀 시 다시 읽음), 손가락 크기 창·설정·장면 키, 끌어서 읽기.
+- **S14 Android**: ETC2/ASTC, 센서 가로, aspect expand, 뒤로 가기를 게임이 처리. 적응형·단색(테마) 런처 아이콘 SVG 3종.
+  휴대전화 화면 다듬기: 터치 막대 앞의 목판 도장 미리보기, 위 막대의 안내 줄과 어두운 배경판, 남는 높이를 채우는 종이,
+  휴대전화에서 종료 키 없음, "이 기기" 문구, 도움말의 메뉴 안내, 장면·창의 노치 여백.
+- 신뢰 프로브(먼저 작성해 실패 확인): touch_mode, touch_layout, touch_dialogs, android_project, phone_polish.
+  rc_20·rc_21은 독립 검토의 수정 요청(뒤로 가기 종료 기본값, 괄호 키 안내, 반 바퀴 회전 시 노치)을 프로브 강화 후 반영했다.
+- **패키징**: `scripts/android/package_android.py`가 커밋된 게임을 격리 폴더에서 APK(테스트)와 AAB(Gradle, Play용)로 묶고
+  aapt2·apksigner·jarsigner·bundletool로 검증한다(패키지·버전·SDK 24/36·arm64 전용·권한 없음·가로·런처·적응형/단색 아이콘·
+  bundletool validate·범용 APK 세트). 인증 커밋의 디버그 빌드: `.data/android-builds/rc-7c48e14-debug/`
+  (APK `bae3f111…`, AAB `05b98043…`, `android-evidence.json`). 릴리스 경로는 일회용 시험 키로 서명·검증까지 확인했다(그 키는 폐기 대상, 업로드 키 아님).
+- **제출 준비물**: `docs/play-store/` 등록정보·개인정보처리방침·데이터 보안·콘텐츠 등급 참고·출시 안내(`ANDROID_RELEASE_KO.md`),
+  `graphics/`(512 아이콘, 1024×500 그래픽, 1920×1080 스크린샷 6장: 인증 커밋의 게임을 터치 모드로 렌더링, 편집 없음).
+  사용자 실행용 `scripts/android/make_upload_key.ps1`(업로드 키, 저장소 밖), `package_release.ps1`(서명 AAB).
+- **에뮬레이터 확인**(Android 14 x86_64 이미지 + ARM 번역, 호스트 GPU. 실제 기기 아님): 터치 모드 자동, 종료 키 없음, 뒤로 가기로 장면 건너뛰기·메뉴,
+  인쇄, 앱 재시작 후 진행 복원, 'tall' 노치 에뮬레이션에서 양쪽 여백, logcat 스크립트 오류 0.
+
+사람 검토 필요: 실제 휴대전화에서의 손가락 닿는 범위·가독성(목판 미리보기 80×72 포함)·노치·회전·뒤로 가기·소리, 런처 아이콘의
+원형/스쿼클/테마 마스크 모양, 스토어 문구와 그래픽, 콘텐츠 등급의 공포 수위 답변, 비데스크톱 비율(16:10·초광폭) 데스크톱 창 모양,
+시작 시 기본 Godot 부팅 화면(프로젝트 설정으로 바꿀 수 있음, 이번 범위 밖). 업로드·Play Console·출시 승인은 사용자 몫이다.
+
 ## 다음 세션
 
 `CLAUDE.md`를 읽고 `.\game-production.ps1 status`로 시작한다. 모든 마일스톤이 끝났으므로 새 작업은 사람 검토 결과나
 출시 표기 결정 같은 새 요청에서 시작한다. Claude CLI 로그인 후에는 백그라운드 디렉터가 모델 단계를 직접 수행할 수 있다.
+Android 빌드는 `docs/play-store/ANDROID_RELEASE_KO.md`를 따른다.

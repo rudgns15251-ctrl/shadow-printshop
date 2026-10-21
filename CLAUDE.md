@@ -75,5 +75,8 @@ Claude Code가 2026-10-21 Codex로부터 제작 책임을 인수했다. 새 세�
 - 인증은 마지막 작업 커밋 == 원격 브랜치 끝을 요구한다. 문서·인프라 커밋은 인증이 끝난 뒤에 한다.
 - 2차 제작 S09~S12 완료(같은 날): 시각 기반·작업대 화면·이야기 장면·제품 검토. RELEASE_CANDIDATE_READY (`76774f0`, 120/120).
   자세한 내용과 사람 검토 항목은 `docs/CLAUDE_HANDOFF_20261021_KO.md`.
+- 모바일(Android) S13~S14 완료(같은 날): 터치 모드·휴대전화 배치·Android 설정·적응형 아이콘. RELEASE_CANDIDATE_READY (`7c48e14`, 120/120).
+  PC 후보 `76774f0`은 `.data/release-archive/RC-20261021-76774f0/`(태그 `rc-20261021-pc`)에 보존. Android 패키징·검증은
+  `scripts/android/package_android.py`, 제출 준비물과 안내는 `docs/play-store/`. 업로드 키·Play Console·업로드는 사용자 몫.
 - 운영자 주의: 새 파일은 `git diff --check`(끝 공백·공백 줄)를 통과해야 통합된다. 통합이 거절되면 작업 공간을 실행의
   `before_integrate` 백업 바이트로 되돌리고 `operator-reopen` → `reconcile-infrastructure` → 재검증·재검토한다.
