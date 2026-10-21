@@ -40,13 +40,16 @@ func coverage(main, label: String) -> void:
 	var found: Array = []
 	controls(main, found)
 	var missing := {}
+	# Font.has_char also searches fallbacks; ask the primary face's own data only.
+	var server := TextServerManager.get_primary_interface()
 	for item in found:
 		var font: Font = item.get_theme_font("font")
+		var primary: RID = font.get_rids()[0]
 		for ch in str(item.text):
 			var code := ch.unicode_at(0)
 			var hangul := code >= 0xAC00 and code <= 0xD7A3
 			var basic := (code >= 0x30 and code <= 0x39) or (code >= 0x41 and code <= 0x5A) or (code >= 0x61 and code <= 0x7A)
-			if (hangul or basic) and not font.has_char(code):
+			if (hangul or basic) and not server.font_has_char(primary, code):
 				missing[ch] = family(font)
 	check(missing.is_empty(), label + ": Hangul and alphanumerics are covered by the bundled primary font " + str(missing.keys().slice(0, 10)))
 
