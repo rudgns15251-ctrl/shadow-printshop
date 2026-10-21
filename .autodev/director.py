@@ -398,6 +398,8 @@ def start(recover=False,max_milestones=None):
         if held() and owner.get('pid')==child.pid:return report()
         if child.poll() is not None:break
         time.sleep(0.05)
+    # A worker can finish real work (e.g. packaging only) before this check.
+    if child.poll()==0 and read(OWNER,{}).get('pid')==child.pid:return report()
     a.require(held(),'Worker failed startup; inspect '+str(log.relative_to(ROOT)))
     return report()
 
