@@ -1392,9 +1392,10 @@ def operator_adopt(run_id, c, p):
 
 def operator_reopen(run_id, c, p):
     """Reopen a run whose integration a pre-commit guard refused (e.g. git diff --check)
-    for repair. Only when nothing was integrated: no commit recorded, HEAD at the run's
-    source commit, a clean tree and the game files byte-identical to the run's
-    baseline. The stage then needs full trusted QA and a fresh independent review."""
+    for repair. Only when nothing was integrated: no commit recorded, a clean tree,
+    game files byte-identical to the run's baseline, and any commits since the run's
+    source commit outside the game (reconcile-infrastructure then validates them).
+    The stage then needs full trusted QA and a fresh independent review."""
     with locked():
         operator_safe_stop()
         plan = read(PLAN)
@@ -1404,7 +1405,10 @@ def operator_reopen(run_id, c, p):
         data = read(run / 'autonomous.json')
         require(not alive(data.get('child_pid')), 'Previous child is alive')
         require(data['phase'] == 'INTEGRATE' and 'commit' not in data, 'Only a refused, uncommitted integration can be reopened')
-        require(git('rev-parse', 'HEAD') == data['source_commit'], 'HEAD moved since the run; integration state uncertain')
+        head = git('rev-parse', 'HEAD')
+        git('merge-base', '--is-ancestor', data['source_commit'], head)
+        moved = git('diff', '--name-only', data['source_commit'], head).splitlines()
+        require(not any(rel.startswith(c['game_dir'] + '/') for rel in moved), 'Game files committed since the run; integration state uncertain')
         require(not git('status', '--porcelain', '--untracked-files=all'), 'Working tree not clean; restore the baseline first')
         require(snapshot(source(c)) == data['source_snapshot'], 'Game files differ from the run baseline')
         require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')

@@ -278,7 +278,12 @@ class OperatorPath(base.Coordinator):
         with self.assertRaisesRegex(a.ERROR, 'refused, uncommitted'):
             a.operator_reopen(run, self.c, self.p)
         data.pop('commit'); data['source_commit'] = '0' * 40; a.write(path, data)
-        with self.assertRaisesRegex(a.ERROR, 'HEAD moved'):
+        with self.assertRaisesRegex(a.ERROR, 'merge-base'):
+            a.operator_reopen(run, self.c, self.p)
+        data['source_commit'] = self.base; a.write(path, data)
+        (self.game / 'scripts/slice_main.gd').write_text('extends Control\n# committed elsewhere\n')
+        a.git('add', '--', '.'); a.git('commit', '-qm', 'game change after the run')
+        with self.assertRaisesRegex(a.ERROR, 'Game files committed since the run'):
             a.operator_reopen(run, self.c, self.p)
 
     def test_integration_refused_without_review_or_after_revise(self):
