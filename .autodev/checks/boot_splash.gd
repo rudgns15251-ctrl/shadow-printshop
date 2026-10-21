@@ -54,6 +54,18 @@ func run() -> void:
 						lamp += 1
 		check(drawn > (w / 4) * (h / 4) / 10, "boot image draws a recognisable mark")
 		check(lamp > 20, "title lettering in the lamp colour")
+		# The boot screen blends straight alpha: soft title edges must keep the
+		# lamp colour, not colour already darkened by its alpha (premultiplied).
+		var soft := 0
+		var darkened := 0
+		for y in range(h):
+			for x in range(w):
+				var c := image.get_pixel(x, y)
+				if c.a > 0.3 and c.a < 0.9 and c.r > 0.3 and c.b > 0.2 and c.r > c.b:
+					soft += 1
+					if c.r < 0.85:
+						darkened += 1
+		check(soft > 100 and darkened * 20 < soft, "soft title edges in straight alpha (%d of %d darkened)" % [darkened, soft])
 	var ledger = JSON.parse_string(FileAccess.get_file_as_string("res://ASSET_LICENSES.json"))
 	var row := {}
 	if ledger is Array:
@@ -67,7 +79,9 @@ func run() -> void:
 		ctx.update(bytes)
 		digest = ctx.finish().hex_encode()
 	check(not row.is_empty() and str(row.get("final_encoded_measurements", {}).get("sha256", "")) == digest and not row.get("usage", []).is_empty(), "boot image in the ledger with matching hash and usage")
-	check(FileAccess.get_file_as_string("res://CREDITS_KO.md").contains("boot_splash.png"), "boot image named in the credits")
+	var credits := FileAccess.get_file_as_string("res://CREDITS_KO.md")
+	check(credits.contains("boot_splash.png"), "boot image named in the credits")
+	check(not credits.contains("나눔명조로 쓴 제목을 게임 엔진으로 그린 것입니다. 외부 이미지나 글꼴을 사용하지 않았습니다."), "credits do not deny fonts right after naming the bundled one")
 	print("BOOT_SPLASH_RESULT " + JSON.stringify({"checks": checks, "failures": failures}))
 	if failures.is_empty():
 		print("BOOT_SPLASH_PASS")

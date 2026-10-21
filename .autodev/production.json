@@ -201,6 +201,21 @@
         "release_candidate",
         "context_tooltips"
       ]
+    },
+    {
+      "id": "s16_boot_splash_polish",
+      "depends_on": [
+        "s15_boot_splash"
+      ],
+      "tasks": 1,
+      "goal": "Polish of the S15 boot screen from its independent review, before release: the boot image's soft title edges stored with straight alpha (the engine blends straight alpha, so premultiplied edges looked darker and thinner), the ledger row following the new file, and the credit no longer saying no fonts were used right after naming the bundled NanumMyeongjo. Nothing else changes; every earlier probe stays green. Never claim aesthetic review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
     }
   ]
 }
