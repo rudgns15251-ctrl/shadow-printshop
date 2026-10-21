@@ -342,7 +342,7 @@ func _set_title_look(enabled: bool) -> void:
 		var button: Button = keys[index]
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("focus", _title_focus_style())
-		if index >= 2 and index < keys.size() - 1:
+		if (index >= 2 or touch_mode) and index < keys.size() - 1:
 			button.reparent(grid)
 	# 종료 keeps its own full-width row instead of sitting alone in the grid.
 	menu.move_child(keys[keys.size() - 1], menu.get_child_count() - 1)
@@ -899,6 +899,17 @@ func _show_dialog(title: String, message: String, options: Array) -> void:
 	_scroll_dialog_to_top()
 	if touch_mode:
 		_strip_key_hints(dialog)
+		_touch_controls(dialog)
+
+func _touch_controls(node: Node) -> void:
+	for child in node.get_children():
+		if child is CheckBox or child is Slider:
+			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 64.0)
+		elif child is Button:
+			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, TOUCH_KEY)
+			child.custom_minimum_size.x = maxf(child.custom_minimum_size.x, 140.0)
+			child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_touch_controls(child)
 
 func _scroll_dialog_to_top() -> void:
 	# Every dialog opens at its first line, even after paging a previous one;
@@ -966,6 +977,8 @@ func _open_settings() -> void:
 	_cancel_presentation_motion()
 	super._open_settings()
 	_open_settings_marks()
+	if touch_mode:
+		_touch_controls(dialog)
 	_confine_journal_focus()
 	_scroll_dialog_to_top()
 
@@ -1283,6 +1296,9 @@ func set_touch_mode(enabled: bool) -> void:
 	if story_stage != null:
 		story_stage.set_touch_mode(enabled)
 	_arrange_for_touch(enabled)
+	if popup_scroll != null:
+		# A dead zone keeps a tap on a key from turning into a scroll.
+		popup_scroll.scroll_deadzone = 12 if enabled else 0
 	if print_button != null:
 		print_button.text = _touch_text("인쇄 [Space]")
 		undo_button.text = _touch_text("되돌리기 [U]")

@@ -157,6 +157,9 @@ func set_touch_mode(enabled: bool) -> void:
 	# Fingers tap the keys or the scene itself; keyboard hints are for desktops.
 	touch_mode = enabled
 	skip_key.text = "건너뛰기" if enabled else "건너뛰기 [Esc]"
+	for key in [skip_key, advance_key]:
+		key.custom_minimum_size.y = 84.0 if enabled else 46.0
+		key.custom_minimum_size.x = 180.0 if enabled else 150.0
 	advance_key.tooltip_text = "다음 줄을 읽습니다. 화면 어디를 눌러도 됩니다." if enabled else "다음 줄을 읽습니다. Space · Enter · 클릭"
 	if is_playing():
 		_show_line()
