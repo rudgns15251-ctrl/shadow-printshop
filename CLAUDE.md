@@ -69,3 +69,7 @@ Claude Code가 2026-10-21 Codex로부터 제작 책임을 인수했다. 새 세�
   원인은 계획 결함(보호된 테스트로만 덮을 수 있는 기준). Claude 운영자가 S07을 4개 작업으로 재계획하고
   신뢰 프로브 4개(`modal_motion`, `campaign_titles`, `chapter_transition`, `asset_licenses`)를 먼저 추가했다.
 - 진행 기록과 남은 일은 `docs/CLAUDE_HANDOFF_20261021_KO.md`에 갱신한다.
+- 2026-10-21 오후: Claude CLI 로그인 완료(claude.ai Max). 백그라운드 디렉터가 Claude로 작성·검토·통합·인증을 무인 수행함을 확인했다.
+  엔진은 GDScript 종료 해제 후 사용 결함을 고친 `binaries/patched-gdscript-fix-20261021` 프로필을 쓴다(이전 프로필은 config의
+  `engine_profile_history`와 원래 폴더에 보존). S08 완료, RELEASE_CANDIDATE_READY (`f990602`).
+- 인증은 마지막 작업 커밋 == 원격 브랜치 끝을 요구한다. 문서·인프라 커밋은 인증이 끝난 뒤에 한다.
