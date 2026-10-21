@@ -74,7 +74,13 @@
     "assets/art/portrait_client_sealed.svg",
     "assets/art/portrait_client_sealed.svg.import",
     "assets/art/portrait_client_signed.svg",
-    "assets/art/portrait_client_signed.svg.import"
+    "assets/art/portrait_client_signed.svg.import",
+    "assets/art/android_icon_foreground.svg",
+    "assets/art/android_icon_foreground.svg.import",
+    "assets/art/android_icon_background.svg",
+    "assets/art/android_icon_background.svg.import",
+    "assets/art/android_icon_monochrome.svg",
+    "assets/art/android_icon_monochrome.svg.import"
   ],
   "max_tasks": 8,
   "max_fixes": 3,
