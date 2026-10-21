@@ -66,6 +66,11 @@ func run() -> void:
 		if index in [7, 12]:
 			main.advance()
 			await process_frame
+			# S11: the chapter scene plays over the record first; read past it.
+			var stage = main.find_child("StoryStage", true, false)
+			if stage != null and stage.is_visible_in_tree():
+				stage.skip()
+				await process_frame
 			verify(main, "C01_OUTRO" if index == 7 else "C02_OUTRO", "C02_INTRO" if index == 7 else "C03_INTRO")
 		elif index < 12:
 			main.advance()

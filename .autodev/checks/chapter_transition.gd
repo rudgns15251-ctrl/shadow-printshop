@@ -82,6 +82,12 @@ func solve(main, index: int) -> void:
 func save_bytes() -> PackedByteArray:
 	return FileAccess.get_file_as_bytes(Save.SAVE_PATH) if FileAccess.file_exists(Save.SAVE_PATH) else PackedByteArray()
 
+func no_chapter_dialog(main) -> bool:
+	# S11: a short story scene may play when entering an order; it is not a
+	# chapter dialog as long as no chapter record is built under it.
+	var stage = main.find_child("StoryStage", true, false)
+	return not main.overlay.visible or (stage != null and stage.is_visible_in_tree() and main.dialog.get_child_count() == 0)
+
 func boundary(main, outro_id: String, intro_id: String, expect_sound: bool) -> void:
 	var events: Dictionary = CampaignState.story_data()["events"]
 	var before: int = int(main.session.snapshot()["puzzle"])
@@ -135,14 +141,14 @@ func run() -> void:
 		solve(main, index)
 		if index < 7:
 			main.advance()
-			check(not main.overlay.visible, "no chapter dialog inside chapter 1 (puzzle %d)" % (index + 2))
+			check(no_chapter_dialog(main), "no chapter dialog inside chapter 1 (puzzle %d)" % (index + 2))
 	boundary(main, "C01_OUTRO", "C02_INTRO", true)
 	for index in range(8, 13):
 		main.dismiss_story()
 		solve(main, index)
 		if index < 12:
 			main.advance()
-			check(not main.overlay.visible, "no chapter dialog inside chapter 2 (puzzle %d)" % (index + 2))
+			check(no_chapter_dialog(main), "no chapter dialog inside chapter 2 (puzzle %d)" % (index + 2))
 	main._setting_value_changed(true, "mute")
 	boundary(main, "C02_OUTRO", "C03_INTRO", false)
 	main._setting_value_changed(false, "mute")
