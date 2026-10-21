@@ -9,6 +9,8 @@ const NIGHT_SCENE = preload("res://assets/art/scene_shop_night.svg")
 const ATMOSPHERE = preload("res://shaders/atmosphere.gdshader")
 
 var atmosphere: ColorRect
+var title_backdrop: TextureRect
+var document_panel_style: StyleBox
 
 var campaign_save = CampaignSave.new()
 var story_button: Button
@@ -138,6 +140,95 @@ func _build_interface() -> void:
 	ending_panel.hide()
 	# Last: every label the night scene recolours now exists.
 	_build_night_scene()
+	_build_title_backdrop()
+
+func _build_title_backdrop() -> void:
+	# The start screen alone shows the night shop behind its menu, inside the
+	# existing overlay so it blocks input exactly like every other dialog.
+	title_backdrop = TextureRect.new()
+	title_backdrop.name = "TitleBackdrop"
+	title_backdrop.texture = NIGHT_SCENE
+	title_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	title_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	title_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_backdrop.focus_mode = Control.FOCUS_NONE
+	var shade := ColorRect.new()
+	shade.color = Color(UiTheme.SHADOW, 0.38)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_backdrop.add_child(shade)
+	overlay.add_child(title_backdrop)
+	overlay.move_child(title_backdrop, 0)
+	title_backdrop.hide()
+	document_panel_style = popup_panel.get_theme_stylebox("panel")
+
+func _set_title_look(enabled: bool) -> void:
+	if title_backdrop == null or popup_panel == null:
+		return
+	title_backdrop.visible = enabled
+	if not enabled:
+		popup_panel.add_theme_stylebox_override("panel", document_panel_style)
+		return
+	var style := UiTheme.surface(Color(UiTheme.NIGHT, 0.88), 14, 20)
+	style.border_color = Color(UiTheme.LAMP, 0.55)
+	style.set_content_margin_all(22)
+	popup_panel.add_theme_stylebox_override("panel", style)
+	var title_label: Label = dialog.get_child(0)
+	title_label.text = "음영 인쇄소"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.set_meta("font_base", 48)
+	title_label.add_theme_font_size_override("font_size", int(round(48 * float(settings["font_scale"]))))
+	title_label.add_theme_color_override("font_color", UiTheme.LAMP)
+	UiTheme.title_font(title_label)
+	_room_outline(title_label)
+	var subtitle := _label(dialog, "1998년 11월 17일 밤", 19, UiTheme.PAPER)
+	subtitle.name = "TitleSubtitle"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UiTheme.document_font(subtitle)
+	dialog.move_child(subtitle, 1)
+	var body: Label = dialog.get_child(2)
+	# How to play lives in 도움말; the title keeps one short line.
+	body.text = "세 장, 열여덟 의뢰, 하나의 결말"
+	body.add_theme_color_override("font_color", Color(UiTheme.PAPER, 0.86))
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# The start actions become a centred menu column of equal-width keys.
+	var menu: VBoxContainer = dialog.get_child(dialog.get_child_count() - 1)
+	menu.name = "TitleMenu"
+	menu.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	menu.custom_minimum_size.x = 380
+	# 처음부터 and 이어하기 stay full-width; the other actions share a two-column
+	# grid inside the same column, so tree order (and focus wrapping) is unchanged.
+	var keys: Array = menu.get_children()
+	var grid := GridContainer.new()
+	grid.name = "TitleMenuGrid"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	menu.add_child(grid)
+	for index in range(keys.size()):
+		var button: Button = keys[index]
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_stylebox_override("focus", _title_focus_style())
+		if index >= 2:
+			button.reparent(grid)
+	_fit_dialog.call_deferred()
+
+func _title_focus_style() -> StyleBoxFlat:
+	# The inherited dark-blue ring vanishes on the night panel; use lamp light.
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color.TRANSPARENT
+	style.border_color = UiTheme.LAMP
+	style.set_border_width_all(3)
+	style.set_expand_margin_all(3)
+	style.set_corner_radius_all(8)
+	return style
+
+func _fit_dialog() -> void:
+	super._fit_dialog()
+	if title_backdrop != null and title_backdrop.visible and popup_panel != null:
+		# A narrower title panel leaves more of the night workshop visible.
+		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0)
 
 func _build_night_scene() -> void:
 	# The inherited daylight backdrop becomes the night workshop; an atmosphere
@@ -359,6 +450,8 @@ func _disconnect_dialog_actions(node: Node) -> void:
 		_disconnect_dialog_actions(child)
 
 func _clear_dialog() -> void:
+	# Every other dialog, settings included, keeps the paper document look.
+	_set_title_look(false)
 	dialog_back = Callable()
 	if overlay != null and overlay.has_meta("campaign_event_id"):
 		overlay.remove_meta("campaign_event_id")
@@ -495,6 +588,7 @@ func _open_start() -> void:
 	# Escape on the start screen must not silently start a new game.
 	dialog_back = Callable()
 	_primary_button(get_viewport().gui_get_focus_owner() as Button)
+	_set_title_look(true)
 	_confine_journal_focus()
 
 func _ask_new_game() -> void:
