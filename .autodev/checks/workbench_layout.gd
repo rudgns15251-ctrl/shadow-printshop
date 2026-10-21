@@ -59,10 +59,10 @@ func run() -> void:
 	var card = main.find_child("OrderCard", true, false)
 	check(card is BaseButton and card.is_visible_in_tree(), "order card visible and pressable")
 	if card is BaseButton:
-		check(texts(card).contains("C01-01") and texts(card).contains("백인호"), "order card names the current order and speaker")
+		check(texts(card).contains("의뢰 1") and texts(card).contains("백인호"), "order card names the current order and speaker")
 		card.pressed.emit()
 		await process_frame
-		check(main.overlay.visible and texts(main.dialog).contains("의뢰서 · C01-01"), "order card opens the order")
+		check(main.overlay.visible and texts(main.dialog).contains("의뢰서 · 의뢰 1"), "order card opens the order")
 		main.dismiss_story()
 		for action in main.session.puzzle_data()[0]["solution"]:
 			main.puzzle_view._select(int(int(action) / 4))
@@ -71,7 +71,7 @@ func run() -> void:
 		main.advance()
 		main.dismiss_story()
 		await process_frame
-		check(texts(card).contains("C01-02"), "order card follows the current puzzle")
+		check(texts(card).contains("의뢰 2"), "order card follows the current puzzle")
 	for res in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
 		root.size = res
 		main._set_font_scale(1.0)

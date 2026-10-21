@@ -52,7 +52,7 @@ func hint_scenario(view,row: Dictionary,label: String) -> Array:
 				var next_board: int = board ^ MASKS[int(action["stamp"])*4+int(action["rotation"])]
 				check(distance(next_board,target,row["allowed_masks"]) == distance(board,target,row["allowed_masks"])-1,label+" reduces actual shortest distance by one")
 				# Player-facing stamp names (S10): 꺾임 = mask 0, 막대 = mask 1.
-				var expression := RegEx.new();expression.compile("(꺾임|막대) 도장을 시계 방향 ([0-9]+)°")
+				var expression := RegEx.new();expression.compile("(꺾임|막대) 도장을 ([0-9]+)°로 맞춘")
 				var rendered := expression.search(text_of(view.dialog))
 				check(rendered != null,label+" actual dialog renders existing level-three suggestion")
 				if rendered != null:

@@ -1,7 +1,7 @@
 extends SceneTree
 ## Trusted S11 probe: data-driven story scenes. A StoryStage inside the modal
-## overlay shows a background, a portrait, a name plate, the line kind (현장 발화 /
-## 보관 문서 / 기록) and the line; Space/Enter/click advance at the player's pace,
+## overlay shows a background, a portrait, a name plate, the line kind (직접 말함 /
+## 남겨진 문서 / 기록) and the line; Space/Enter/click advance at the player's pace,
 ## Escape skips, and nothing reading does changes progress or the save. Scenes play
 ## on a new campaign (opening), on entering orders that have one, over the chapter
 ## record at a chapter boundary, and from the ending panel; 이야기 replays only
@@ -13,7 +13,7 @@ const CampaignState = preload("res://scripts/campaign_state.gd")
 const Save = preload("res://scripts/campaign_save.gd")
 const SPEAKERS := ["백인호", "윤해린", "0번 의뢰인", ""]
 const KINDS := ["live", "document", "narration"]
-const KIND_TEXT := {"live": "현장 발화", "document": "보관 문서", "narration": "기록"}
+const KIND_TEXT := {"live": "직접 말함", "document": "남겨진 문서", "narration": "기록"}
 
 func check(ok: bool, message: String) -> void:
 	checks += 1
@@ -53,6 +53,10 @@ func stage(main) -> Control:
 func part(main, part_name: String) -> Control:
 	var node = stage(main)
 	return node.find_child(part_name, true, false) if node != null else null
+
+func shown_text(main) -> String:
+	# Lines may carry invisible word joiners (U+2060) so words never break when wrapped.
+	return str(part(main, "DialogueText").text).replace(char(0x2060), "")
 
 func playing(main) -> bool:
 	var node := stage(main)
@@ -105,7 +109,7 @@ func data_checks() -> Dictionary:
 
 func line_shown(main, scene: Dictionary, index: int, label: String) -> void:
 	var line: Dictionary = scene["lines"][index]
-	check(str(part(main, "DialogueText").text) == str(line["text"]), label + ": line %d text shown" % index)
+	check(shown_text(main) == str(line["text"]), label + ": line %d text shown" % index)
 	var plate := part(main, "NamePlate")
 	if str(line["speaker"]).is_empty():
 		check(plate == null or not plate.is_visible_in_tree() or str(plate.text).is_empty(), label + ": narration has no name plate")
@@ -221,7 +225,7 @@ func run() -> void:
 	main._setting_value_changed(true, "reduce_motion")
 	main.play_scene(str(opening["id"]))
 	await settle()
-	check(str(part(main, "DialogueText").text) == str(opening["lines"][0]["text"]) and part(main, "DialogueText").visible_ratio >= 1.0, "reduced motion shows the whole line at once")
+	check(shown_text(main) == str(opening["lines"][0]["text"]) and part(main, "DialogueText").visible_ratio >= 1.0, "reduced motion shows the whole line at once")
 	await fits(main, "1280x720 150% opening")
 	root.size = Vector2i(1920, 1080)
 	await fits(main, "1920x1080 150% opening")
