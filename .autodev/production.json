@@ -186,6 +186,21 @@
         "release_candidate",
         "context_tooltips"
       ]
+    },
+    {
+      "id": "s15_boot_splash",
+      "depends_on": [
+        "s14_android_release"
+      ],
+      "tasks": 1,
+      "goal": "Own boot screen instead of the engine's default logo, requested by the user on 2026-10-21 after the Android release candidate 7c48e14: the game's night colour as the boot background and an original PNG of the app icon with the title, shown at its own size on Windows and Android. The game itself (desktop and touch layouts, saves, story data, puzzles, accessibility rules, audio lifecycle, every earlier probe) stays exactly as certified. Never claim device playtesting or aesthetic review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
     }
   ]
 }
