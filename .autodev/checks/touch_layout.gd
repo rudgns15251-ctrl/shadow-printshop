@@ -6,7 +6,9 @@ extends SceneTree
 ## key, every key at least 80 logical px tall and inside the window; the three
 ## sheets side by side, unscrolled, at least 150 px each and never under the bar
 ## or status line; desktop-only keys hidden (they live in the menu); the notch
-## safe area respected. Desktop layout returns when touch mode is off.
+## safe area respected on both long edges (a half turn moves the notch) and read
+## again on resize and on return to the app. Desktop layout returns when touch
+## mode is off.
 var failures: Array = []
 var checks := 0
 const MIN_KEY := 80.0
@@ -111,6 +113,25 @@ func run() -> void:
 			if item.get_global_rect().position.x < 88 - 0.5 or item.get_global_rect().end.x > 1600 - 40 + 0.5:
 				clear = false
 		check(clear, "keys stay inside the display safe area")
+		# Sensor landscape: a half turn moves the notch to the other long edge
+		# without a resize, so both sides keep the larger inset.
+		var margins: MarginContainer = main.title_navigation.get_parent().get_parent()
+		var mirrored := margins.get_theme_constant("margin_left") >= 16 + 88 and margins.get_theme_constant("margin_right") >= 16 + 88
+		for item in buttons:
+			if item.get_global_rect().end.x > 1600 - 88 + 0.5:
+				mirrored = false
+		check(mirrored, "the notch inset holds on both long edges (half-turn safe)")
+		# A resize, or coming back to the app, reads the display safe area again
+		# (the inset may not be final when the scene first starts).
+		var fresh: Rect2i = main._display_safe_area()
+		var expected: int = 16 + maxi(0, maxi(fresh.position.x, int(main.get_viewport_rect().size.x) - fresh.end.x))
+		main.resized.emit()
+		await settle()
+		check(margins.get_theme_constant("margin_left") == expected, "a resize re-applies the display safe area")
+		main.apply_safe_area(Rect2i(Vector2i(88, 0), Vector2i(1600 - 88 - 40, 720)))
+		main.notification(NOTIFICATION_APPLICATION_FOCUS_IN)
+		await settle()
+		check(margins.get_theme_constant("margin_left") == expected, "returning to the app re-applies the display safe area")
 		main.apply_safe_area(Rect2i(Vector2i.ZERO, Vector2i(1600, 720)))
 	else:
 		check(false, "campaign applies the display safe area")
