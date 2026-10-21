@@ -15,6 +15,8 @@ var document_panel_style: StyleBox
 var campaign_save = CampaignSave.new()
 var story_button: Button
 var order_cue: Label
+var order_card: Button
+var workbench_scroll: ScrollContainer
 var ending_panel: Control
 var environment_audio: AudioStreamPlayer
 var environment_audio_exiting := false
@@ -139,6 +141,7 @@ func _build_interface() -> void:
 	UiTheme.document_font(_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17))
 	ending_panel.hide()
 	_apply_player_labels()
+	_build_workbench()
 	# Last: every label the night scene recolours now exists.
 	_build_night_scene()
 	_build_title_backdrop()
@@ -230,6 +233,73 @@ func _fit_dialog() -> void:
 	if title_backdrop != null and title_backdrop.visible and popup_panel != null:
 		# A narrower title panel leaves more of the night workshop visible.
 		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0)
+
+const PORTRAITS := {"백인호": preload("res://assets/art/portrait_baek.svg"),
+	"윤해린": preload("res://assets/art/portrait_yoon.svg"), "0번 의뢰인": preload("res://assets/art/portrait_client.svg")}
+
+func _build_workbench() -> void:
+	# The puzzle as a desk: paper sheets lie on a dark Workbench, the stamp and its
+	# keys on a wood StampBench, and the current order is a card pinned beside the
+	# heading. Nodes are only regrouped; every member keeps its behaviour.
+	var header: VBoxContainer = heading.get_parent()
+	var content: VBoxContainer = header.get_parent()
+	workbench_scroll = content.get_parent()
+	workbench_scroll.name = "WorkbenchScroll"
+	# Header: the order card replaces the order line; the print count joins the
+	# heading line so the progress chips keep a full row.
+	var top := HBoxContainer.new()
+	top.name = "DeskHeader"
+	top.add_theme_constant_override("separation", 12)
+	content.add_child(top)
+	content.move_child(top, header.get_index())
+	header.reparent(top)
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	order_cue.hide()
+	var title_line := _row(header, 16)
+	header.move_child(title_line, 0)
+	heading.reparent(title_line)
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	progress_label.reparent(title_line)
+	progress_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	progress_label.size_flags_vertical = Control.SIZE_SHRINK_END
+	order_card = _button(top, "", _open_order, 250)
+	order_card.name = "OrderCard"
+	order_card.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	order_card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	order_card.add_theme_constant_override("icon_max_width", 40)
+	order_card.add_theme_constant_override("h_separation", 10)
+	order_card.tooltip_text = "지금 의뢰서를 다시 엽니다. 읽기는 퍼즐을 진행하지 않습니다."
+	# Workbench: the three sheets and their legend on the dark bench.
+	var bench := PanelContainer.new()
+	bench.name = "Workbench"
+	var bench_style := UiTheme.surface(Color("#2a211b", 0.86), 10, 8)
+	bench_style.border_color = Color(UiTheme.LAMP, 0.28)
+	bench.add_theme_stylebox_override("panel", bench_style)
+	content.add_child(bench)
+	content.move_child(bench, boards_grid.get_index())
+	var sheets := _column(bench, 4)
+	var note: Label = content.get_child(boards_grid.get_index() + 1)
+	boards_grid.reparent(sheets)
+	note.reparent(sheets)
+	note.add_theme_color_override("font_color", UiTheme.PAPER)
+	_room_outline(note)
+	# StampBench: the inherited control panel becomes a wood bench; save and hint
+	# keys move to their own column so the print row stays above the fold.
+	var stamp_bench: PanelContainer = stamp_view.get_parent().get_parent().get_parent()
+	stamp_bench.name = "StampBench"
+	var wood := UiTheme.surface(UiTheme.WOOD, 10, 6)
+	wood.border_color = Color("#6b4a30")
+	wood.set_border_width_all(2)
+	stamp_bench.add_theme_stylebox_override("panel", wood)
+	var controls: HBoxContainer = stamp_view.get_parent().get_parent()
+	var tools := _column(controls, 6)
+	tools.name = "BenchTools"
+	tools.custom_minimum_size.x = 150
+	var extras: Control = hint_label.get_parent().get_child(hint_label.get_index() - 1)
+	extras.reparent(tools)
+	for key in extras.get_children():
+		key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hint_label.reparent(tools)
 
 const BOARD_NAMES := [["지금 종이", "지금 인쇄된 종이"], ["찍으면 · 미리보기", "인쇄 횟수에 포함되지 않아요"], ["견본", "이 모양과 같게 찍으세요"]]
 const CAPTIONS := {"Q · ↶ 90°": "↶ 왼쪽으로 [Q]", "E · ↷ 90°": "↷ 오른쪽으로 [E]", "R · 초기화": "초기화 [R]",
@@ -877,6 +947,9 @@ func _refresh() -> void:
 		for row in CampaignState.story_data()["orders"]:
 			if row["puzzle_id"] == puzzle["id"]:
 				order_cue.text = "현재 의뢰 %s · %s · %s" % [row["id"], row["speaker"], "현장 발화" if row["delivery"] == "live_speech" else "보관 문서"]
+				if order_card != null:
+					order_card.text = "의뢰서 · %s\n%s · %s" % [row["id"], row["speaker"], "현장 발화" if row["delivery"] == "live_speech" else "보관 문서"]
+					order_card.icon = PORTRAITS.get(str(row["speaker"]))
 				break
 	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
 		if int(data["history_size"]) == 0:
@@ -889,6 +962,8 @@ func _refresh() -> void:
 		subheading.text = "종이에 도장을 찍어 견본과 같은 무늬를 만드세요."
 	if bool(data["solved"]):
 		reaction_label.text = "✓ 견본 일치"
+	for caption in progress_captions:
+		caption.text = caption.text.replace(" · 지남", "✓")
 	detail.text = "선택: %s 도장  ·  회전 %d°" % [_stamp_name(int(data["selected_mask"])), int(data["rotation"]) * 90]
 	for index in range(stamp_buttons.size()):
 		var state_cue: String = " · 사용 불가" if stamp_buttons[index].disabled else (" ✓ 선택" if index == int(data["selected_mask"]) else "")
@@ -904,8 +979,7 @@ func _refresh() -> void:
 		ending_panel.visible = is_finished()
 		if newly_finished:
 			# Bring the ending heading and its credits control into view once.
-			var scroll: ScrollContainer = heading.get_parent().get_parent().get_parent()
-			scroll.set_deferred("scroll_vertical", 0)
+			workbench_scroll.set_deferred("scroll_vertical", 0)
 	if is_finished():
 		subheading.text = "3장 · 18개 의뢰 완료 · 아침의 서명"
 		next_button.tooltip_text = "18개 퍼즐을 모두 완성했습니다. 다음 퍼즐이 없습니다."
