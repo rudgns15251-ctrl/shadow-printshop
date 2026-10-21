@@ -126,6 +126,14 @@ class ClaudeAdapter(base.Coordinator):
                 a.qa(stage, self.run, data, self.c, self.p, task)
         self.assertEqual(a.classify('QA', str(caught.exception)), 'ENVIRONMENT')
 
+    def test_task_id_rule_is_in_the_model_contract(self):
+        schema = {'type': 'object', 'properties': {'id': {'type': 'string', 'pattern': a.TASK_ID}}, 'required': ['id']}
+        self.assertTrue(a.schema_errors({'id': 'S08-T1-product-identity'}, schema))
+        self.assertEqual(a.schema_errors({'id': 'rc_07_exe_metadata'}, schema), [])
+        task = dict(self.task(), id='S08-T1-upper')
+        with self.assertRaisesRegex(a.ERROR, "Invalid/duplicate task ID: 'S08-T1-upper'"):
+            a.validate_tasks([task], self.p)
+
     def test_codex_remains_default(self):
         c = dict(self.c); c.pop('model_cli')
         with patch.object(a, 'codex_executable', side_effect=a.ERROR('codex path used')):
