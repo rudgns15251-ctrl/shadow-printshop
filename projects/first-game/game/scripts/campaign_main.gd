@@ -4,6 +4,7 @@ extends "res://scripts/slice_main.gd"
 ## Coordinator owns Godot QA/export; narrative and presentation need human review.
 const CampaignState = preload("res://scripts/campaign_state.gd")
 const CampaignSave = preload("res://scripts/campaign_save.gd")
+const UiTheme = preload("res://scripts/ui_theme.gd")
 
 var campaign_save = CampaignSave.new()
 var story_button: Button
@@ -87,9 +88,26 @@ func _reset_campaign_hints() -> void:
 	hint_levels.resize(session.puzzle_count())
 	hint_levels.fill(0)
 
+## Every inherited panel and button is built through these two hooks, so the
+## campaign gets the shared paper/key look while the legacy slice keeps its own.
+func _panel_style(color: Color, radius: int = 10, vertical_padding: int = 12) -> StyleBoxFlat:
+	return UiTheme.surface(color, radius, vertical_padding)
+
+func _style_button(item: Button, primary: bool = false) -> void:
+	super._style_button(item, primary)
+	var face: Color = ACCENT if primary else PAPER
+	item.add_theme_stylebox_override("normal", UiTheme.key(face, INK))
+	item.add_theme_stylebox_override("hover", UiTheme.key(Color("#6f301c") if primary else Color("#efe1cf"), INK))
+	item.add_theme_stylebox_override("pressed", UiTheme.key(INK if primary else ACCENT, INK, true))
+	item.add_theme_stylebox_override("hover_pressed", UiTheme.key(INK if primary else ACCENT, INK, true))
+	item.add_theme_stylebox_override("disabled", UiTheme.key(Color("#ddd4c6"), Color("#9c917f"), true))
+
 func _build_interface() -> void:
 	super._build_interface()
+	UiTheme.apply(theme)
 	title_area.get_child(0).text = "음영 인쇄소"
+	UiTheme.title_font(title_area.get_child(0))
+	UiTheme.title_font(heading)
 	story_button = _button(next_button.get_parent(), "이야기", _open_story, 100)
 	order_cue = _label(heading.get_parent(), "", 15)
 	order_cue.name = "CurrentOrderCue"
@@ -104,10 +122,10 @@ func _build_interface() -> void:
 	content.move_child(panel, 1)
 	ending_panel = panel
 	var column := _column(panel, 8)
-	_label(column, "18개 퍼즐 완료 · 아침의 서명", 21, GREEN)
+	UiTheme.title_font(_label(column, "18개 퍼즐 완료 · 아침의 서명", 21, GREEN))
 	_button(column, "크레딧", show_credits, 130)
 	_button(column, "전체 캠페인 다시 플레이", _ask_campaign_replay, 130)
-	_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17)
+	UiTheme.document_font(_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17))
 	ending_panel.hide()
 
 func start_new() -> void:
@@ -160,12 +178,16 @@ func _show_chapter_transition(chapter_number: int) -> void:
 	_show_dialog(CampaignState.CHAPTERS[chapter_number - 1]["title"], session.event_text(outro_id), [
 		{"label": "작업 시작", "call": Callable(self, "_noop")},
 	])
+	UiTheme.document_font(dialog.get_child(1))
 	# Two sections, record first: each event title is its own accent heading,
 	# larger than the body text it introduces and kept above the buttons.
 	var record_heading := _label(dialog, session.event_title(outro_id), 21, ACCENT)
+	UiTheme.title_font(record_heading)
 	dialog.move_child(record_heading, 1)
 	var opening_heading := _label(dialog, session.event_title(intro_id), 21, ACCENT)
+	UiTheme.title_font(opening_heading)
 	var opening_body := _label(dialog, session.event_text(intro_id), 17)
+	UiTheme.document_font(opening_body)
 	dialog.move_child(opening_heading, dialog.get_child_count() - 3)
 	dialog.move_child(opening_body, dialog.get_child_count() - 2)
 	_play_sound("chapter")
@@ -240,7 +262,9 @@ func _show_credit_notices(back: Callable, back_caption: String) -> void:
 func _engine_credits() -> String:
 	# Read notices from the running engine, including its actual bundled fonts.
 	var sections: Array[String] = [
-		"실행 시 기본 글꼴: " + heading.get_theme_font("font").get_font_name(),
+		# The theme default is the UI face; headings carry a Myeongjo override.
+		"실행 시 기본 글꼴: " + theme.default_font.get_font_name(),
+		"제목·문서 글꼴: " + heading.get_theme_font("font").get_font_name(),
 		"ThemeDB 대체 글꼴: " + ThemeDB.fallback_font.get_font_name(),
 		"실행 엔진 · Godot Engine\n" + Engine.get_license_text(),
 	]
@@ -298,6 +322,7 @@ func _cancel_presentation_motion() -> void:
 func _show_dialog(title: String, message: String, options: Array) -> void:
 	_cancel_presentation_motion()
 	super._show_dialog(title, message, options)
+	UiTheme.title_font(dialog.get_child(0))
 	var buttons: Node = dialog.get_child(dialog.get_child_count() - 1)
 	for index in range(options.size()):
 		var button: Button = buttons.get_child(index)
@@ -479,6 +504,7 @@ func _replay_event(id: String) -> void:
 		options.append({"label": "크레딧", "call": Callable(self, "_show_ending_credits")})
 		options.append({"label": "전체 캠페인 다시 플레이", "call": Callable(self, "_ask_ending_replay")})
 	_show_dialog(source.event_title(id), source.event_text(id), options)
+	UiTheme.document_font(dialog.get_child(1))
 	overlay.set_meta("campaign_event_id", id)
 	_play_sound("paper")
 
@@ -507,6 +533,7 @@ func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
 		chronology, kind, "발화" if row["delivery"] == "live_speech" else "문서", row["document_date"], row["speaker"], row["text"]], [
 		{"label": caption, "call": back},
 	])
+	UiTheme.document_font(dialog.get_child(1))
 	_add_order_portrait(row)
 	_confine_journal_focus()
 	_play_sound("paper")

@@ -29,6 +29,9 @@ Noto Sans — Copyright 2012 Google Inc.; SIL Open Font License 1.1.
 DroidSans — Copyright 2008 The Android Open Source Project; Apache License 2.0.
 내장 글꼴의 포함 여부는 엔진 빌드에 따릅니다. ‘엔진·글꼴 라이선스 전문’에서 실행 엔진의 MIT 원문과 모든 내장 font 항목의 파일·저작권·라이선스 원문, UI 기본·대체 글꼴의 실제 가족명을 읽을 수 있습니다.
 
-한글은 실행 환경에 따라 운영체제의 시스템 대체 글꼴을 사용할 수 있습니다. Windows의 맑은 고딕(Malgun Gothic)은 Microsoft Corporation의 독점 사용 조건을 따릅니다. 이 게임은 맑은 고딕이나 다른 시스템 글꼴 파일을 복제·재배포하지 않습니다.
+글꼴 · 나눔고딕·나눔명조 (NHN Corporation, SIL Open Font License 1.1 · OFL)
+화면 글자는 나눔고딕, 제목과 문서는 나눔명조로 표시합니다. 공식 Google Fonts 배포본을 수정 없이 동봉했으며, 라이선스 전문은 ‘자산 출처·라이선스’에서 읽을 수 있습니다.
+
+나눔 글꼴에 없는 일부 기호는 실행 환경에 따라 엔진 또는 운영체제의 대체 글꼴로 표시될 수 있습니다. Windows의 맑은 고딕(Malgun Gothic)은 Microsoft Corporation의 독점 사용 조건을 따릅니다. 이 게임은 맑은 고딕이나 다른 시스템 글꼴 파일을 복제·재배포하지 않습니다.
 
 자산별 출처·권리 기록은 ASSET_LICENSES.json과 기존 제작 문서에 보존되어 있습니다.
