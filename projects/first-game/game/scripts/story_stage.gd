@@ -28,6 +28,7 @@ var portrait_for: Callable
 var atmosphere: ColorRect
 var reduce_motion := false
 var _fades: Array[Tween] = []
+var _portrait_fade: Tween
 
 func build(host: Control) -> void:
 	# Labels and keys come from the host so font scaling and key styling match
@@ -134,6 +135,8 @@ func build(host: Control) -> void:
 
 func set_reduce_motion(enabled: bool) -> void:
 	reduce_motion = enabled
+	if enabled:
+		_stop_fades()
 	atmosphere.material.set_shader_parameter("motion", 0.0 if enabled else 1.0)
 
 func play(scene: Dictionary, scene_texture: Texture2D, portraits: Callable) -> void:
@@ -197,6 +200,11 @@ func _fade(item: CanvasItem, seconds: float) -> void:
 	var tween := create_tween()
 	tween.tween_property(item, "modulate:a", 1.0, seconds)
 	_fades.append(tween)
+	if item == portrait_frame:
+		# A quick second speaker change restarts the portrait fade cleanly.
+		if _portrait_fade != null and _portrait_fade.is_valid():
+			_portrait_fade.kill()
+		_portrait_fade = tween
 
 func _stop_fades() -> void:
 	# A skipped or replaced scene leaves no fade running and nothing half-faded.

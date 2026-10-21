@@ -19,6 +19,10 @@ var order_cue: Label
 var order_card: Button
 var story_stage: Control
 var story_after := Callable()
+var ending_scene_key: Button
+var workbench_panel: Control
+var dialog_hint: Label
+var rotate_keys: Array = []
 static var _scene_rows: Array = []
 var workbench_scroll: ScrollContainer
 var ending_panel: Control
@@ -155,10 +159,11 @@ func _build_interface() -> void:
 	story_stage.set_reduce_motion(bool(settings["reduce_motion"]))
 	story_stage.advanced.connect(_play_sound.bind("paper"))
 	story_stage.skipped.connect(_end_scene)
-	var ending_scene := _button(ending_panel.get_child(0), "결말 장면 보기", func(): play_scene(_scene_for("ending")), 130)
-	ending_scene.tooltip_text = "마지막 장면을 다시 봅니다. 진행은 바뀌지 않습니다."
-	_primary_button(ending_scene)
-	ending_scene.get_parent().move_child(ending_scene, 1)
+	ending_scene_key = _button(ending_panel.get_child(0), "결말 장면 보기", func(): play_scene(_scene_for("ending"), Callable(self, "_focus_ending_scene_key")), 130)
+	ending_scene_key.tooltip_text = "마지막 장면을 다시 봅니다. 진행은 바뀌지 않습니다."
+	_primary_button(ending_scene_key)
+	_arrange_ending()
+	_build_dialog_hint()
 
 static func scene_rows() -> Array:
 	if _scene_rows.is_empty():
@@ -218,6 +223,7 @@ func play_scene(id: String, then: Callable = Callable()) -> void:
 		overlay.show()
 	popup_panel.hide()
 	story_after = then
+	story_stage.atmosphere.material.set_shader_parameter("tube", 1.0 if str(scene.get("background", "night")) == "night" else 0.0)
 	story_stage.play(scene, _scene_background(scene), _scene_portrait)
 
 func _end_scene() -> void:
@@ -338,8 +344,88 @@ func _title_focus_style() -> StyleBoxFlat:
 	style.set_corner_radius_all(8)
 	return style
 
+func _update_responsive() -> void:
+	super._update_responsive()
+	if boards_grid != null:
+		boards_grid.columns = 3 if size.x >= 1100.0 else 2
+	# Sheets shrink only as far as the larger text needs; digits keep their size.
+	var edge: float = 156.0 if float(settings["font_scale"]) <= 1.0 else (136.0 if float(settings["font_scale"]) <= 1.25 else 112.0)
+	for view in [before_view, after_view, target_view]:
+		if view != null:
+			view.custom_minimum_size = Vector2(edge, edge)
+
+func _update_header_layout() -> void:
+	# One arrangement per window width, never per text length, so the header
+	# does not jump between orders.
+	if title_navigation != null:
+		title_navigation.vertical = size.x < 1000.0
+
+func _style_chips(data: Dictionary) -> void:
+	# Status chips, not keys: flat outlines, the current one filled.
+	for i in range(progress_indicators.size()):
+		var current: bool = i == int(data["puzzle"])
+		var chip := StyleBoxFlat.new()
+		chip.set_corner_radius_all(4)
+		chip.set_border_width_all(1)
+		chip.set_content_margin_all(5)
+		chip.content_margin_top = 1
+		chip.content_margin_bottom = 1
+		if current:
+			chip.bg_color = GREEN if bool(data["solved"]) else INK
+			chip.border_color = UiTheme.LAMP
+		else:
+			chip.bg_color = Color(UiTheme.PAPER, 0.14 if i < int(data["puzzle"]) else 0.0)
+			chip.border_color = Color(UiTheme.PAPER, 0.45)
+		progress_indicators[i].add_theme_stylebox_override("panel", chip)
+		progress_captions[i].add_theme_color_override("font_color", UiTheme.PAPER)
+
+func _arrange_ending() -> void:
+	# The ending reads first; its keys share one row under the text.
+	var column: VBoxContainer = ending_panel.get_child(0)
+	var keys := HBoxContainer.new()
+	keys.name = "EndingKeys"
+	keys.add_theme_constant_override("separation", 8)
+	var buttons: Array = column.get_children().filter(func(node): return node is Button)
+	var text: Label = column.get_children().filter(func(node): return node is Label).back()
+	column.add_child(keys)
+	for key in buttons:
+		key.reparent(keys)
+		key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	keys.move_child(ending_scene_key, 0)
+	column.move_child(text, 1)
+
+func _focus_ending_scene_key() -> void:
+	if ending_scene_key != null and ending_scene_key.is_visible_in_tree():
+		ending_scene_key.grab_focus()
+
+func _open_story_at(title: String) -> void:
+	# Returning from a replayed scene puts focus back on that scene's entry.
+	_open_story()
+	for node in dialog.find_children("*", "Button", true, false):
+		if node.text == "장면 · " + title:
+			node.grab_focus()
+			break
+
+func _build_dialog_hint() -> void:
+	# Long documents say how to read on and leave, outside the scrolling text.
+	var frame := VBoxContainer.new()
+	frame.name = "DialogFrame"
+	popup_panel.add_child(frame)
+	popup_scroll.reparent(frame)
+	dialog_hint = _label(frame, "", 14, GREEN)
+	dialog_hint.name = "DialogHint"
+	dialog_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	dialog_hint.autowrap_mode = TextServer.AUTOWRAP_OFF
+	dialog_hint.hide()
+
 func _fit_dialog() -> void:
 	super._fit_dialog()
+	if dialog_hint != null and popup_scroll != null and is_inside_tree():
+		var overflow: bool = dialog.get_combined_minimum_size().y > size.y - 96.0 and not (title_backdrop != null and title_backdrop.visible)
+		dialog_hint.text = "↓ 더 읽기 [PageDown]  ·  닫기 [Esc]" if dialog_back.is_valid() else "↓ 더 읽기 [PageDown]"
+		dialog_hint.visible = overflow
+		if overflow:
+			popup_scroll.custom_minimum_size.y = maxf(120.0, size.y - 96.0 - dialog_hint.get_combined_minimum_size().y - 4.0)
 	if title_backdrop != null and title_backdrop.visible and popup_panel != null:
 		# A narrower title panel leaves more of the night workshop visible.
 		popup_panel.custom_minimum_size.x = minf(560.0, size.x - 64.0)
@@ -357,11 +443,18 @@ func _build_workbench() -> void:
 	workbench_scroll.name = "WorkbenchScroll"
 	# Header: the order card replaces the order line; the print count joins the
 	# heading line so the progress chips keep a full row.
+	# The header lies on a dark backing so it reads over every room plate.
+	var backing := PanelContainer.new()
+	backing.name = "HeaderBacking"
+	var night := UiTheme.surface(Color(UiTheme.NIGHT, 0.84), 10, 4)
+	night.border_color = Color(UiTheme.LAMP, 0.22)
+	backing.add_theme_stylebox_override("panel", night)
+	content.add_child(backing)
+	content.move_child(backing, header.get_index())
 	var top := HBoxContainer.new()
 	top.name = "DeskHeader"
 	top.add_theme_constant_override("separation", 12)
-	content.add_child(top)
-	content.move_child(top, header.get_index())
+	backing.add_child(top)
 	header.reparent(top)
 	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	order_cue.hide()
@@ -369,9 +462,16 @@ func _build_workbench() -> void:
 	header.move_child(title_line, 0)
 	heading.reparent(title_line)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	progress_label.reparent(title_line)
-	progress_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	progress_label.size_flags_vertical = Control.SIZE_SHRINK_END
+	# One line that never breaks inside a word; a too-long title ends in an ellipsis.
+	heading.autowrap_mode = TextServer.AUTOWRAP_OFF
+	heading.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	heading.clip_text = true
+	# Compact chips keep all eighteen on one row at every text size.
+	var progression: Control = progress_captions[0].get_parent().get_parent()
+	progression.add_theme_constant_override("h_separation", 6)
+	for caption in progress_captions:
+		caption.set_meta("font_base", 13)
+		caption.add_theme_font_size_override("font_size", int(round(13 * float(settings["font_scale"]))))
 	order_card = _button(top, "", _open_order, 250)
 	order_card.name = "OrderCard"
 	order_card.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -385,6 +485,7 @@ func _build_workbench() -> void:
 	var bench_style := UiTheme.surface(Color("#2a211b", 0.86), 10, 8)
 	bench_style.border_color = Color(UiTheme.LAMP, 0.28)
 	bench.add_theme_stylebox_override("panel", bench_style)
+	workbench_panel = bench
 	content.add_child(bench)
 	content.move_child(bench, boards_grid.get_index())
 	var sheets := _column(bench, 4)
@@ -393,6 +494,17 @@ func _build_workbench() -> void:
 	note.reparent(sheets)
 	note.add_theme_color_override("font_color", UiTheme.PAPER)
 	_room_outline(note)
+	note.set_meta("font_base", 13)
+	note.add_theme_font_size_override("font_size", int(round(13 * float(settings["font_scale"]))))
+	bench_style.content_margin_top = 4
+	bench_style.content_margin_bottom = 4
+	for view in [before_view, after_view, target_view]:
+		var caption: Label = view.get_parent().get_child(view.get_parent().get_child_count() - 1)
+		caption.set_meta("font_base", 14)
+		caption.add_theme_font_size_override("font_size", int(round(14 * float(settings["font_scale"]))))
+	for item in stamp_buttons[0].get_parent().get_children():
+		if item is Button and (str(item.text).contains("[Q]") or str(item.text).contains("[E]")):
+			rotate_keys.append(item)
 	# StampBench: the inherited control panel becomes a wood bench; save and hint
 	# keys move to their own column so the print row stays above the fold.
 	var stamp_bench: PanelContainer = stamp_view.get_parent().get_parent().get_parent()
@@ -410,6 +522,30 @@ func _build_workbench() -> void:
 	for key in extras.get_children():
 		key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint_label.reparent(tools)
+	# The print count sits with the selection strip, where the player acts.
+	var selection: Control = detail.get_parent()
+	var strip := HBoxContainer.new()
+	strip.name = "SelectionStrip"
+	strip.add_theme_constant_override("separation", 12)
+	selection.get_parent().add_child(strip)
+	selection.get_parent().move_child(strip, selection.get_index())
+	selection.reparent(strip)
+	selection.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	progress_label.reparent(strip)
+	progress_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	progress_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	progress_label.add_theme_color_override("font_color", UiTheme.INK)
+	# The strip and the footer already say what to do; the step captions only
+	# cost height at larger text. Bench text is ink on wood for contrast.
+	for node in stamp_bench.find_children("*", "Label", true, false):
+		if node.text in ["도장 고르기", "미리보기를 견본과 비교하고 찍기"]:
+			node.hide()
+	reaction_label.add_theme_color_override("font_color", UiTheme.INK)
+	stamp_view.custom_minimum_size = Vector2(124, 100)
+	# A smaller play-screen title leaves room for the work.
+	var title_label: Label = title_area.get_child(0)
+	title_label.set_meta("font_base", 24)
+	title_label.add_theme_font_size_override("font_size", int(round(24 * float(settings["font_scale"]))))
 
 const BOARD_NAMES := [["지금 종이", "지금 인쇄된 종이"], ["찍으면 · 미리보기", "인쇄 횟수에 포함되지 않아요"], ["견본", "이 모양과 같게 찍으세요"]]
 const CAPTIONS := {"Q · ↶ 90°": "↶ 왼쪽으로 [Q]", "E · ↷ 90°": "↷ 오른쪽으로 [E]", "R · 초기화": "초기화 [R]",
@@ -483,7 +619,7 @@ func _build_night_scene() -> void:
 	_update_atmosphere()
 	# Text that sits directly on the dark room is lit by the lamp; everything on
 	# paper or wood panels keeps its ink colour.
-	var on_room: Array = [subheading, order_cue, progress_label]
+	var on_room: Array = [subheading, order_cue]
 	for child in heading.get_parent().get_parent().get_children():
 		if child is Label:
 			on_room.append(child)
@@ -891,7 +1027,7 @@ func _open_story() -> void:
 			"disabled": not outro_available, "tooltip": "장의 마침 기록을 다시 읽습니다." if outro_available else "이 장의 마지막 퍼즐을 완성하면 읽을 수 있습니다."})
 	for scene in scene_rows():
 		var open: bool = _scene_unlocked(source, scene)
-		options.append({"label": "장면 · " + str(scene["title"]), "call": Callable(self, "play_scene").bind(str(scene["id"]), Callable(self, "_open_story")),
+		options.append({"label": "장면 · " + str(scene["title"]), "call": Callable(self, "play_scene").bind(str(scene["id"]), Callable(self, "_open_story_at").bind(str(scene["title"]))),
 			"disabled": not open, "tooltip": "이 장면을 다시 봅니다." if open else "이야기가 이 장면까지 진행되면 볼 수 있습니다."})
 	_show_dialog("이야기 다시 읽기", "열린 장의 기록과 장면을 다시 읽습니다. 퍼즐을 선택하거나 진행을 바꾸지 않습니다.\n\n" + "\n\n".join(summaries), options)
 
@@ -1075,11 +1211,14 @@ func _refresh() -> void:
 	# The original eight keep their protected English data titles; show Korean
 	# display names from story data. Later puzzles already carry Korean titles.
 	var title: String = str(CampaignState.story_data().get("display_titles", {}).get(puzzle["id"], puzzle["title"]))
-	heading.text = "%s · 퍼즐 %d / %d     ·     %s" % [chapter["title"], int(data["puzzle"]) + 1, session.puzzle_count(), title]
+	heading.text = "%s · 의뢰 %d / %d · %s" % [chapter["title"], int(data["puzzle"]) + 1, session.puzzle_count(), title]
 	# The room behind the workbench follows the chapter's time of night.
 	var room := get_node_or_null("NightScene") as TextureRect
 	if room != null:
 		room.texture = SCENE_PLATES[CHAPTER_PLATES.get(int(puzzle["chapter"]), "night")]
+	if atmosphere != null:
+		atmosphere.material.set_shader_parameter("tube", 1.0 if int(puzzle["chapter"]) == 1 else 0.0)
+	_style_chips(data)
 	# Context only: never open an order or mark it read during refresh.
 	if order_cue != null:
 		for row in CampaignState.story_data()["orders"]:
@@ -1091,7 +1230,7 @@ func _refresh() -> void:
 				break
 	if int(data["puzzle"]) == 0 and not bool(data["solved"]):
 		if int(data["history_size"]) == 0:
-			subheading.text = "도장을 고르고, 미리보기를 견본과 비교한 뒤 인쇄하세요. 미리보기는 무료입니다."
+			subheading.text = "미리보기를 견본과 비교한 뒤 인쇄하세요."
 		else:
 			subheading.text = "지금 종이는 견본과 %d칸 다릅니다. 다음 인쇄를 미리 보거나 되돌리기 [U]를 쓰세요." % session.mismatch_count()
 	elif int(data["puzzle"]) == 0:
@@ -1101,11 +1240,15 @@ func _refresh() -> void:
 	if bool(data["solved"]):
 		reaction_label.text = "✓ 견본 일치"
 	for caption in progress_captions:
-		caption.text = caption.text.replace(" · 지남", "✓")
+		caption.text = caption.text.replace(" · 지남", "✓").replace(" · 완료", "✓")
 	detail.text = "선택: %s 도장  ·  회전 %d°" % [_stamp_name(int(data["selected_mask"])), int(data["rotation"]) * 90]
+	var compact: bool = float(settings["font_scale"]) >= 1.5
 	for index in range(stamp_buttons.size()):
 		var state_cue: String = " · 사용 불가" if stamp_buttons[index].disabled else (" ✓ 선택" if index == int(data["selected_mask"]) else "")
-		stamp_buttons[index].text = "%s 도장 [%d]%s" % [_stamp_name(index), index + 1, state_cue]
+		stamp_buttons[index].text = "%s%s [%d]%s" % [_stamp_name(index), "" if compact else " 도장", index + 1, state_cue]
+	if rotate_keys.size() == 2:
+		rotate_keys[0].text = "↶ 왼쪽 [Q]" if compact else "↶ 왼쪽으로 [Q]"
+		rotate_keys[1].text = "↷ 오른쪽 [E]" if compact else "↷ 오른쪽으로 [E]"
 	if not next_button.disabled:
 		next_button.tooltip_text = "다음 의뢰로 직접 넘어갑니다. (N)"
 	elif not bool(data["solved"]):
@@ -1115,6 +1258,9 @@ func _refresh() -> void:
 	if ending_panel != null:
 		var newly_finished: bool = is_finished() and not ending_panel.visible
 		ending_panel.visible = is_finished()
+		# The finished sheets stay on the desk only while undo can reopen them.
+		if workbench_panel != null:
+			workbench_panel.visible = not is_finished()
 		if newly_finished:
 			# Bring the ending heading and its credits control into view once.
 			workbench_scroll.set_deferred("scroll_vertical", 0)
