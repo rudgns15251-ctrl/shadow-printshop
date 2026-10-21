@@ -62,13 +62,31 @@ func title_checks(main, label: String) -> void:
 		if item is Button:
 			var rect: Rect2 = item.get_global_rect()
 			check(rect.position.x >= -1.0 and rect.end.x <= main.get_viewport_rect().size.x + 1.0, label + ": no horizontal overflow " + item.text)
+	if focus is Button:
+		var ring = focus.get_theme_stylebox("focus")
+		check(ring is StyleBoxFlat and ring.border_color.get_luminance() > 0.6 and ring.get_border_width(SIDE_LEFT) >= 2, label + ": focus ring stands out on the title panel")
+
+func fits(main) -> void:
+	# At the base 1280x720 and 100% the whole title menu is on screen, unscrolled.
+	for i in range(6):
+		await process_frame
+	var view: Rect2 = main.popup_scroll.get_global_rect()
+	var found: Array = []
+	visible_controls(main.overlay, found)
+	for item in found:
+		if item is Button:
+			var rect: Rect2 = item.get_global_rect()
+			check(view.encloses(rect.grow(-1.0)), "1280x720 100%: title action inside the visible dialog: " + item.text)
+	check(not main.popup_scroll.get_v_scroll_bar().visible, "1280x720 100%: title needs no scrollbar")
 
 func run() -> void:
 	var main = load("res://campaign_main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
 	await process_frame
+	root.size = Vector2i(1280, 720)
 	title_checks(main, "fresh start")
+	await fits(main)
 	await escape()
 	check(main.overlay.visible and not main.game_active and backdrop_visible(main), "Escape never starts or closes the title")
 	main._open_help()
