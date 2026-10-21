@@ -5,6 +5,7 @@ extends "res://scripts/slice_main.gd"
 const CampaignState = preload("res://scripts/campaign_state.gd")
 const CampaignSave = preload("res://scripts/campaign_save.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const StoryStage = preload("res://scripts/story_stage.gd")
 const NIGHT_SCENE = preload("res://assets/art/scene_shop_night.svg")
 const ATMOSPHERE = preload("res://shaders/atmosphere.gdshader")
 
@@ -16,6 +17,9 @@ var campaign_save = CampaignSave.new()
 var story_button: Button
 var order_cue: Label
 var order_card: Button
+var story_stage: Control
+var story_after := Callable()
+static var _scene_rows: Array = []
 var workbench_scroll: ScrollContainer
 var ending_panel: Control
 var environment_audio: AudioStreamPlayer
@@ -145,6 +149,94 @@ func _build_interface() -> void:
 	# Last: every label the night scene recolours now exists.
 	_build_night_scene()
 	_build_title_backdrop()
+	story_stage = StoryStage.new()
+	story_stage.build(self)
+	overlay.add_child(story_stage)
+	story_stage.advanced.connect(_play_sound.bind("paper"))
+	story_stage.skipped.connect(_end_scene)
+	var ending_scene := _button(ending_panel.get_child(0), "결말 장면 보기", func(): play_scene(_scene_for("ending")), 130)
+	ending_scene.tooltip_text = "마지막 장면을 다시 봅니다. 진행은 바뀌지 않습니다."
+	_primary_button(ending_scene)
+	ending_scene.get_parent().move_child(ending_scene, 1)
+
+static func scene_rows() -> Array:
+	if _scene_rows.is_empty():
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://data/campaign_scenes.json"))
+		_scene_rows = parsed["scenes"] if parsed is Dictionary and parsed.get("scenes") is Array else []
+	return _scene_rows
+
+func _scene(id: String) -> Dictionary:
+	for scene in scene_rows():
+		if str(scene["id"]) == id:
+			return scene
+	return {}
+
+func _scene_for(type: String, value: Variant = null) -> String:
+	for scene in scene_rows():
+		var trigger: Dictionary = scene["trigger"]
+		# JSON numbers are floats; chapters compare as whole numbers.
+		var key: Variant = trigger.get("puzzle_id", int(trigger.get("chapter", 0)))
+		if str(trigger["type"]) == type and (value == null or str(key) == str(value)):
+			return str(scene["id"])
+	return ""
+
+func _scene_background(_scene_row: Dictionary) -> Texture2D:
+	return NIGHT_SCENE
+
+func _scene_portrait(speaker: String, _expression: String) -> Texture2D:
+	return PORTRAITS.get(speaker)
+
+func play_scene(id: String, then: Callable = Callable()) -> void:
+	# Over an open dialog (a chapter record) the scene plays first and the dialog
+	# waits beneath it; otherwise the scene is its own modal reading.
+	var scene := _scene(id)
+	if scene.is_empty():
+		if then.is_valid():
+			then.call()
+		return
+	_cancel_presentation_motion()
+	if not overlay.visible or dialog.get_child_count() == 0:
+		_clear_dialog()
+		overlay.show()
+	popup_panel.hide()
+	story_after = then
+	story_stage.play(scene, _scene_background(scene), _scene_portrait)
+
+func _end_scene() -> void:
+	story_stage.stop()
+	popup_panel.show()
+	var then := story_after
+	story_after = Callable()
+	if dialog.get_child_count() > 0:
+		# The waiting record takes focus at its first action and first line.
+		_confine_journal_focus()
+		_scroll_dialog_to_top()
+	else:
+		dismiss_story()
+	if then.is_valid():
+		then.call()
+
+func _scene_unlocked(source, scene: Dictionary) -> bool:
+	var trigger: Dictionary = scene["trigger"]
+	var reached: int = int(source.snapshot()["puzzle"])
+	match str(trigger["type"]):
+		"opening":
+			return true
+		"ending":
+			return source.is_finished()
+		"chapter":
+			for index in range(source.puzzle_count()):
+				if int(source.puzzle_data()[index]["chapter"]) == int(trigger["chapter"]):
+					return reached >= index
+		"enter":
+			for index in range(source.puzzle_count()):
+				if str(source.puzzle_data()[index]["id"]) == str(trigger["puzzle_id"]):
+					return reached >= index
+	return false
+
+func _begin_campaign() -> void:
+	start_new()
+	play_scene(_scene_for("opening"))
 
 func _build_title_backdrop() -> void:
 	# The start screen alone shows the night shop behind its menu, inside the
@@ -438,7 +530,11 @@ func advance() -> void:
 	super._next()
 	var after: int = int(session.snapshot()["puzzle"])
 	if after != before and int(session.puzzle_data()[after]["chapter"]) != int(session.puzzle_data()[before]["chapter"]):
-		_show_chapter_transition(int(session.puzzle_data()[after]["chapter"]))
+		var chapter := int(session.puzzle_data()[after]["chapter"])
+		_show_chapter_transition(chapter)
+		play_scene(_scene_for("chapter", chapter))
+	elif after != before:
+		play_scene(_scene_for("enter", session.puzzle_data()[after]["id"]))
 
 func _show_chapter_transition(chapter_number: int) -> void:
 	# The finished chapter's record and the new chapter's opening, read once at
@@ -579,6 +675,10 @@ func _clear_dialog() -> void:
 	dialog_back = Callable()
 	if overlay != null and overlay.has_meta("campaign_event_id"):
 		overlay.remove_meta("campaign_event_id")
+	if story_stage != null and story_stage.visible:
+		story_stage.stop()
+		story_after = Callable()
+		popup_panel.show()
 	if dialog != null:
 		if is_inside_tree():
 			var focus: Control = get_viewport().gui_get_focus_owner()
@@ -627,6 +727,16 @@ func _input(event: InputEvent) -> void:
 					popup_scroll.scroll_vertical = int(ceil(popup_scroll.get_v_scroll_bar().max_value))
 		get_viewport().set_input_as_handled()
 		return
+	if story_stage != null and story_stage.is_playing() and event is InputEventKey and event.pressed and not event.echo:
+		var focus: Control = get_viewport().gui_get_focus_owner()
+		if event.keycode == KEY_ESCAPE:
+			story_stage.skip()
+			get_viewport().set_input_as_handled()
+			return
+		if event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER] and not (focus is Button and story_stage.is_ancestor_of(focus)):
+			story_stage.advance()
+			get_viewport().set_input_as_handled()
+			return
 	super._input(event)
 
 func _confine_journal_focus() -> void:
@@ -673,7 +783,7 @@ func _dialog_action(command: Callable) -> void:
 		command.call()
 
 func _new_game() -> void:
-	start_new()
+	_begin_campaign()
 
 func _next() -> void:
 	advance()
@@ -722,7 +832,7 @@ func _ask_new_game() -> void:
 	if game_active or _has_valid_save():
 		_confirm_new_campaign(Callable(self, "_noop") if game_active else Callable(self, "_open_start"))
 	else:
-		start_new()
+		_begin_campaign()
 
 func _ask_campaign_replay() -> void:
 	if not game_active or not is_finished():
@@ -759,7 +869,11 @@ func _open_story() -> void:
 			"disabled": not intro_available, "tooltip": "장의 시작을 다시 읽습니다." if intro_available else "다음 버튼으로 이 장의 첫 퍼즐에 들어가면 읽을 수 있습니다."})
 		options.append({"label": chapter["title"] + " · 마침 기록 읽기", "call": Callable(self, "_replay_event").bind(chapter["outro_event"]),
 			"disabled": not outro_available, "tooltip": "장의 마침 기록을 다시 읽습니다." if outro_available else "이 장의 마지막 퍼즐을 완성하면 읽을 수 있습니다."})
-	_show_dialog("이야기 다시 읽기", "열린 장의 기록을 다시 읽습니다. 퍼즐을 선택하거나 진행을 바꾸지 않습니다.\n\n" + "\n\n".join(summaries), options)
+	for scene in scene_rows():
+		var open: bool = _scene_unlocked(source, scene)
+		options.append({"label": "장면 · " + str(scene["title"]), "call": Callable(self, "play_scene").bind(str(scene["id"]), Callable(self, "_open_story")),
+			"disabled": not open, "tooltip": "이 장면을 다시 봅니다." if open else "이야기가 이 장면까지 진행되면 볼 수 있습니다."})
+	_show_dialog("이야기 다시 읽기", "열린 장의 기록과 장면을 다시 읽습니다. 퍼즐을 선택하거나 진행을 바꾸지 않습니다.\n\n" + "\n\n".join(summaries), options)
 
 func _story_source():
 	if game_active:
@@ -973,7 +1087,7 @@ func _refresh() -> void:
 	elif not bool(data["solved"]):
 		next_button.tooltip_text = "지금 의뢰의 견본을 먼저 완성해야 다음 의뢰로 넘어갈 수 있습니다."
 	if story_button != null:
-		story_button.tooltip_text = "진행에 따라 열린 장의 시작과 마침 기록을 다시 읽습니다. 읽기나 닫기는 퍼즐을 진행하지 않습니다."
+		story_button.tooltip_text = "진행에 따라 열린 장의 시작과 마침 기록, 장면을 다시 읽습니다. 읽기나 닫기는 퍼즐을 진행하지 않습니다."
 	if ending_panel != null:
 		var newly_finished: bool = is_finished() and not ending_panel.visible
 		ending_panel.visible = is_finished()
