@@ -68,7 +68,11 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'scene_motion': ('scene_motion.gd', 'SCENE_MOTION_PASS'),
                      # S12 product review.
                      'screen_fit': ('screen_fit.gd', 'SCREEN_FIT_PASS'),
-                     'player_copy': ('player_copy.gd', 'PLAYER_COPY_PASS')}
+                     'player_copy': ('player_copy.gd', 'PLAYER_COPY_PASS'),
+                     # S13 mobile touch.
+                     'touch_mode': ('touch_mode.gd', 'TOUCH_MODE_PASS'),
+                     'touch_layout': ('touch_layout.gd', 'TOUCH_LAYOUT_PASS'),
+                     'touch_dialogs': ('touch_dialogs.gd', 'TOUCH_DIALOGS_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 

@@ -156,6 +156,36 @@
         "release_candidate",
         "context_tooltips"
       ]
+    },
+    {
+      "id": "s13_mobile_touch",
+      "depends_on": [
+        "s12_product_review"
+      ],
+      "tasks": 3,
+      "goal": "Touch version of the campaign: a touch mode (automatic on phones) without keyboard hints, the Android back gesture and app pause/resume lifecycle; a phone play layout with a large action bar, top bar and finger-sized keys at 16:9, 19.5:9, 20:9 and 16:10 with the display safe area; finger-sized dialogs, title, settings and scenes with drag scrolling. Mobile version requested by the user on 2026-10-21 after the Windows release candidate (archived unchanged at rc-20261021-pc): Android only, landscape, built with the patched 4.7.1 engine (Android templates built from the same source), prepared up to Play Store submission with package com.shadowprintshop.game; uploading, accounts and the release signing key stay with the user. The desktop game must stay exactly as certified when touch mode is off (keyboard hints, layouts, every earlier probe). Keep saves, story data, puzzles, accessibility rules and the audio lifecycle. Never claim device playtesting, listening or literary review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s14_android_release",
+      "depends_on": [
+        "s13_mobile_touch"
+      ],
+      "tasks": 2,
+      "goal": "Android release preparation: project settings for Android (ETC2/ASTC textures, landscape sensor orientation, aspect expand, back gesture handled by the game), adaptive launcher icons, fixes from an independent capture review at phone sizes and on the Android emulator, then APK/AAB packaging with structural validation and store listing materials. Mobile version requested by the user on 2026-10-21 after the Windows release candidate (archived unchanged at rc-20261021-pc): Android only, landscape, built with the patched 4.7.1 engine (Android templates built from the same source), prepared up to Play Store submission with package com.shadowprintshop.game; uploading, accounts and the release signing key stay with the user. The desktop game must stay exactly as certified when touch mode is off (keyboard hints, layouts, every earlier probe). Keep saves, story data, puzzles, accessibility rules and the audio lifecycle. Never claim device playtesting, listening or literary review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
     }
   ]
 }
