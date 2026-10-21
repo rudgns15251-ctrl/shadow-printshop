@@ -10,7 +10,7 @@
 의뢰서와 기록을 펼칠 때의 종이 소리(menu_paper.wav)와 장이 바뀔 때의 인쇄기 소리(chapter_transition.wav)는 이 프로젝트를 위해 Python 표준 라이브러리로 절차 합성한 원본 음원입니다. 외부 녹음이나 샘플을 사용하지 않았습니다. 별도의 배포 허가는 부여하지 않았으며(NOASSERTION), 권리와 크레딧은 사람의 검토가 필요합니다.
 
 게임 아이콘 · Anthropic Claude Code (2026-10-21)
-창과 작업 표시줄의 아이콘(app_icon.svg)은 목판 도장, 종이, 3×3 인쇄 칸과 인주 도장을 직접 그린 원본 벡터입니다. Android 런처 아이콘의 전경·배경·테마용 단색 층(android_icon_foreground.svg, android_icon_background.svg, android_icon_monochrome.svg)도 같은 그림에서 직접 그린 원본 벡터입니다. 외부 이미지나 글꼴을 사용하지 않았습니다. 별도의 배포 허가는 부여하지 않았으며(NOASSERTION), 권리와 크레딧은 사람의 검토가 필요합니다.
+창과 작업 표시줄의 아이콘(app_icon.svg)은 목판 도장, 종이, 3×3 인쇄 칸과 인주 도장을 직접 그린 원본 벡터입니다. Android 런처 아이콘의 전경·배경·테마용 단색 층(android_icon_foreground.svg, android_icon_background.svg, android_icon_monochrome.svg)도 같은 그림에서 직접 그린 원본 벡터입니다. 시작 화면 그림(boot_splash.png)은 이 아이콘과 동봉한 나눔명조로 쓴 제목을 게임 엔진으로 그린 것입니다. 외부 이미지나 글꼴을 사용하지 않았습니다. 별도의 배포 허가는 부여하지 않았으며(NOASSERTION), 권리와 크레딧은 사람의 검토가 필요합니다.
 
 밤의 작업장 그림·분위기 효과 · Anthropic Claude Code (2026-10-21)
 밤의 인쇄소 배경(scene_shop_night.svg)과 분위기 셰이더(atmosphere.gdshader)는 이 프로젝트를 위해 직접 작성한 원본 벡터·셰이더입니다. 외부 이미지나 글꼴을 사용하지 않았습니다. 별도의 배포 허가는 부여하지 않았으며(NOASSERTION), 권리와 크레딧은 사람의 검토가 필요합니다.
