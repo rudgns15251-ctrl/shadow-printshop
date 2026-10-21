@@ -183,8 +183,19 @@ func _scene_for(type: String, value: Variant = null) -> String:
 func _scene_background(_scene_row: Dictionary) -> Texture2D:
 	return NIGHT_SCENE
 
-func _scene_portrait(speaker: String, _expression: String) -> Texture2D:
-	return PORTRAITS.get(speaker)
+# Scenes use expression busts; order documents keep their framed record portraits.
+const EXPRESSION_PORTRAITS := {
+	"백인호": {"neutral": preload("res://assets/art/portrait_baek_neutral.svg"),
+		"worried": preload("res://assets/art/portrait_baek_worried.svg"),
+		"resolved": preload("res://assets/art/portrait_baek_resolved.svg")},
+	"윤해린": {"record": preload("res://assets/art/portrait_yoon_record.svg"),
+		"restored": preload("res://assets/art/portrait_yoon_restored.svg")},
+	"0번 의뢰인": {"sealed": preload("res://assets/art/portrait_client_sealed.svg"),
+		"signed": preload("res://assets/art/portrait_client_signed.svg")},
+}
+
+func _scene_portrait(speaker: String, expression: String) -> Texture2D:
+	return EXPRESSION_PORTRAITS.get(speaker, {}).get(expression, PORTRAITS.get(speaker))
 
 func play_scene(id: String, then: Callable = Callable()) -> void:
 	# Over an open dialog (a chapter record) the scene plays first and the dialog

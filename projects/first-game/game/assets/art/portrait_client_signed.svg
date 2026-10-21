@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="448" viewBox="0 0 384 448">
+  <title>0번 의뢰인 · 서명된 의뢰서</title>
+  <!-- No face: the client exists only as an unnumbered envelope and its signature box -->
+  <rect x="54" y="120" width="276" height="290" rx="6" fill="#efe4cf" stroke="#24211d" stroke-width="6"/>
+  <path d="M54 120L192 34L330 120" fill="#d8c7ad" stroke="#24211d" stroke-width="6" stroke-linejoin="round"/>
+  <rect x="96" y="232" width="192" height="140" fill="#f4ebdd" stroke="#24211d" stroke-width="4"/>
+  <path d="M112 256H272M112 276H240M112 296H256" stroke="#24211d" stroke-opacity="0.35" stroke-width="4"/>
+  <!-- 3장에서 드러나는 서명: hand-drawn stroke, the same hand as Yoon's proof marks -->
+  <path d="M128 330C140 300 152 352 166 318S190 300 196 334C204 312 220 300 232 326S256 340 268 316" fill="none" stroke="#24211d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M128 346H272" stroke="#8a3f24" stroke-width="3"/>
+  <!-- unnumbered order mark: an empty number box -->
+  <rect x="262" y="140" width="48" height="48" fill="none" stroke="#8a3f24" stroke-width="5"/>
+  <circle cx="286" cy="164" r="11" fill="none" stroke="#8a3f24" stroke-width="4"/>
+  <path d="M60 400L326 400" stroke="#121110" stroke-opacity="0.25" stroke-width="10"/>
+</svg>

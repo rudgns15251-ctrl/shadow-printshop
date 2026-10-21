@@ -351,5 +351,110 @@
       "scripts/campaign_main.gd::_build_night_scene / _update_atmosphere (Atmosphere layer)"
     ],
     "review_pending": "Human review of flicker comfort and grain visibility."
+  },
+  {
+    "path": "assets/art/portrait_baek_neutral.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "SVG path data authored by Claude Code and emitted by a short Python script: 384x448 woodcut-style bust of 백인호 in 3/4 light, flat 2-3 tone blocks, hatching on the shadow side, reading glasses, grey receding hair, work shirt and green apron; neutral brows, eyes with pupils and closed straight mouth. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "c7ce4530a62b50df5dbbbad6dd927821fef5f54c16118d917bb16783d3c20df9",
+      "bytes": 3214
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 백인호 neutral lines)"
+    ],
+    "review_pending": "Human review of likeness, expression legibility and style consistency."
+  },
+  {
+    "path": "assets/art/portrait_baek_worried.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Same Claude-authored SVG base drawing as portrait_baek_neutral.svg with raised inner brows, lowered lids, downturned mouth and a brow crease. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "6f54df2521ef33aa24e156e29c55b0abf5bb4ec987e441d52fd84015d90a1e25",
+      "bytes": 3376
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 백인호 worried lines)"
+    ],
+    "review_pending": "Human review of likeness, expression legibility and style consistency."
+  },
+  {
+    "path": "assets/art/portrait_baek_resolved.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Same Claude-authored SVG base drawing as portrait_baek_neutral.svg with brows angled down toward the centre, steady eyes, a set mouth and a shaded jaw block. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "fd66801bb8c013ae686b34b9d590efd9310ecd9c62cf97cb602d887d174c54ba",
+      "bytes": 3408
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 백인호 resolved lines)"
+    ],
+    "review_pending": "Human review of likeness, expression legibility and style consistency."
+  },
+  {
+    "path": "assets/art/portrait_yoon_record.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "SVG markup authored by Claude Code: 윤해린 as a faded archival photograph (sepia palette, drawn halftone dot rows, torn lower corner, green paper clip) for every appearance before her restoration. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "1194db713eae9640736437a8e295c8d921390fb60d403fdd946e54abbb3bf1da",
+      "bytes": 49022
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 윤해린 record lines before the ending)"
+    ],
+    "review_pending": "Human review of likeness, the archival look and style consistency."
+  },
+  {
+    "path": "assets/art/portrait_yoon_restored.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "SVG markup authored by Claude Code: the same 윤해린 bust in present-day colour (cardigan, collared shirt, chin-length hair), used only in the ending after restoration. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "0ea2ccc957683b61d2a7411a29c5e8c8169c5563ce520f8025040210b6591db6",
+      "bytes": 2450
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage portrait for 윤해린 in the ending scene only)"
+    ],
+    "review_pending": "Human review of likeness, expression legibility and style consistency."
+  },
+  {
+    "path": "assets/art/portrait_client_sealed.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "SVG markup authored by Claude Code: faceless representation of 0번 의뢰인 as a sealed unnumbered envelope with an empty number box and a dashed blank signature line. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "c296b66db0e58ef23669798379c70c1b02c4d9b5e17fe3e473a5fdaa43f16fc9",
+      "bytes": 1091
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage mark for 0번 의뢰인 documents before chapter 3)"
+    ],
+    "review_pending": "Human review of readability as an anonymous document mark."
+  },
+  {
+    "path": "assets/art/portrait_client_signed.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "SVG markup authored by Claude Code: the opened unnumbered envelope with a hand-drawn signature stroke on its signature line (no face), shown only in chapter 3. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "8af93b61332531007f0b6b3e6e54a88671a0c2d5c3813d54ef3e21df3d305fdd",
+      "bytes": 1352
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_portrait (StoryStage mark for the signed 0번 의뢰인 document in chapter 3)"
+    ],
+    "review_pending": "Human review of readability as the revealed signature."
   }
 ]

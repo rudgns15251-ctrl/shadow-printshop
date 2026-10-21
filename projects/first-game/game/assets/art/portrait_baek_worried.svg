@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="448" viewBox="0 0 384 448">
+  <title>백인호 · 걱정</title>
+  <!-- shoulders, shirt and green apron -->
+  <path d="M40 448C46 380 92 346 150 336H234C292 346 338 380 344 448Z" fill="#e6ddcc" stroke="#24211d" stroke-width="5"/>
+  <path d="M234 336C292 346 338 380 344 448H262Z" fill="#b9ae9a"/>
+  <path d="M120 448L134 372H250L264 448Z" fill="#315d49" stroke="#24211d" stroke-width="5"/>
+  <path d="M134 372L150 340M250 372L234 340" stroke="#24211d" stroke-width="6"/>
+  <path d="M150 336L192 372L234 336" fill="#e6ddcc" stroke="#24211d" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M178 400H206" stroke="#f4ebdd" stroke-width="4" stroke-opacity="0.6"/>
+  <!-- neck -->
+  <path d="M160 300V344H224V300Z" fill="#dcc3a1" stroke="#24211d" stroke-width="5"/>
+  <path d="M200 300V344H224V300Z" fill="#b4936c"/>
+  <!-- ears -->
+  <ellipse cx="110" cy="206" rx="14" ry="24" fill="#dcc3a1" stroke="#24211d" stroke-width="5"/>
+  <ellipse cx="274" cy="206" rx="13" ry="23" fill="#b4936c" stroke="#24211d" stroke-width="5"/>
+  <!-- head: broad, heavy jaw -->
+  <path d="M116 170C116 112 150 84 192 84C236 84 270 112 270 170V214C270 268 236 310 192 310C148 310 116 268 116 214Z" fill="#dcc3a1" stroke="#24211d" stroke-width="6"/>
+  <path d="M232 98C258 116 270 140 270 170V214C270 268 236 310 192 310C222 290 240 250 238 206C238 160 240 124 232 98Z" fill="#b4936c"/>
+  <!-- woodcut hatching on the shadow side -->
+  <path d="M248 236L262 226M244 256L260 244M238 276L254 262" stroke="#24211d" stroke-width="3" stroke-opacity="0.55"/>
+  <!-- receding grey hair, sideburns -->
+  <path d="M116 176C112 118 146 78 196 78C240 78 272 108 272 168C262 140 246 124 222 120C206 132 172 128 150 116C134 128 124 148 116 176Z" fill="#6e6a64" stroke="#24211d" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M150 116C168 104 196 102 222 120" stroke="#9c978e" stroke-width="5" fill="none"/>
+  <path d="M116 176V214M270 170V212" stroke="#4a4640" stroke-width="10"/>
+  <!-- forehead lines (age) -->
+  <path d="M160 140Q192 134 224 140M166 152Q192 147 218 152" stroke="#24211d" stroke-width="2.5" fill="none" stroke-opacity="0.6"/>
+  <!-- reading glasses -->
+  <g fill="none" stroke="#24211d" stroke-width="5">
+    <circle cx="160" cy="194" r="22"/><circle cx="226" cy="194" r="22"/>
+    <path d="M182 192Q193 186 204 192M138 190L118 184M248 190L270 186"/>
+  </g>
+  <!-- nose and folds -->
+  <path d="M194 198L186 240Q194 246 204 242" stroke="#24211d" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M160 238Q154 256 158 272M226 238Q232 256 228 272" stroke="#24211d" stroke-width="3" fill="none" stroke-opacity="0.55"/>
+  <!-- 걱정: inner brows raised, eyes lowered, mouth pulled down, sweat-free restraint -->
+  <path d="M140 172L180 160M206 160L246 172" stroke="#3f3b36" stroke-width="7" stroke-linecap="round"/>
+  <path d="M150 198Q160 194 170 198M216 198Q226 194 236 198" stroke="#24211d" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="160" cy="202" r="4" fill="#24211d"/><circle cx="226" cy="202" r="4" fill="#24211d"/>
+  <path d="M168 274Q193 262 218 274" stroke="#24211d" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M184 150L192 160L200 150" stroke="#24211d" stroke-width="2.5" fill="none" stroke-opacity="0.6"/>
+</svg>

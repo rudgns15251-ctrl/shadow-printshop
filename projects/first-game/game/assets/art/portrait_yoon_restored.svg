@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="448" viewBox="0 0 384 448">
+  <title>윤해린 · 복원 후 현재의 모습</title>
+  <!-- shoulders, collared shirt, work cardigan -->
+  <path d="M52 448C58 388 98 352 152 342H232C286 352 326 388 332 448Z" fill="#4b5a52" stroke="#24211d" stroke-width="5"/>
+  <path d="M232 342C286 352 326 388 332 448H270Z" fill="#36423c"/>
+  <path d="M152 342L192 392L232 342" fill="#e6ddcc" stroke="#24211d" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M152 342L172 380L192 392M232 342L212 380L192 392" fill="none" stroke="#24211d" stroke-width="4"/>
+  <path d="M192 392V448" stroke="#24211d" stroke-width="4"/>
+  <rect x="236" y="384" width="34" height="8" rx="2" fill="#8a3f24" stroke="#24211d" stroke-width="3"/>
+  <!-- neck -->
+  <path d="M168 300V350H216V300Z" fill="#dcc3a1" stroke="#24211d" stroke-width="5"/>
+  <path d="M198 300V350H216V300Z" fill="#b4936c"/>
+  <!-- face: narrower oval -->
+  <path d="M128 178C128 122 156 94 192 94C230 94 256 122 256 178V206C256 262 228 304 192 304C156 304 128 262 128 206Z" fill="#dcc3a1" stroke="#24211d" stroke-width="6"/>
+  <path d="M226 104C246 122 256 146 256 178V206C256 262 228 304 192 304C218 284 232 248 230 206C230 160 234 128 226 104Z" fill="#b4936c"/>
+  <!-- chin-length dark hair with a straight fringe, tucked behind one ear -->
+  <path d="M120 230C110 150 140 86 194 84C248 84 276 136 268 236L262 290C252 262 252 226 254 196C246 168 236 148 222 140C196 148 160 146 136 136C134 160 132 196 132 228Z" fill="#2a2621" stroke="#24211d" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M136 136C160 146 196 148 222 140" stroke="#4a443b" stroke-width="4" fill="none"/>
+  <path d="M120 230C116 254 118 276 128 292L140 266" fill="#2a2621" stroke="#24211d" stroke-width="5" stroke-linejoin="round"/>
+  <!-- calm, observant eyes; neutral mouth -->
+  <path d="M148 176L178 172M206 172L236 176" stroke="#24211d" stroke-width="5" stroke-linecap="round"/>
+  <path d="M152 198Q163 192 174 198M210 198Q221 192 232 198" stroke="#24211d" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="163" cy="200" r="4" fill="#24211d"/><circle cx="221" cy="200" r="4" fill="#24211d"/>
+  <path d="M194 206L188 238Q194 242 202 238" stroke="#24211d" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M174 266Q192 272 210 266" stroke="#7b3f2b" stroke-width="5" fill="none" stroke-linecap="round"/>
+</svg>
