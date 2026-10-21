@@ -321,5 +321,35 @@
     "usage": [
       "scripts/ui_theme.gd (campaign theme: titles and documents)"
     ]
+  },
+  {
+    "path": "assets/art/scene_shop_night.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG markup (rects, paths, circles, linear/radial gradients) in the ART_STYLE_BIBLE palette plus its night tones: type-case cabinet, platen press silhouette, fluorescent tube, hanging lamp with light cone, night window, paper shelf, lamp-lit workbench. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "50d5caa936bbc99bf115ccc266388c32b450147862d0ff0f22136609338ca160",
+      "bytes": 7382
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_build_night_scene (NightScene behind the campaign UI)"
+    ],
+    "review_pending": "Human review of composition, mood and readability of UI text over the scene."
+  },
+  {
+    "path": "shaders/atmosphere.gdshader",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written Godot canvas_item shader: vignette, fine paper grain and a cold fluorescent band with rare small dips; all time-based change scales with the motion uniform (0 under reduced motion).",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "642561d6b275c4959233a2133760280d98d9b852509684f1794b1cfd15872bd4",
+      "bytes": 1319
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_build_night_scene / _update_atmosphere (Atmosphere layer)"
+    ],
+    "review_pending": "Human review of flicker comfort and grain visibility."
   }
 ]

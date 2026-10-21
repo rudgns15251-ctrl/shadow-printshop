@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <title>음영 인쇄소 · 밤의 작업장</title>
+  <defs>
+    <!-- woodcut night scene for 음영 인쇄소; flat shapes, bible palette plus night tones -->
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f131a"/>
+      <stop offset="1" stop-color="#1c2330"/>
+    </linearGradient>
+    <linearGradient id="bench" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6a5038"/>
+      <stop offset="1" stop-color="#2e2318"/>
+    </linearGradient>
+    <linearGradient id="pane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d121a"/>
+      <stop offset="1" stop-color="#1b2636"/>
+    </linearGradient>
+    <radialGradient id="lamp" cx="640" cy="560" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2d49b" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#f2d49b" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#f2d49b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cold" cx="640" cy="34" r="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9e8ec" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#d9e8ec" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="street" cx="1160" cy="250" r="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2d49b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f2d49b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Back wall with plank seams -->
+  <rect width="1280" height="480" fill="url(#wall)"/>
+  <g stroke="#121110" stroke-opacity="0.35" stroke-width="3">
+    <path d="M330 0V480M420 0V480M510 0V480M770 0V480M860 0V480M950 0V480"/>
+  </g>
+
+  <!-- Type-case cabinet (left) -->
+  <rect x="18" y="60" width="290" height="420" rx="6" fill="#121110"/>
+  <g fill="#1d232d" stroke="#0b0b0a" stroke-width="2">
+    <rect x="32" y="76" width="82" height="44"/><rect x="122" y="76" width="82" height="44"/><rect x="212" y="76" width="82" height="44"/>
+    <rect x="32" y="128" width="82" height="44"/><rect x="122" y="128" width="82" height="44"/><rect x="212" y="128" width="82" height="44"/>
+    <rect x="32" y="180" width="82" height="44"/><rect x="122" y="180" width="82" height="44"/><rect x="212" y="180" width="82" height="44"/>
+    <rect x="32" y="232" width="82" height="44"/><rect x="122" y="232" width="82" height="44"/><rect x="212" y="232" width="82" height="44"/>
+    <rect x="32" y="284" width="82" height="44"/><rect x="122" y="284" width="82" height="44"/><rect x="212" y="284" width="82" height="44"/>
+    <rect x="32" y="336" width="82" height="44"/><rect x="122" y="336" width="82" height="44"/><rect x="212" y="336" width="82" height="44"/>
+  </g>
+  <!-- one drawer pulled out, catching lamp light -->
+  <rect x="118" y="226" width="96" height="54" fill="#3a3326" stroke="#0b0b0a" stroke-width="2"/>
+  <g fill="#8a7a5c"><rect x="126" y="236" width="8" height="8"/><rect x="140" y="236" width="8" height="8"/><rect x="154" y="236" width="8" height="8"/><rect x="168" y="236" width="8" height="8"/><rect x="182" y="236" width="8" height="8"/><rect x="196" y="236" width="8" height="8"/><rect x="126" y="252" width="8" height="8"/><rect x="140" y="252" width="8" height="8"/><rect x="154" y="252" width="8" height="8"/><rect x="168" y="252" width="8" height="8"/></g>
+  <g fill="#6b5a43">
+    <circle cx="73" cy="98" r="3"/><circle cx="163" cy="98" r="3"/><circle cx="253" cy="98" r="3"/>
+    <circle cx="73" cy="150" r="3"/><circle cx="163" cy="150" r="3"/><circle cx="253" cy="150" r="3"/>
+    <circle cx="73" cy="202" r="3"/><circle cx="253" cy="202" r="3"/>
+    <circle cx="73" cy="254" r="3"/><circle cx="253" cy="254" r="3"/>
+    <circle cx="73" cy="306" r="3"/><circle cx="163" cy="306" r="3"/><circle cx="253" cy="306" r="3"/>
+    <circle cx="73" cy="358" r="3"/><circle cx="163" cy="358" r="3"/><circle cx="253" cy="358" r="3"/>
+  </g>
+
+  <!-- Night window (right) -->
+  <rect x="960" y="54" width="268" height="250" rx="4" fill="#121110"/>
+  <rect x="974" y="68" width="114" height="104" fill="url(#pane)"/><rect x="1100" y="68" width="114" height="104" fill="url(#pane)"/>
+  <rect x="974" y="184" width="114" height="106" fill="url(#pane)"/><rect x="1100" y="184" width="114" height="106" fill="url(#pane)"/>
+  <rect x="960" y="54" width="268" height="250" fill="url(#street)"/>
+  <g stroke="#2b3442" stroke-width="2" stroke-opacity="0.8"><path d="M990 90L1010 72M1120 210L1146 188M1000 230L1018 214"/></g>
+  <!-- Paper shelf under the window -->
+  <rect x="948" y="340" width="300" height="12" fill="#121110"/>
+  <g stroke="#24211d" stroke-width="2">
+    <rect x="968" y="300" width="70" height="40" fill="#b8ad9a"/><rect x="972" y="292" width="62" height="10" fill="#c9bea9"/>
+    <rect x="1060" y="312" width="90" height="28" fill="#a99f8d"/><rect x="1170" y="296" width="58" height="44" fill="#bdb29e"/>
+  </g>
+
+  <!-- Platen press silhouette (left, behind the bench) -->
+  <g fill="none" stroke="#0b0b0a" stroke-width="16" stroke-linecap="round">
+    <circle cx="190" cy="430" r="96"/>
+    <path d="M190 334V526M94 430H286M122 362L258 498M258 362L122 498"/>
+  </g>
+  <path d="M262 470L300 300H352L380 470Z" fill="#0b0b0a"/><rect x="300" y="250" width="70" height="118" rx="4" fill="#0b0b0a"/><rect x="306" y="258" width="58" height="102" fill="#1d1a15"/><path d="M335 250V214" stroke="#0b0b0a" stroke-width="10"/>
+  <circle cx="190" cy="430" r="18" fill="#2a241c"/>
+
+  <!-- Ceiling fluorescent tube and its cold light -->
+  <rect x="470" y="14" width="340" height="14" rx="3" fill="#2a2f36"/>
+  <rect x="482" y="28" width="316" height="7" rx="3" fill="#eef5f6"/>
+  <rect width="1280" height="480" fill="url(#cold)"/>
+
+  <!-- Hanging lamp -->
+  <path d="M640 0V96" stroke="#0b0b0a" stroke-width="4"/>
+  <path d="M598 96H682L716 146H564Z" fill="#24211d" stroke="#0b0b0a" stroke-width="3"/>
+  <ellipse cx="640" cy="146" rx="76" ry="9" fill="#f2d49b" fill-opacity="0.9"/>
+
+  <!-- Workbench -->
+  <rect y="470" width="1280" height="250" fill="url(#bench)"/>
+  <rect y="466" width="1280" height="14" fill="#2e241a"/>
+  <g fill="none" stroke="#24211d" stroke-opacity="0.35" stroke-width="3">
+    <path d="M0 540Q320 520 640 548T1280 532M0 610Q300 594 620 618T1280 600M0 680Q340 664 700 690T1280 672"/>
+  </g>
+  <!-- Bench props at the edges -->
+  <ellipse cx="78" cy="640" rx="46" ry="16" fill="#121110"/><rect x="32" y="604" width="92" height="36" fill="#1d2430"/><ellipse cx="78" cy="604" rx="46" ry="14" fill="#24211d"/>
+  <g transform="rotate(-8 1180 640)"><rect x="1110" y="628" width="130" height="24" rx="12" fill="#24211d"/><path d="M1240 640H1270" stroke="#3a3326" stroke-width="8" stroke-linecap="round"/></g>
+  <g transform="rotate(4 1120 560)"><rect x="1040" y="520" width="150" height="104" fill="#d9cfbd" stroke="#24211d" stroke-width="2"/><path d="M1060 545H1170M1060 565H1150M1060 585H1160" stroke="#8a3f24" stroke-opacity="0.5" stroke-width="3"/></g>
+
+  <!-- Warm light: a soft cone under the shade and a pool on the bench only -->
+  <path d="M566 146H714L930 466H350Z" fill="#f2d49b" fill-opacity="0.07"/>
+  <rect y="466" width="1280" height="254" fill="url(#lamp)"/>
+</svg>

@@ -5,6 +5,10 @@ extends "res://scripts/slice_main.gd"
 const CampaignState = preload("res://scripts/campaign_state.gd")
 const CampaignSave = preload("res://scripts/campaign_save.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const NIGHT_SCENE = preload("res://assets/art/scene_shop_night.svg")
+const ATMOSPHERE = preload("res://shaders/atmosphere.gdshader")
+
+var atmosphere: ColorRect
 
 var campaign_save = CampaignSave.new()
 var story_button: Button
@@ -91,7 +95,12 @@ func _reset_campaign_hints() -> void:
 ## Every inherited panel and button is built through these two hooks, so the
 ## campaign gets the shared paper/key look while the legacy slice keeps its own.
 func _panel_style(color: Color, radius: int = 10, vertical_padding: int = 12) -> StyleBoxFlat:
-	return UiTheme.surface(color, radius, vertical_padding)
+	var style := UiTheme.surface(color, radius, vertical_padding)
+	if color.get_luminance() < 0.2:
+		# Ink-filled pieces (current progress chip, selection strip) keep an edge
+		# against the dark room.
+		style.border_color = Color(UiTheme.LAMP, 0.6)
+	return style
 
 func _style_button(item: Button, primary: bool = false) -> void:
 	super._style_button(item, primary)
@@ -127,6 +136,53 @@ func _build_interface() -> void:
 	_button(column, "전체 캠페인 다시 플레이", _ask_campaign_replay, 130)
 	UiTheme.document_font(_label(column, str(CampaignState.story_data()["events"]["C03_ENDING"]["text"]), 17))
 	ending_panel.hide()
+	# Last: every label the night scene recolours now exists.
+	_build_night_scene()
+
+func _build_night_scene() -> void:
+	# The inherited daylight backdrop becomes the night workshop; an atmosphere
+	# layer sits between it and the UI. Neither takes input.
+	var scene: TextureRect = get_node("ShopBackground")
+	scene.name = "NightScene"
+	scene.texture = NIGHT_SCENE
+	atmosphere = ColorRect.new()
+	atmosphere.name = "Atmosphere"
+	atmosphere.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	atmosphere.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	atmosphere.focus_mode = Control.FOCUS_NONE
+	var material := ShaderMaterial.new()
+	material.shader = ATMOSPHERE
+	atmosphere.material = material
+	add_child(atmosphere)
+	move_child(atmosphere, scene.get_index() + 1)
+	_update_atmosphere()
+	# Text that sits directly on the dark room is lit by the lamp; everything on
+	# paper or wood panels keeps its ink colour.
+	var on_room: Array = [subheading, order_cue, progress_label]
+	for child in heading.get_parent().get_parent().get_children():
+		if child is Label:
+			on_room.append(child)
+	for label in [title_area.get_child(0), heading]:
+		label.add_theme_color_override("font_color", UiTheme.LAMP)
+		_room_outline(label)
+	for label in on_room:
+		label.add_theme_color_override("font_color", UiTheme.PAPER)
+		_room_outline(label)
+
+func _room_outline(label: Label) -> void:
+	# A carved dark edge keeps room text readable over any part of the scene,
+	# including the lamp glow and the lit bench at 125/150% font sizes.
+	label.add_theme_color_override("font_outline_color", Color(UiTheme.SHADOW, 0.92))
+	label.add_theme_constant_override("outline_size", 7)
+
+func _update_atmosphere() -> void:
+	if atmosphere != null:
+		atmosphere.material.set_shader_parameter("motion", 0.0 if bool(settings["reduce_motion"]) else 1.0)
+
+func _setting_value_changed(value: Variant, key: String) -> void:
+	super._setting_value_changed(value, key)
+	if key == "reduce_motion":
+		_update_atmosphere()
 
 func start_new() -> void:
 	# Direct public entry is immediately playable; intro is available in 이야기.
