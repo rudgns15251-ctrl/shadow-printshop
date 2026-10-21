@@ -17,7 +17,7 @@
     },
     {
       "id": "SC_C01_MEMO",
-      "title": "원본 뒷면의 연필 글씨",
+      "title": "원본 여백의 연필 글씨",
       "trigger": {"type": "enter", "puzzle_id": "C01-03"},
       "chapter": 1,
       "background": "night",
@@ -46,7 +46,7 @@
       "title": "담당자 칸",
       "trigger": {"type": "enter", "puzzle_id": "C01-07"},
       "chapter": 1,
-      "background": "night",
+      "background": "ledger",
       "lines": [
         {"speaker": "", "kind": "narration", "text": "자정이 가까워지자 형광등이 한 번 깜빡인다."},
         {"speaker": "", "kind": "narration", "text": "작업 대장 셋째 장, 담당자 칸 사이에 접힌 메모가 끼워져 있다."},
@@ -87,13 +87,13 @@
       "background": "midnight",
       "lines": [
         {"speaker": "", "kind": "narration", "text": "봉투 속 원본을 펼치자, 여백의 대조 표시가 대장의 담당자 칸과 같은 높이에 놓인다."},
-        {"speaker": "", "kind": "narration", "text": "봉투 안에는 같은 필체의 지시문이 한 장 더 접혀 있다."},
+        {"speaker": "", "kind": "narration", "text": "봉투 안에는 교정 메모와 같은 필체의 지시문이 한 장 더 접혀 있다."},
         {"speaker": "백인호", "expression": "resolved", "kind": "live", "text": "해린 씨가 남긴 순서대로 해 주세요. 저도 거기에 맞추겠습니다."}
       ]
     },
     {
       "id": "SC_C03_DAWN",
-      "title": "새벽의 교정판",
+      "title": "봉투 안쪽의 서명란",
       "trigger": {"type": "chapter", "chapter": 3},
       "chapter": 3,
       "background": "dawn",
@@ -117,13 +117,13 @@
     },
     {
       "id": "SC_C03_PLATE",
-      "title": "겹쳐 놓은 세 장",
+      "title": "원래 교정판의 나무틀",
       "trigger": {"type": "enter", "puzzle_id": "C03-04"},
       "chapter": 3,
       "background": "dawn",
       "lines": [
-        {"speaker": "", "kind": "narration", "text": "원본의 밑줄, 여백의 대조 표시, 대장의 담당자 칸. 세 장을 겹치자 같은 자리를 가리킨다."},
-        {"speaker": "", "kind": "narration", "text": "판 옆에는 조립 순서를 적은 원본 한 장이 놓여 있다. 같은 필체다."},
+        {"speaker": "", "kind": "narration", "text": "백인호가 원래 교정판의 나무틀을 작업대 가운데로 옮긴다."},
+        {"speaker": "", "kind": "narration", "text": "판 옆에는 조립 순서를 적은 원본 한 장이 놓여 있다. 교정 메모와 같은 필체다."},
         {"speaker": "백인호", "expression": "resolved", "kind": "live", "text": "판은 제가 잡겠습니다. 찍는 건 부탁드립니다."}
       ]
     },
@@ -134,8 +134,8 @@
       "chapter": 3,
       "background": "dawn",
       "lines": [
-        {"speaker": "", "kind": "narration", "text": "새벽 네 시 오십 분. 인쇄기 롤러에 마지막 종이가 물린다."},
-        {"speaker": "백인호", "expression": "resolved", "kind": "live", "text": "이 표본이 끝나면 기계를 멈추겠습니다."}
+        {"speaker": "", "kind": "narration", "text": "새벽 네 시 오십 분. 압반에 마지막 종이를 물린다."},
+        {"speaker": "백인호", "expression": "resolved", "kind": "live", "text": "마지막 한 장입니다."}
       ]
     },
     {
@@ -143,9 +143,9 @@
       "title": "아침의 서명",
       "trigger": {"type": "ending"},
       "chapter": 3,
-      "background": "dawn",
+      "background": "ledger",
       "lines": [
-        {"speaker": "", "kind": "narration", "text": "마지막 표본이 롤러를 빠져나온다. 인쇄기가 멈춘다."},
+        {"speaker": "", "kind": "narration", "text": "마지막 표본이 압반에서 떨어진다. 인쇄기가 멈춘다."},
         {"speaker": "", "kind": "narration", "text": "작업 대장의 빈 담당자 칸에 이름 석 자가 다시 드러난다. 윤해린."},
         {"speaker": "", "kind": "narration", "text": "고개를 들자, 작업대 건너편에 윤해린이 서 있다."},
         {"speaker": "윤해린", "expression": "restored", "kind": "live", "text": "제 이름이 있던 자리를 끝까지 대조해 주셨네요."},

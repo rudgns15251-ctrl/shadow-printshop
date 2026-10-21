@@ -180,8 +180,14 @@ func _scene_for(type: String, value: Variant = null) -> String:
 			return str(scene["id"])
 	return ""
 
-func _scene_background(_scene_row: Dictionary) -> Texture2D:
-	return NIGHT_SCENE
+# The night passes by colour temperature: night, after midnight, dawn; the
+# ledger close-up is for document scenes.
+const SCENE_PLATES := {"night": NIGHT_SCENE, "midnight": preload("res://assets/art/scene_midnight.svg"),
+	"dawn": preload("res://assets/art/scene_dawn.svg"), "ledger": preload("res://assets/art/scene_ledger.svg")}
+const CHAPTER_PLATES := {1: "night", 2: "midnight", 3: "dawn"}
+
+func _scene_background(scene_row: Dictionary) -> Texture2D:
+	return SCENE_PLATES.get(str(scene_row.get("background", "night")), NIGHT_SCENE)
 
 # Scenes use expression busts; order documents keep their framed record portraits.
 const EXPRESSION_PORTRAITS := {
@@ -1067,6 +1073,10 @@ func _refresh() -> void:
 	# display names from story data. Later puzzles already carry Korean titles.
 	var title: String = str(CampaignState.story_data().get("display_titles", {}).get(puzzle["id"], puzzle["title"]))
 	heading.text = "%s · 퍼즐 %d / %d     ·     %s" % [chapter["title"], int(data["puzzle"]) + 1, session.puzzle_count(), title]
+	# The room behind the workbench follows the chapter's time of night.
+	var room := get_node_or_null("NightScene") as TextureRect
+	if room != null:
+		room.texture = SCENE_PLATES[CHAPTER_PLATES.get(int(puzzle["chapter"]), "night")]
 	# Context only: never open an order or mark it read during refresh.
 	if order_cue != null:
 		for row in CampaignState.story_data()["orders"]:

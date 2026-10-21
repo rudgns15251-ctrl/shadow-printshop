@@ -456,5 +456,52 @@
       "scripts/campaign_main.gd::_scene_portrait (StoryStage mark for the signed 0번 의뢰인 document in chapter 3)"
     ],
     "review_pending": "Human review of readability as the revealed signature."
+  },
+  {
+    "path": "assets/art/scene_midnight.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG derived from scene_shop_night.svg by a short Python script of literal replacements: deeper and cooler wall and window gradients, the fluorescent tube switched off (lamp light only), dimmer street glow, and a wall clock just past twelve. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "39c5898cca85af5cdce169602c6e7440bc056549bd180e6fc23b87c39668bde4",
+      "bytes": 7870
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_background (chapter 2 scenes)",
+      "scripts/campaign_main.gd::_refresh (NightScene room during chapter 2)"
+    ],
+    "review_pending": "Human review of mood and UI readability over the plate."
+  },
+  {
+    "path": "assets/art/scene_dawn.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG derived from scene_shop_night.svg by a short Python script of literal replacements: the room warmer and lighter after the long night (wall, bench, cabinet; a faint lamp-warm wash), tube off, the window still dark blue-grey with a faint cool lift (before sunrise, 02:00-04:52 in November). No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "7182e4481a404331d929380ab80014996ce13793d3feb1736b3cc2d410a5ac42",
+      "bytes": 7497
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_background (chapter 3 scenes)",
+      "scripts/campaign_main.gd::_refresh (NightScene room during chapter 3)"
+    ],
+    "review_pending": "Human review of mood and UI readability over the plate."
+  },
+  {
+    "path": "assets/art/scene_ledger.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original work authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG markup: close-up of the open work ledger under the lamp (ruled rows and columns, a proof-marked 담당자 box, two empty printer signature lines), pencil and proof slip on the bench. No text glyphs, image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "c48f032c7e56fad8d750f2d5419c8efd8aca1251b8a641449e8cd85999ac3212",
+      "bytes": 5958
+    },
+    "usage": [
+      "scripts/campaign_main.gd::_scene_background (SC_C01_LEDGER and SC_ENDING scenes)"
+    ],
+    "review_pending": "Human review of composition and readability."
   }
 ]
