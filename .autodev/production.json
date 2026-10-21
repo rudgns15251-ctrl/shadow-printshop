@@ -96,6 +96,66 @@
         "release_candidate",
         "context_tooltips"
       ]
+    },
+    {
+      "id": "s09_visual_foundation",
+      "depends_on": [
+        "s08_release_polish"
+      ],
+      "tasks": 3,
+      "goal": "Visual foundation: bundled Nanum fonts and a shared campaign theme (paper/ink/wood/vermilion), a layered night printshop background with an atmosphere shader that respects reduced motion, and a real title screen instead of a stacked start dialog. Second production pass requested by the user on 2026-10-21 to remove the prototype impression: art is hand-written SVG vector plus Godot shaders only (no image generation), story keeps the 3-chapter/18-puzzle structure, event IDs and save compatibility, fonts are the bundled SIL OFL Nanum families. Follow ART_STYLE_BIBLE '2차 아트 디렉션', NARRATIVE_BIBLE and CHARACTER_BIBLE. Preserve every existing behaviour, probe, shortcut, accessibility rule (keyboard, focus, 1280x720/1920x1080, font 100/125/150%, reduced motion) and the audio lifecycle. Never claim human playtesting, listening or literary review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s10_workbench_ui",
+      "depends_on": [
+        "s09_visual_foundation"
+      ],
+      "tasks": 2,
+      "goal": "Workbench puzzle screen: present the three boards as paper sheets on the workbench, the stamp as a wood block with its controls, the current order as a card, and replace developer-style labels with player-facing Korean while keeping shortcuts as secondary hints. Second production pass requested by the user on 2026-10-21 to remove the prototype impression: art is hand-written SVG vector plus Godot shaders only (no image generation), story keeps the 3-chapter/18-puzzle structure, event IDs and save compatibility, fonts are the bundled SIL OFL Nanum families. Follow ART_STYLE_BIBLE '2차 아트 디렉션', NARRATIVE_BIBLE and CHARACTER_BIBLE. Preserve every existing behaviour, probe, shortcut, accessibility rule (keyboard, focus, 1280x720/1920x1080, font 100/125/150%, reduced motion) and the audio lifecycle. Never claim human playtesting, listening or literary review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s11_story_scenes",
+      "depends_on": [
+        "s10_workbench_ui"
+      ],
+      "tasks": 4,
+      "goal": "Story scenes: a data-driven scene stage (background, portraits with expressions, name plate, dialogue box, player-paced advance, skip, replay), expression portraits and scene backgrounds, an opening, short scenes between orders, chapter transitions and an ending with epilogue, all within the narrative and character bibles. Second production pass requested by the user on 2026-10-21 to remove the prototype impression: art is hand-written SVG vector plus Godot shaders only (no image generation), story keeps the 3-chapter/18-puzzle structure, event IDs and save compatibility, fonts are the bundled SIL OFL Nanum families. Follow ART_STYLE_BIBLE '2차 아트 디렉션', NARRATIVE_BIBLE and CHARACTER_BIBLE. Preserve every existing behaviour, probe, shortcut, accessibility rule (keyboard, focus, 1280x720/1920x1080, font 100/125/150%, reduced motion) and the audio lifecycle. Never claim human playtesting, listening or literary review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
+    },
+    {
+      "id": "s12_product_review",
+      "depends_on": [
+        "s11_story_scenes"
+      ],
+      "tasks": 2,
+      "goal": "Product review and release candidate: capture every product screen at 2 resolutions x 3 font sizes, independent narrative and visual review, fix concrete defects found, full regression and recertification. Second production pass requested by the user on 2026-10-21 to remove the prototype impression: art is hand-written SVG vector plus Godot shaders only (no image generation), story keeps the 3-chapter/18-puzzle structure, event IDs and save compatibility, fonts are the bundled SIL OFL Nanum families. Follow ART_STYLE_BIBLE '2차 아트 디렉션', NARRATIVE_BIBLE and CHARACTER_BIBLE. Preserve every existing behaviour, probe, shortcut, accessibility rule (keyboard, focus, 1280x720/1920x1080, font 100/125/150%, reduced motion) and the audio lifecycle. Never claim human playtesting, listening or literary review. Do not publish.",
+      "probes": [
+        "campaign_shell",
+        "campaign_full",
+        "sound_content",
+        "release_candidate",
+        "context_tooltips"
+      ]
     }
   ]
 }

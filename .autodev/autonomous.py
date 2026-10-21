@@ -53,7 +53,11 @@ ACCEPTANCE_PROBES = {'context_tooltips': ('context_tooltips.gd', 'TOOLTIP_ACCEPT
                      'product_identity': ('product_identity.gd', 'PRODUCT_IDENTITY_PASS'),
                      'dialog_scroll': ('dialog_scroll.gd', 'DIALOG_SCROLL_PASS'),
                      'window_icon': ('window_icon.gd', 'WINDOW_ICON_PASS'),
-                     'transition_sections': ('transition_sections.gd', 'TRANSITION_SECTIONS_PASS')}
+                     'transition_sections': ('transition_sections.gd', 'TRANSITION_SECTIONS_PASS'),
+                     # S09 visual foundation (second production pass).
+                     'fonts_theme': ('fonts_theme.gd', 'FONTS_THEME_PASS'),
+                     'night_atmosphere': ('night_atmosphere.gd', 'NIGHT_ATMOSPHERE_PASS'),
+                     'title_screen': ('title_screen.gd', 'TITLE_SCREEN_PASS')}
 TASK_ID = '^[a-z][a-z0-9_-]{2,60}$'
 MODEL_ERRORS = re.compile(r'(?im)(?:usage limit|quota exceeded|rate.limit|not authenticated|unauthorized|401\b|403\b|insufficient credits)')
 
