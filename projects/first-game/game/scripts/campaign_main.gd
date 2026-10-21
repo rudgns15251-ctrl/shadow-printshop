@@ -13,8 +13,8 @@ var environment_audio: AudioStreamPlayer
 var environment_audio_exiting := false
 
 func _ready() -> void:
-	# Keep the established user:// location; the legacy project name is also
-	# its save-directory key. Only the player-facing window title changes here.
+	# project.godot names the product 음영 인쇄소 and pins user:// to the legacy
+	# Godot/app_userdata/C01 - Shadow Printshop Slice directory, so saves stay put.
 	get_window().title = "음영 인쇄소"
 	print("CAMPAIGN_AUDIO_DRIVER ", AudioServer.get_driver_name())
 	super._ready()
