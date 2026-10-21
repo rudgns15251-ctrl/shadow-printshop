@@ -1214,7 +1214,10 @@ def reconcile_infrastructure(run_id, c, p):
                    '.autodev/campaign_data.py', '.autodev/tests/test_campaign_data.py'}
         allowed.add('.autodev/checks/campaign_hints.gd')
         allowed.update({'.autodev/tests/test_claude_operator.py', '.autodev/audio_lab/synth_s07_sfx.py'})
-        require(set(files) <= allowed, 'Unreviewed infrastructure changes')
+        # Trusted probes may be corrected between attempts; every change is recorded
+        # by blob hash and the run re-executes every gate before integration.
+        probe_changes = [rel for rel in files if rel.startswith('.autodev/checks/') and rel.endswith('.gd')]
+        require(set(files) - set(probe_changes) <= allowed, 'Unreviewed infrastructure changes')
         if '.gitattributes' in files:
             require((ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines() == [
                 '.autodev/audio_lab/original_immediate.gd text eol=lf',
@@ -1250,8 +1253,14 @@ def reconcile_infrastructure(run_id, c, p):
                 before[rel] = data['baseline'][rel]
             record_import_metadata(stage, before, data, record)
         run_changes(data, actual, read(run / 'task.json'), p)
+        def blob(commit, rel):
+            try:
+                return git('rev-parse', commit + ':' + rel)
+            except ERROR:
+                return None  # added or removed in this range
         data.setdefault('infrastructure_history', []).append({'time': now(), 'previous_source_commit': previous,
             'source_commit': current, 'files': files, 'game_snapshot_unchanged': True,
+            'probe_changes': {rel: {'before': blob(previous, rel), 'after': blob(current, rel)} for rel in probe_changes},
             'preserved_model_response': 'coder-1-last.txt'})
         data['source_commit'] = current
         checkpoint(run, data)

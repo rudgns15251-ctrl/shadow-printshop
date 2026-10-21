@@ -83,7 +83,10 @@ func run() -> void:
 		var row: Dictionary = rows.get(path.trim_prefix("res://"), {})
 		check(str(row.get("license", "")) == "OFL-1.1", "register license for " + path)
 		var text := str(row.get("license_text", ""))
-		check(text.contains("SIL OPEN FONT LICENSE Version 1.1") and text.contains("Reserved Font Name"), "full OFL text recorded for " + path)
+		# Official files wrap the title differently ("...LICENSE\nVersion 1.1"); require the substance.
+		var flat := " ".join(text.split("\n")).replace("\r", "")
+		check(flat.contains("SIL OPEN FONT LICENSE") and flat.contains("Version 1.1") and text.contains("Reserved Font Name")
+			and text.contains("PERMISSION & CONDITIONS") and text.contains("NHN Corporation"), "full OFL text recorded for " + path)
 	var credits := FileAccess.get_file_as_string("res://CREDITS_KO.md")
 	check(credits.contains("나눔고딕") and credits.contains("나눔명조") and credits.contains("OFL"), "credits name the bundled fonts and license")
 	main.free()

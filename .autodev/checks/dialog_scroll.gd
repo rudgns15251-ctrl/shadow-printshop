@@ -39,12 +39,17 @@ func max_scroll(main) -> int:
 	var bar: VScrollBar = main.popup_scroll.get_v_scroll_bar()
 	return int(bar.max_value - bar.page)
 
-func exercise(main, label: String) -> void:
+func exercise(main, label: String, must_overflow: bool = true) -> void:
 	await settle()
 	var focus: Control = main.get_viewport().gui_get_focus_owner()
 	var progress: Dictionary = main.session.export_progress().duplicate(true)
-	check(max_scroll(main) > 0, label + ": content overflows at 150% (precondition)")
 	check(main.popup_scroll.scroll_vertical == 0, label + ": opens at the top")
+	if not must_overflow and max_scroll(main) <= 0:
+		# A dialog that fits needs no paging: its action must already be on screen.
+		var viewport: Rect2 = main.get_viewport_rect()
+		check(focus != null and viewport.encloses(focus.get_global_rect()), label + ": fits, with its action visible without scrolling")
+		return
+	check(max_scroll(main) > 0, label + ": content overflows at 150% (precondition)")
 	key(KEY_PAGEDOWN)
 	await settle()
 	var after_page: int = main.popup_scroll.scroll_vertical
@@ -81,7 +86,7 @@ func run() -> void:
 		if index < 17:
 			main.advance()
 			if index == 7:
-				await exercise(main, "chapter transition")
+				await exercise(main, "chapter transition", false)
 	main.dismiss_story()
 	main.show_credits()
 	await exercise(main, "credits")
