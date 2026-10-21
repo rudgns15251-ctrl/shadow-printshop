@@ -42,6 +42,7 @@ TITLE = "음영 인쇄소"
 # Android screenOrientation values: 6 sensorLandscape, 11 userLandscape (Godot's
 # mapping of SCREEN_SENSOR_LANDSCAPE: follows the sensor unless rotation is locked).
 LANDSCAPE = {"6", "11"}
+NIGHT = "Color(0.113725, 0.141176, 0.188235, 1)"
 DEBUG_KEY = {"user": "androiddebugkey", "password": "android"}  # Android's published debug-key values.
 
 
@@ -158,7 +159,10 @@ class Packager:
                 "launcher_icons/adaptive_foreground_432x432": art + "android_icon_foreground.svg",
                 "launcher_icons/adaptive_background_432x432": art + "android_icon_background.svg",
                 "launcher_icons/adaptive_monochrome_432x432": art + "android_icon_monochrome.svg",
-                "screen/immersive_mode": True, "screen/background_color": "Color(0.141, 0.129, 0.114, 1)",
+                "screen/immersive_mode": True,
+                # The game's night colour from launch to the boot screen (UiTheme.NIGHT #1d2430);
+                # the system splash shows the adaptive icon on it (Gradle builds apply the theme).
+                "screen/background_color": NIGHT, "splash_screen/background_color": NIGHT,
                 "user_data_backup/allow": False,
                 # The game needs no permissions: no network, storage or sensors beyond rotation.
                 "permissions/internet": False,

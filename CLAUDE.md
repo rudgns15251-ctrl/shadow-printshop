@@ -78,5 +78,9 @@ Claude Code가 2026-10-21 Codex로부터 제작 책임을 인수했다. 새 세�
 - 모바일(Android) S13~S14 완료(같은 날): 터치 모드·휴대전화 배치·Android 설정·적응형 아이콘. RELEASE_CANDIDATE_READY (`7c48e14`, 120/120).
   PC 후보 `76774f0`은 `.data/release-archive/RC-20261021-76774f0/`(태그 `rc-20261021-pc`)에 보존. Android 패키징·검증은
   `scripts/android/package_android.py`, 제출 준비물과 안내는 `docs/play-store/`. 업로드 키·Play Console·업로드는 사용자 몫.
+- S15~S16 시작 화면(같은 날 밤): 밤색 배경과 아이콘·제목 부팅 그림. RELEASE_CANDIDATE_READY (`9bb0070`, 120/120),
+  보관 `.data/release-archive/RC-20261021-9bb0070/`(태그 `rc-20261021-boot`).
+- 디렉터 주의: 매니페스트에 마일스톤을 덧붙이면 operator-plan 전까지 recover가 "manifest changed"로 멈춘다. 앞 마일스톤 패키징이
+  남아 있으면 덧붙이기를 그 뒤로 미룬다.
 - 운영자 주의: 새 파일은 `git diff --check`(끝 공백·공백 줄)를 통과해야 통합된다. 통합이 거절되면 작업 공간을 실행의
   `before_integrate` 백업 바이트로 되돌리고 `operator-reopen` → `reconcile-infrastructure` → 재검증·재검토한다.

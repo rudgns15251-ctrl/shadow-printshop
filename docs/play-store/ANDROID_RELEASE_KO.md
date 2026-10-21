@@ -18,6 +18,7 @@ Claude가 준비한 범위는 "Play 스토어 제출 직전"까지다. Google �
 
 게임 설정: 패키지 `com.shadowprintshop.game`, 가로(센서에 따라 180° 회전, 회전 잠금은 존중),
 최소 Android 7.0(API 24), 대상 API 36, 64비트 ARM(arm64-v8a), 권한 없음, 인터넷 없음, 백업 끔.
+시작: Android 12+ 시스템 스플래시(밤색 배경 위 적응형 아이콘, AAB에 적용) → 게임 부팅 화면(밤색 위 아이콘·제목) → 시작 화면.
 
 스토어 그래픽은 게임을 바꾼 뒤 창 모드로 다시 만든다(헤드리스 불가, 글꼴 렌더링 필요):
 `godot.windows.editor.x86_64.exe --path <게임 폴더> --script scripts\android\store_graphics.gd -- output=<출력 폴더>`
