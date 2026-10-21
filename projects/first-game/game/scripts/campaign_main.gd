@@ -24,6 +24,8 @@ var workbench_panel: Control
 var dialog_hint: Label
 var rotate_keys: Array = []
 var hint_key: Button
+var touch_mode := false
+var reset_key: Button
 static var _scene_rows: Array = []
 var workbench_scroll: ScrollContainer
 var ending_panel: Control
@@ -35,7 +37,11 @@ func _ready() -> void:
 	# Godot/app_userdata/C01 - Shadow Printshop Slice directory, so saves stay put.
 	get_window().title = "음영 인쇄소"
 	print("CAMPAIGN_AUDIO_DRIVER ", AudioServer.get_driver_name())
+	# Android Back must reach _go_back instead of closing the app.
+	get_tree().set_quit_on_go_back(false)
+	touch_mode = OS.has_feature("mobile")
 	super._ready()
+	set_touch_mode(touch_mode)
 
 func get_environment_audio() -> AudioStreamPlayer:
 	return environment_audio
@@ -427,7 +433,10 @@ func _fit_dialog() -> void:
 	super._fit_dialog()
 	if dialog_hint != null and popup_scroll != null and is_inside_tree():
 		var overflow: bool = dialog.get_combined_minimum_size().y > size.y - 96.0 and not (title_backdrop != null and title_backdrop.visible)
-		dialog_hint.text = "↓ 더 읽기 [PageDown]  ·  닫기 [Esc]" if dialog_back.is_valid() else "↓ 더 읽기 [PageDown]"
+		if touch_mode:
+			dialog_hint.text = "↓ 밀어서 더 읽기"
+		else:
+			dialog_hint.text = "↓ 더 읽기 [PageDown]  ·  닫기 [Esc]" if dialog_back.is_valid() else "↓ 더 읽기 [PageDown]"
 		dialog_hint.visible = overflow
 		if overflow:
 			popup_scroll.custom_minimum_size.y = maxf(120.0, size.y - 96.0 - dialog_hint.get_combined_minimum_size().y - 4.0)
@@ -577,6 +586,9 @@ func _apply_player_labels() -> void:
 	print_button.text = "인쇄 [Space]"
 	undo_button.text = "되돌리기 [U]"
 	next_button.text = "다음 의뢰 [N]"
+	for node in find_children("*", "Button", true, false):
+		if node.text == "R · 초기화":
+			reset_key = node
 	var stack: Array = [self]
 	while not stack.is_empty():
 		var node: Node = stack.pop_back()
@@ -874,6 +886,8 @@ func _show_dialog(title: String, message: String, options: Array) -> void:
 		button.tooltip_text = str(options[index].get("tooltip", ""))
 	_confine_journal_focus()
 	_scroll_dialog_to_top()
+	if touch_mode:
+		_strip_key_hints(dialog)
 
 func _scroll_dialog_to_top() -> void:
 	# Every dialog opens at its first line, even after paging a previous one;
@@ -1119,6 +1133,73 @@ func _show_order(row: Dictionary, back: Callable, caption: String) -> void:
 	_confine_journal_focus()
 	_play_sound("paper")
 
+# Phrases that only make sense with a keyboard become touch phrases; then any
+# remaining bracketed key hint is dropped.
+const TOUCH_PHRASES := [
+	["창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동하며 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.",
+		"긴 글은 손가락으로 밀어 올려 읽을 수 있습니다. 읽어도 진행은 바뀌지 않습니다."],
+	["꺾임 도장 [1] · 막대 도장 [2] · 돌리기 [Q]·[E] · 인쇄 [Space]·[Enter] · 되돌리기 [U]·[Z] · 초기화 [R] · 다음 의뢰 [N]",
+		"도장 고르기·돌리기·인쇄·되돌리기·다음 의뢰는 화면 아래 버튼으로 합니다. 뒤로 가기는 창을 닫거나 메뉴를 엽니다."],
+	["돌리기는 [Q]·[E]입니다.", "돌리기는 ↶·↷ 버튼으로 합니다."],
+]
+var _key_hint := RegEx.create_from_string(" ?\\[(Space|Enter|Esc|Q|E|U|Z|N|R|1|2|PageDown|PageUp|Home|End)\\](·\\[(Enter|Z|E)\\]|/\\[(2|E)\\])?| ?\\((N|U/Z|Space/Enter|Enter|Esc|R|Q/E|1/2)\\)")
+
+func set_touch_mode(enabled: bool) -> void:
+	# Phones speak to fingers; the desktop keeps its keyboard hints.
+	touch_mode = enabled
+	if story_stage != null:
+		story_stage.set_touch_mode(enabled)
+	if print_button != null:
+		print_button.text = _touch_text("인쇄 [Space]")
+		undo_button.text = _touch_text("되돌리기 [U]")
+		next_button.text = _touch_text("다음 의뢰 [N]")
+		if reset_key != null:
+			reset_key.text = _touch_text("초기화 [R]")
+	if heading != null:
+		_refresh()
+	if enabled and overlay != null and overlay.visible:
+		_strip_key_hints(dialog)
+
+func _touch_text(text: String) -> String:
+	if not touch_mode:
+		return text
+	for pair in TOUCH_PHRASES:
+		text = text.replace(pair[0], pair[1])
+	return _key_hint.sub(text, "", true)
+
+func _strip_key_hints(node: Node, skip: Node = null) -> void:
+	for child in node.get_children():
+		if child == skip:
+			continue
+		if child is Label or child is Button:
+			child.text = _touch_text(child.text)
+			child.tooltip_text = _touch_text(child.tooltip_text)
+		_strip_key_hints(child, skip)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_go_back()
+	elif what == NOTIFICATION_APPLICATION_PAUSED:
+		# The phone may close a paused app: keep the night's work and quiet the room.
+		if game_active:
+			_autosave()
+		if environment_audio != null:
+			environment_audio.stream_paused = true
+	elif what == NOTIFICATION_APPLICATION_RESUMED:
+		if environment_audio != null:
+			environment_audio.stream_paused = false
+		_update_audio()
+
+func _go_back() -> void:
+	# The Android back gesture is Escape: skip a scene, close a dialog, else the menu.
+	if story_stage != null and story_stage.is_playing():
+		story_stage.skip()
+	elif overlay != null and overlay.visible:
+		if dialog_back.is_valid():
+			_dialog_action(dialog_back)
+	elif game_active:
+		_open_pause()
+
 func _date_ko(date: String) -> String:
 	var parts := date.split("-")
 	return "%s년 %d월 %d일" % [parts[0], int(parts[1]), int(parts[2])] if parts.size() == 3 else date
@@ -1341,6 +1422,10 @@ func _refresh() -> void:
 	if hint_key != null:
 		var used: int = int(hint_levels[int(data["puzzle"])])
 		hint_key.text = "힌트" if used == 0 else "힌트 · %d/3단계" % used
+	if touch_mode:
+		feedback.text = _touch_text(feedback.text.replace(char(0x2060), ""))
+		subheading.text = _touch_text(subheading.text.replace(char(0x2060), ""))
+		_strip_key_hints(self, overlay)
 	# Korean words stay whole when the status lines wrap at larger text.
 	feedback.text = UiTheme.keep_words(feedback.text)
 	subheading.text = UiTheme.keep_words(subheading.text)

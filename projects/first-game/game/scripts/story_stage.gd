@@ -27,6 +27,7 @@ var skip_key: Button
 var portrait_for: Callable
 var atmosphere: ColorRect
 var reduce_motion := false
+var touch_mode := false
 var _fades: Array[Tween] = []
 var _portrait_fade: Tween
 
@@ -152,6 +153,14 @@ func play(scene: Dictionary, scene_texture: Texture2D, portraits: Callable) -> v
 	# Cosmetic only: keys read on at once even while the scene fades in.
 	_fade(self, SCENE_FADE)
 
+func set_touch_mode(enabled: bool) -> void:
+	# Fingers tap the keys or the scene itself; keyboard hints are for desktops.
+	touch_mode = enabled
+	skip_key.text = "건너뛰기" if enabled else "건너뛰기 [Esc]"
+	advance_key.tooltip_text = "다음 줄을 읽습니다. 화면 어디를 눌러도 됩니다." if enabled else "다음 줄을 읽습니다. Space · Enter · 클릭"
+	if is_playing():
+		_show_line()
+
 func stop() -> void:
 	_stop_fades()
 	scene_id = ""
@@ -190,7 +199,8 @@ func _show_line() -> void:
 	portrait_frame.visible = texture != null
 	if arrives:
 		_fade(portrait_frame, PORTRAIT_FADE)
-	advance_key.text = "다음 [Space]" if line_index + 1 < lines.size() else "닫기 [Space]"
+	var key := "" if touch_mode else " [Space]"
+	advance_key.text = ("다음" if line_index + 1 < lines.size() else "닫기") + key
 
 func _fade(item: CanvasItem, seconds: float) -> void:
 	item.modulate.a = 1.0
