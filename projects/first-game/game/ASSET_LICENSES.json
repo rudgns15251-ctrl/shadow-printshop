@@ -568,8 +568,8 @@
     "origin": "Rendered by the pinned Godot 4.7.1 editor from the project's own app_icon.svg (original vector) and the title 음영 인쇄소 set in the bundled NanumMyeongjo Bold (SIL OFL 1.1, see its ledger row) in the ART_STYLE_BIBLE lamp colour, on a transparent background. No image generation, photographs or external resources.",
     "rights_evidence": "Derived from this project's own icon and its bundled OFL font; no separate public distribution license is granted here. Human rights review pending.",
     "final_encoded_measurements": {
-      "sha256": "bb5d0a37979b410051fd5f80267a065b8ccd5a00d6124a73b952760822ae61e4",
-      "bytes": 24493,
+      "sha256": "e7d0208dcb600a8081b8296484431c06dc6887634dbdf7ffb74d85d4de182533",
+      "bytes": 22828,
       "width": 480,
       "height": 400
     },
