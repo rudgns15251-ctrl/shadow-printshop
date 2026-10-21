@@ -297,6 +297,32 @@ func _show_dialog(title: String, message: String, options: Array) -> void:
 		button.disabled = bool(options[index].get("disabled", false))
 		button.tooltip_text = str(options[index].get("tooltip", ""))
 	_confine_journal_focus()
+	_scroll_dialog_to_top()
+
+func _scroll_dialog_to_top() -> void:
+	# Every dialog opens at its first line, even after paging a previous one;
+	# the deferred reset follows any focus-follow scroll queued this frame.
+	popup_scroll.scroll_vertical = 0
+	popup_scroll.set_deferred("scroll_vertical", 0)
+
+func _input(event: InputEvent) -> void:
+	# Reading keys for long dialogs: scroll only. Focus, the dialog, progress and
+	# gameplay are untouched; with no dialog open the keys do nothing at all.
+	if event is InputEventKey and event.pressed and event.keycode in [KEY_PAGEUP, KEY_PAGEDOWN, KEY_HOME, KEY_END]:
+		if overlay != null and overlay.visible and not event.echo:
+			var page := int(popup_scroll.size.y)
+			match event.keycode:
+				KEY_PAGEUP:
+					popup_scroll.scroll_vertical -= page
+				KEY_PAGEDOWN:
+					popup_scroll.scroll_vertical += page
+				KEY_HOME:
+					popup_scroll.scroll_vertical = 0
+				KEY_END:
+					popup_scroll.scroll_vertical = int(ceil(popup_scroll.get_v_scroll_bar().max_value))
+		get_viewport().set_input_as_handled()
+		return
+	super._input(event)
 
 func _confine_journal_focus() -> void:
 	# Include nested sliders, checkboxes and font buttons; skip locked chapters.
@@ -329,6 +355,7 @@ func _open_settings() -> void:
 	_cancel_presentation_motion()
 	super._open_settings()
 	_confine_journal_focus()
+	_scroll_dialog_to_top()
 
 func _settings_close() -> void:
 	dismiss_story()
@@ -410,7 +437,7 @@ func _confirm_new_campaign(back: Callable) -> void:
 	])
 
 func _open_help() -> void:
-	_show_dialog("캠페인 · 플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 반전됩니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\nAFTER는 무료 미리보기입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 각 의뢰에서 허용된 도장만 선택할 수 있습니다.\n3장, 모두 %d개 퍼즐입니다. 장의 마지막 목표를 완성해도 다음 버튼으로 직접 진행합니다. 이야기와 의뢰서 읽기는 퍼즐을 진행하지 않습니다. 마지막 완성 후 결말과 크레딧을 볼 수 있습니다. 되돌리기나 초기화로 마지막 퍼즐을 다시 열 수 있습니다." % session.puzzle_count(), [
+	_show_dialog("캠페인 · 플레이 방법", "밝은 종이 0 / 검은 잉크 1. 도장에 표시된 칸은 인쇄할 때 0↔1로 반전됩니다. 같은 도장·방향으로 다시 찍으면 원래대로 돌아갑니다.\n1/2 선택 · Q/E 회전 · Space/Enter 인쇄 · U/Z 되돌리기 · R 초기화 · N 다음\n창이 열려 있을 때 PageUp/PageDown으로 한 화면씩, Home/End로 글의 처음과 끝으로 이동해 긴 글을 읽을 수 있습니다. 포커스와 진행은 바뀌지 않습니다.\nAFTER는 무료 미리보기입니다. 선택·회전·힌트는 인쇄 횟수를 늘리지 않습니다. 각 의뢰에서 허용된 도장만 선택할 수 있습니다.\n3장, 모두 %d개 퍼즐입니다. 장의 마지막 목표를 완성해도 다음 버튼으로 직접 진행합니다. 이야기와 의뢰서 읽기는 퍼즐을 진행하지 않습니다. 마지막 완성 후 결말과 크레딧을 볼 수 있습니다. 되돌리기나 초기화로 마지막 퍼즐을 다시 열 수 있습니다." % session.puzzle_count(), [
 		{"label": "돌아가기", "call": Callable(self, "_return_from_help")},
 	])
 
