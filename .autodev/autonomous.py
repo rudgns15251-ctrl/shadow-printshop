@@ -1390,6 +1390,36 @@ def operator_adopt(run_id, c, p):
         write(PLAN, plan)
     print('OPERATOR_ADOPTED ' + run_id)
 
+def operator_reopen(run_id, c, p):
+    """Reopen a run whose integration a pre-commit guard refused (e.g. git diff --check)
+    for repair. Only when nothing was integrated: no commit recorded, HEAD at the run's
+    source commit, a clean tree and the game files byte-identical to the run's
+    baseline. The stage then needs full trusted QA and a fresh independent review."""
+    with locked():
+        operator_safe_stop()
+        plan = read(PLAN)
+        task = next((t for t in plan['tasks'] if t.get('run') == run_id), None)
+        require(task is not None and task['status'] == 'BLOCKED', 'Not a blocked task run')
+        run = inside(HERE / 'runs', run_id)
+        data = read(run / 'autonomous.json')
+        require(not alive(data.get('child_pid')), 'Previous child is alive')
+        require(data['phase'] == 'INTEGRATE' and 'commit' not in data, 'Only a refused, uncommitted integration can be reopened')
+        require(git('rev-parse', 'HEAD') == data['source_commit'], 'HEAD moved since the run; integration state uncertain')
+        require(not git('status', '--porcelain', '--untracked-files=all'), 'Working tree not clean; restore the baseline first')
+        require(snapshot(source(c)) == data['source_snapshot'], 'Game files differ from the run baseline')
+        require(spec(read(run / 'task.json')) == spec(task), 'Task specification changed since run')
+        data['failures'].append({'attempt': data['attempts'], 'phase': 'INTEGRATE', 'category': 'INTEGRATION_REFUSED',
+                                 'fingerprint': hashlib.sha256(str(data.get('last_failure', '')).encode()).hexdigest(),
+                                 'detail': 'Pre-commit guard refused integration; worktree verified at baseline, run reopened for repair',
+                                 'time': now()})
+        for key in ('expected_source', 'production_review_snapshot', 'failure_category'):
+            data.pop(key, None)
+        data.update(status='RUNNING', phase='REPAIR')
+        checkpoint(run, data)
+        task['status'] = 'RUNNING'
+        write(PLAN, plan)
+    print('OPERATOR_REOPENED ' + run_id)
+
 def operator_verify(run_id, outcome_file, c, p):
     with locked():
         operator_safe_stop()
@@ -1496,6 +1526,7 @@ def main(argv=None):
     q = sub.add_parser('qualify-verification'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('operator-stage'); q.add_argument('--task-id', required=True)
     q = sub.add_parser('operator-adopt'); q.add_argument('--run-id', required=True)
+    q = sub.add_parser('operator-reopen'); q.add_argument('--run-id', required=True)
     q = sub.add_parser('operator-verify'); q.add_argument('--run-id', required=True); q.add_argument('--outcome', required=True)
     q = sub.add_parser('operator-review'); q.add_argument('--run-id', required=True); q.add_argument('--review', required=True)
     q.add_argument('--reviewer', required=True, help='Who reviewed, e.g. independent read-only Claude subagent')
@@ -1520,6 +1551,7 @@ def main(argv=None):
         elif args.command == 'qualify-verification': qualify_verification(args.run_id, c, p)
         elif args.command == 'operator-stage': operator_stage(args.task_id, c, p)
         elif args.command == 'operator-adopt': operator_adopt(args.run_id, c, p)
+        elif args.command == 'operator-reopen': operator_reopen(args.run_id, c, p)
         elif args.command == 'operator-verify': operator_verify(args.run_id, args.outcome, c, p)
         elif args.command == 'operator-review': operator_review(args.run_id, args.review, args.reviewer, c, p)
         elif args.command == 'operator-integrate': operator_integrate(args.run_id, c, p, not args.no_push)

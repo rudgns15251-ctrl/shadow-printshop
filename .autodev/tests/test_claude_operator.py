@@ -238,6 +238,49 @@ class OperatorPath(base.Coordinator):
         with self.assertRaisesRegex(a.ERROR, 'non-fatal'):
             a.operator_adopt(run, self.c, self.p)
 
+    def test_reopen_after_guard_refused_integration(self):
+        run, stage = self.stage()
+        # Trailing whitespace passes QA but is refused by git diff --check at integration.
+        (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit \n')
+        with patch('builtins.print'):
+            a.operator_verify(run, self.file('out.json', outcome()), self.c, self.p)
+            a.operator_review(run, self.review(), 'reviewer', self.c, self.p)
+            with self.assertRaisesRegex(a.ERROR, 'GIT_FAILURE: diff'):
+                a.operator_integrate(run, self.c, self.p, push=False)
+        self.assertEqual(a.git('rev-parse', 'HEAD'), self.base)
+        with self.assertRaisesRegex(a.ERROR, 'not clean'):
+            a.operator_reopen(run, self.c, self.p)
+        a.git('restore', '--staged', '--', '.')
+        a.git('checkout', '--', '.')
+        with patch('builtins.print'):
+            a.operator_reopen(run, self.c, self.p)
+        data = a.read(a.HERE / 'runs' / run / 'autonomous.json')
+        self.assertEqual(data['phase'], 'REPAIR')
+        self.assertNotIn('production_review_snapshot', data)
+        self.assertEqual(a.read(a.PLAN)['tasks'][0]['status'], 'RUNNING')
+        (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit\n')
+        with patch('builtins.print'):
+            a.operator_verify(run, self.file('out2.json', outcome()), self.c, self.p)
+            with self.assertRaisesRegex(a.ERROR, 'review missing or stale'):
+                a.operator_integrate(run, self.c, self.p, push=False)
+            a.operator_review(run, self.review(), 'reviewer', self.c, self.p)
+            a.operator_integrate(run, self.c, self.p, push=False)
+        self.assertEqual(a.read(a.PLAN)['tasks'][0]['status'], 'DONE')
+
+    def test_reopen_refuses_committed_or_moved_runs(self):
+        run, stage = self.stage()
+        plan = a.read(a.PLAN); plan['tasks'][0]['status'] = 'BLOCKED'; a.write(a.PLAN, plan)
+        path = a.HERE / 'runs' / run / 'autonomous.json'
+        data = a.read(path); data.update(phase='REPAIR'); a.write(path, data)
+        with self.assertRaisesRegex(a.ERROR, 'refused, uncommitted'):
+            a.operator_reopen(run, self.c, self.p)
+        data.update(phase='INTEGRATE', commit='abc'); a.write(path, data)
+        with self.assertRaisesRegex(a.ERROR, 'refused, uncommitted'):
+            a.operator_reopen(run, self.c, self.p)
+        data.pop('commit'); data['source_commit'] = '0' * 40; a.write(path, data)
+        with self.assertRaisesRegex(a.ERROR, 'HEAD moved'):
+            a.operator_reopen(run, self.c, self.p)
+
     def test_integration_refused_without_review_or_after_revise(self):
         run, stage = self.stage()
         (stage / 'scripts/slice_main.gd').write_text('extends Control\n# edit\n')
