@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 432 432">
+  <title>음영 인쇄소 · Android 아이콘 배경</title>
+  <!-- Wood stamp block filling the whole layer, with a faint grain -->
+  <rect width="432" height="432" fill="#d8c7ad"/>
+  <path d="M0 96 Q144 78 288 100 T432 92 M0 334 Q160 316 300 340 T432 330" fill="none" stroke="#24211d" stroke-opacity="0.14" stroke-width="7"/>
+  <path d="M0 214 Q150 202 290 220 T432 210" fill="none" stroke="#24211d" stroke-opacity="0.08" stroke-width="5"/>
+</svg>

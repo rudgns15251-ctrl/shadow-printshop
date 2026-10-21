@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 432 432">
+  <title>음영 인쇄소 · Android 아이콘 전경</title>
+  <!-- Paper sheet, print grid and seal, all inside the adaptive-icon safe circle (r 132 around 216,216) -->
+  <rect x="134" y="122" width="164" height="176" rx="8" fill="#f4ebdd" stroke="#24211d" stroke-width="6"/>
+  <g stroke="#24211d" stroke-width="5">
+    <rect x="152" y="142" width="38" height="38" rx="4" fill="#24211d"/>
+    <rect x="195" y="142" width="38" height="38" rx="4" fill="#24211d"/>
+    <rect x="238" y="142" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="152" y="185" width="38" height="38" rx="4" fill="#24211d"/>
+    <rect x="195" y="185" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="238" y="185" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="152" y="228" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="195" y="228" width="38" height="38" rx="4" fill="#f4ebdd"/>
+    <rect x="238" y="228" width="38" height="38" rx="4" fill="#315d49"/>
+  </g>
+  <circle cx="276" cy="282" r="28" fill="#8a3f24" stroke="#24211d" stroke-width="6"/>
+  <rect x="264" y="270" width="24" height="24" rx="3" fill="none" stroke="#f4ebdd" stroke-width="4"/>
+</svg>

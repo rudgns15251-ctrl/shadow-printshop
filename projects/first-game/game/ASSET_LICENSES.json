@@ -512,5 +512,53 @@
       "scripts/campaign_main.gd::_scene_background (SC_C01_LEDGER and SC_ENDING scenes)"
     ],
     "review_pending": "Human review of composition and readability."
+  },
+  {
+    "path": "assets/art/android_icon_foreground.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original vector authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG markup derived from the project's own app_icon.svg in the ART_STYLE_BIBLE palette. Paper sheet with the 3x3 print grid (stamp-A cells inked, green target cell) and the vermilion seal, drawn inside the 66 dp adaptive-icon safe circle on a transparent 432x432 layer. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "61c806acc005f6d02e46dd4bda77d10e36b068230773d84db33f8b34d2576577",
+      "bytes": 1265,
+      "viewbox": "0 0 432 432"
+    },
+    "usage": [
+      "Android adaptive launcher icon, foreground layer (export preset launcher_icons/adaptive_foreground_432x432)"
+    ],
+    "review_pending": "Human review of launcher icon taste and legibility under circle, squircle and themed masks on real phones."
+  },
+  {
+    "path": "assets/art/android_icon_background.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original vector authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG markup derived from the project's own app_icon.svg in the ART_STYLE_BIBLE palette. Full-bleed wood stamp block colour with three faint grain strokes; opaque 432x432 layer. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "1395c3332104ca60a9b5adc01fe895ec46ae6b870a4850f5f41705d1519b17a7",
+      "bytes": 539,
+      "viewbox": "0 0 432 432"
+    },
+    "usage": [
+      "Android adaptive launcher icon, background layer (export preset launcher_icons/adaptive_background_432x432)"
+    ],
+    "review_pending": "Human review of launcher icon taste and legibility under circle, squircle and themed masks on real phones."
+  },
+  {
+    "path": "assets/art/android_icon_monochrome.svg",
+    "license": "NOASSERTION",
+    "creator": "Anthropic Claude Code (Claude Opus 5.5), original vector authored for this project on 2026-10-21 (AI-assisted output; no human author asserted).",
+    "origin": "Hand-written SVG markup derived from the project's own app_icon.svg in the ART_STYLE_BIBLE palette. Single-colour silhouette of the sheet outline, the three inked cells and the seal, for Android 13 themed icons. No image generation, embedded images, fonts or external resources.",
+    "rights_evidence": "Authored for this project; no separate public distribution license is granted here. Human rights review pending.",
+    "final_encoded_measurements": {
+      "sha256": "3f81169aaf91fe80de5dff16ba69a90d33a57a709bc7097949d25f5f4e890205",
+      "bytes": 642,
+      "viewbox": "0 0 432 432"
+    },
+    "usage": [
+      "Android themed launcher icon, monochrome layer (export preset launcher_icons/adaptive_monochrome_432x432)"
+    ],
+    "review_pending": "Human review of launcher icon taste and legibility under circle, squircle and themed masks on real phones."
   }
 ]

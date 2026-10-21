@@ -7,6 +7,7 @@ config/use_custom_user_dir=true
 config/custom_user_dir_name="Godot/app_userdata/C01 - Shadow Printshop Slice"
 run/main_scene="res://campaign_main.tscn"
 config/icon="res://assets/art/app_icon.svg"
+config/quit_on_go_back=false
 config/features=PackedStringArray("4.0", "GL Compatibility")
 
 [display]
@@ -15,8 +16,11 @@ window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.956, 0.922, 0.867, 1)
