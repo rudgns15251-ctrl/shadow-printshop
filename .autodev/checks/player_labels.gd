@@ -32,7 +32,9 @@ func clean(main, label: String) -> void:
 	var found := []
 	for text in texts:
 		for word in FORBIDDEN:
-			if text.to_upper().contains(word):
+			# The developer labels were upper-case ("SPACE · 인쇄", "CURRENT · 현재");
+			# bracketed key hints such as "[Space]" are the intended replacement.
+			if text.contains(word):
 				found.append(word + " in '" + text.left(40) + "'")
 	check(found.is_empty(), label + ": no developer labels " + str(found.slice(0, 4)))
 
